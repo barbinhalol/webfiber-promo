@@ -636,6 +636,7 @@ summary { cursor: pointer; }
 .faq__item[open] summary::after { transform: rotate(45deg); }
 .faq__item p { padding: 0 22px 20px; color: var(--txt-dim); font-size: .94rem; }
 .faq__item p b { color: var(--txt); }
+.faq__contrato { text-align: center; margin-top: 32px; }
 
 /* ==========================================================================
    CTA FINAL
