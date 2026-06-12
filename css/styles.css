@@ -143,9 +143,9 @@ summary { cursor: pointer; }
    HERO
    ========================================================================== */
 .hero {
-  position: relative; min-height: min(100svh, 980px);
+  position: relative; min-height: min(100svh, 860px);
   display: flex; flex-direction: column; justify-content: center;
-  padding: calc(var(--header-h) + 34px) 0 56px;
+  padding: calc(var(--header-h) + 34px) 0 24px;
   overflow: hidden;
 }
 .hero__canvas {
@@ -561,36 +561,7 @@ summary { cursor: pointer; }
    COBERTURA
    ========================================================================== */
 .areas { max-width: 880px; margin-inline: auto; text-align: center; }
-.areas__search {
-  display: flex; align-items: center; gap: 12px;
-  max-width: 460px; margin-inline: auto; padding: 4px 8px 4px 18px;
-  border-radius: 999px; background: var(--glass); border: 1px solid var(--stroke);
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  transition: border-color .3s, box-shadow .3s;
-}
-.areas__search:focus-within { border-color: var(--ciano); box-shadow: 0 0 0 4px rgba(0, 224, 255, .12); }
-.areas__search .ico { color: var(--txt-faint); }
-.areas__search input {
-  flex: 1; padding: 13px 6px; font: inherit; font-size: 1rem;
-  background: none; border: 0; outline: 0; color: var(--txt);
-}
-.areas__search input::placeholder { color: var(--txt-faint); }
-.areas__chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 26px; }
-.areas__chips li {
-  padding: .6em 1.25em; border-radius: 999px; font-size: .92rem; font-weight: 500;
-  background: var(--glass); border: 1px solid var(--stroke-soft);
-  transition: transform .25s, background .25s, border-color .25s, opacity .25s, box-shadow .25s;
-}
-.areas__chips li:hover { transform: translateY(-3px); border-color: rgba(0, 224, 255, .4); }
-.areas__chips li.match {
-  background: rgba(0, 224, 255, .16); border-color: var(--ciano); color: #C9F4FF;
-  box-shadow: 0 0 26px rgba(0, 224, 255, .25); transform: translateY(-3px) scale(1.06);
-}
-.areas__chips li.dim { opacity: .25; }
-.areas__found, .areas__notfound { margin-top: 20px; font-size: .98rem; }
-.areas__found b { color: var(--ciano); }
-.areas__notfound b { color: var(--amarelo); }
-.areas__cta { margin-top: 26px; }
+.areas__cta { margin-top: 8px; }
 
 /* ==========================================================================
    VERSUS

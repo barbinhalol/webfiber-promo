@@ -320,33 +320,7 @@ if (mq) mq.appendChild(mq.firstElementChild.cloneNode(true));
 })();
 
 /* --------------------------------------------------------------------------
-   10 · Busca de bairros
-   -------------------------------------------------------------------------- */
-(function bairros() {
-  const input = document.getElementById("bairroInput");
-  const chips = [...document.querySelectorAll("#bairroChips li")];
-  const found = document.getElementById("bairroFound");
-  const notFound = document.getElementById("bairroNotFound");
-  if (!input) return;
-
-  const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
-
-  input.addEventListener("input", () => {
-    const q = norm(input.value);
-    let any = false;
-    chips.forEach(li => {
-      const hit = q && norm(li.textContent).includes(q);
-      li.classList.toggle("match", hit);
-      li.classList.toggle("dim", q && !hit);
-      if (hit) any = true;
-    });
-    found.hidden = !(q && any);
-    notFound.hidden = !(q.length >= 3 && !any);
-  });
-})();
-
-/* --------------------------------------------------------------------------
-   11 · Barra fixa mobile: aparece depois do hero
+   10 · Barra fixa mobile: aparece depois do hero
    -------------------------------------------------------------------------- */
 (function stickybar() {
   const bar = document.getElementById("stickybar");
