@@ -40,43 +40,192 @@
        Textos e preços editáveis: veja CONFIG no topo de js/main.js
        ============================================================ -->
 
-  <title>WebFiber — Internet 100% Fibra no Rio de Janeiro | 700 Mega, 850 Mega e 1 Giga</title>
-  <meta name="description" content="Internet de verdade para você: planos 100% fibra de 700 Mega, 850 Mega e 1 Giga no Rio de Janeiro, sem fidelidade. Nos planos 850 Mega e 1 Giga, streaming Watch TV incluso com canais ao vivo e 30 mil filmes e séries.">
+  <title>Internet 100% Fibra no Rio de Janeiro — 700 Mega por R$ 99,90 | WebFiber</title>
+  <meta name="description" content="Internet fibra sem fidelidade no Rio de Janeiro: 700 Mega por R$ 99,90/mês e planos com streaming Watch TV. Provedor local no Centro, Tijuca, Vila Isabel, São Cristóvão e região. Contrate pelo WhatsApp.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://webfiberprovedor.com.br/">
   <meta name="theme-color" content="#0064FF">
+  <meta name="author" content="WebFiber Telecom">
 
+  <!-- Open Graph -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="WebFiber — Internet de Verdade para Você | 100% Fibra">
-  <meta property="og:description" content="700 Mega, 850 Mega e 1 Giga 100% fibra, sem fidelidade. Streaming Watch TV incluso nos planos com TV. Chame no WhatsApp.">
+  <meta property="og:url" content="https://webfiberprovedor.com.br/">
+  <meta property="og:site_name" content="WebFiber Telecom">
   <meta property="og:locale" content="pt_BR">
+  <meta property="og:title" content="Internet 100% Fibra — 700 Mega por R$ 99,90 | WebFiber">
+  <meta property="og:description" content="Internet de verdade, sem fidelidade, com streaming Watch TV nos planos com TV. Provedor local nos principais bairros do Rio de Janeiro. Contrate pelo WhatsApp.">
+  <meta property="og:image" content="https://webfiberprovedor.com.br/assets/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="WebFiber — 700 Mega por R$ 99,90, internet 100% fibra no Rio de Janeiro">
 
-  <link rel="icon" type="image/png" href="assets/logo_webfiber.png">
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Internet 100% Fibra — 700 Mega por R$ 99,90 | WebFiber">
+  <meta name="twitter:description" content="Internet de verdade no Rio de Janeiro, sem fidelidade. Streaming Watch TV nos planos com TV. Contrate pelo WhatsApp.">
+  <meta name="twitter:image" content="https://webfiberprovedor.com.br/assets/og-image.jpg">
 
+  <!-- Ícones e PWA -->
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Performance: conexões e LCP -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+  <link rel="preload" as="image" href="assets/watch/milo_tv.webp" fetchpriority="high">
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/styles.css?v=novosite7"> <!-- ?v= força navegadores a pegar o arquivo novo a cada atualização -->
+  <link rel="stylesheet" href="css/styles.css?v=seo1"> <!-- ?v= força navegadores a pegar o arquivo novo a cada atualização -->
 
-  <!-- Dados estruturados: provedor local + oferta + FAQ -->
+  <!-- Dados estruturados (Schema.org JSON-LD) -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "InternetServiceProvider",
-    "name": "WebFiber Telecom",
-    "url": "https://webfiberprovedor.com.br",
-    "telephone": "+55-21-2291-0825",
-    "areaServed": "Rio de Janeiro",
-    "makesOffer": {
-      "@type": "Offer",
-      "name": "Planos de internet 100% fibra WebFiber",
-      "price": "99.90",
-      "priceCurrency": "BRL",
-      "description": "Planos residenciais 100% fibra: 700 Mega (R$ 99,90), 850 Mega + Watch TV (R$ 129,90) e 1 Giga + TV completa (R$ 159,90), sem fidelidade, no Rio de Janeiro."
-    }
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://webfiberprovedor.com.br/#org",
+        "name": "WebFiber Telecom",
+        "url": "https://webfiberprovedor.com.br/",
+        "logo": "https://webfiberprovedor.com.br/assets/icons/icon-512.png",
+        "sameAs": ["https://www.instagram.com/webfiber.provedor"],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+55-21-98558-9201",
+          "contactType": "sales",
+          "areaServed": "BR",
+          "availableLanguage": "Portuguese"
+        }
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://webfiberprovedor.com.br/#site",
+        "url": "https://webfiberprovedor.com.br/",
+        "name": "WebFiber Telecom",
+        "inLanguage": "pt-BR",
+        "publisher": { "@id": "https://webfiberprovedor.com.br/#org" }
+      },
+      {
+        "@type": ["InternetServiceProvider", "LocalBusiness"],
+        "@id": "https://webfiberprovedor.com.br/#isp",
+        "name": "WebFiber Telecom",
+        "url": "https://webfiberprovedor.com.br/",
+        "image": "https://webfiberprovedor.com.br/assets/og-image.jpg",
+        "telephone": "+55-21-2291-0825",
+        "priceRange": "R$ 99,90 – R$ 159,90",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Rio de Janeiro",
+          "addressRegion": "RJ",
+          "addressCountry": "BR"
+        },
+        "areaServed": [
+          "Centro do Rio de Janeiro", "Tijuca", "Vila Isabel", "Grajaú", "Maracanã",
+          "Andaraí", "Praça da Bandeira", "Rio Comprido", "São Cristóvão", "Cidade Nova",
+          "Santa Teresa", "Bairro de Fátima", "Catumbi", "Lapa", "Santo Cristo", "São Francisco Xavier"
+        ],
+        "makesOffer": [
+          {
+            "@type": "Offer",
+            "name": "Plano 700 Mega Wi-Fi Turbo",
+            "price": "99.90",
+            "priceCurrency": "BRL",
+            "description": "Internet residencial 100% fibra óptica de 700 Mega, sem fidelidade, com Wi-Fi de alta performance.",
+            "itemOffered": { "@type": "Service", "name": "Internet banda larga 700 Mega 100% fibra", "serviceType": "Internet fibra óptica" }
+          },
+          {
+            "@type": "Offer",
+            "name": "Plano 850 Mega + Streaming Watch TV",
+            "price": "129.90",
+            "priceCurrency": "BRL",
+            "description": "Internet 100% fibra de 850 Mega com streaming Watch TV incluso: canais abertos e mais de 30 mil filmes e séries, sem fidelidade.",
+            "itemOffered": { "@type": "Service", "name": "Internet 850 Mega + streaming Watch TV", "serviceType": "Internet fibra óptica com streaming" }
+          },
+          {
+            "@type": "Offer",
+            "name": "Plano 1 Giga + TV Completa Watch TV",
+            "price": "159.90",
+            "priceCurrency": "BRL",
+            "description": "Internet 100% fibra de 1 Giga com TV completa no app Watch TV: Telecine, SporTV, ESPN e 60+ canais ao vivo, mais de 30 mil filmes e séries, sem fidelidade.",
+            "itemOffered": { "@type": "Service", "name": "Internet 1 Giga + TV completa Watch TV", "serviceType": "Internet fibra óptica com TV" }
+          }
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://webfiberprovedor.com.br/#breadcrumb",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Início", "item": "https://webfiberprovedor.com.br/" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://webfiberprovedor.com.br/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Qual o valor da internet da WebFiber?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Os planos residenciais de internet 100% fibra da WebFiber começam em R$ 99,90/mês (700 Mega). O plano de 850 Mega com streaming Watch TV custa R$ 129,90/mês e o de 1 Giga com TV completa, R$ 159,90/mês — todos sem fidelidade." }
+          },
+          {
+            "@type": "Question",
+            "name": "A internet da WebFiber tem fidelidade?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Não. Nenhum plano da WebFiber tem fidelidade obrigatória: você permanece porque gosta da qualidade da internet fibra e do atendimento, não por contrato." }
+          },
+          {
+            "@type": "Question",
+            "name": "A instalação é rápida?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Sim. A instalação é feita por equipe própria, qualificada e organizada — concluída em poucos minutos, com o Wi-Fi já configurado e funcionando." }
+          },
+          {
+            "@type": "Question",
+            "name": "A WebFiber atende a Tijuca e Vila Isabel?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Sim. A WebFiber atende a Tijuca, Vila Isabel e os principais bairros do Rio de Janeiro, como Centro, São Cristóvão, Grajaú, Maracanã, Andaraí, Santa Teresa e Lapa — e a rede está sempre em expansão. Consulte seu endereço pelo WhatsApp (21) 98558-9201." }
+          },
+          {
+            "@type": "Question",
+            "name": "A internet é 100% fibra óptica mesmo?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Sim, 100%. A conexão é FTTH (fibra até a sua casa): fibra pura do poste até dentro do imóvel, sem sinal de rádio, sem antena e sem cabo de cobre no meio do caminho." }
+          },
+          {
+            "@type": "Question",
+            "name": "A internet da WebFiber funciona bem para home office?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Sim. Com alta velocidade, estabilidade e baixa latência, as videochamadas ficam nítidas e os sistemas em nuvem respondem rápido — ideal para quem trabalha de casa no Rio de Janeiro." }
+          },
+          {
+            "@type": "Question",
+            "name": "Funciona para jogos online?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Sim. A fibra óptica da WebFiber entrega ping baixo e conexão estável do início ao fim da partida — perfeita para jogos online competitivos." }
+          },
+          {
+            "@type": "Question",
+            "name": "Qual a velocidade real dos planos?",
+            "acceptedAnswer": { "@type": "Answer", "text": "A velocidade contratada chega de verdade no seu Wi-Fi: planos de 700 Mega, 850 Mega e 1 Giga de fibra óptica, com roteador de alta performance incluso." }
+          },
+          {
+            "@type": "Question",
+            "name": "O suporte da WebFiber é humanizado?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Sim. Você fala com gente de verdade pelo WhatsApp, sem robô de call center. O suporte externo funciona 24 horas para urgências técnicas." }
+          },
+          {
+            "@type": "Question",
+            "name": "Como contratar a internet da WebFiber?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Direto pelo WhatsApp (21) 98558-9201: você confirma a cobertura do seu endereço, escolhe o plano e agenda a instalação. Simples, sem burocracia." }
+          }
+        ]
+      }
+    ]
   }
   </script>
 </head>
 <body>
+
+  <a class="skip-link" href="#inicio">Pular para o conteúdo</a>
+  <noscript><style>.reveal{opacity:1 !important;transform:none !important}.rot-fx{display:none}</style></noscript>
 
   <!-- ▸ Aurora de fundo global (camadas de luz fixas, custo zero de JS) -->
   <div class="aurora" aria-hidden="true">
@@ -124,7 +273,8 @@
           <p class="badge badge--magenta reveal" data-rv><span class="badge__dot"></span>Oferta especial</p>
 
           <!-- ROTADOR DE PLANOS: letras viram em 3D entre 700 / 850 / 1 GIGA (config no main.js) -->
-          <h1 class="hero__title rotador reveal" data-rv id="rotador">
+          <h1 class="sr-only">Internet 100% fibra no Rio de Janeiro — planos de 700 Mega por R$ 99,90, 850 Mega e 1 Giga com streaming Watch TV, sem fidelidade</h1>
+          <p class="hero__title rotador reveal" data-rv id="rotador" aria-hidden="true">
             <canvas class="rot-fx" id="rotFx" aria-hidden="true"></canvas>
             <span class="hero__mega">
               <b class="hero__num rot-flip" id="rotNum" aria-live="polite">700</b><b class="hero__unit rot-flip" id="rotUnit">MEGA</b>
@@ -134,7 +284,7 @@
               <i id="rotPre">por apenas</i> <strong id="rotPreco">R$&nbsp;99,90</strong><i>/mês</i>
             </span>
             <span class="rot-dots" id="rotDots" aria-hidden="true"></span>
-          </h1>
+          </p>
 
           <p class="hero__sub reveal" data-rv>
             Internet de verdade <strong>100% fibra óptica</strong> para navegar, jogar e maratonar —
@@ -177,7 +327,7 @@
     <!-- ============================================================
          Faixa marquee em loop infinito
          ============================================================ -->
-    <div class="marquee" id="marquee" aria-hidden="true">
+    <div class="marquee" id="marquee" role="presentation" aria-hidden="true">
       <div class="marquee__track">
         <!-- conteúdo duplicado via JS para loop perfeito -->
         <div class="marquee__group">
@@ -197,7 +347,7 @@
     <section class="section section--watch" id="watch">
 
       <!-- 2) Filmes e séries do catálogo (duas direções) -->
-      <div class="posters reveal" data-rv>
+      <div class="posters reveal" data-rv role="region" aria-label="Filmes e séries do catálogo de streaming">
         <div class="posters__row posters__row--left" data-marquee-row>
           <div class="posters__group">
             <img class="poster-img" src="assets/posters/topgun.png" alt="Pôster de filme do catálogo de streaming" loading="lazy">
@@ -497,6 +647,7 @@
         </header>
 
         <div class="areas reveal" data-rv>
+          <p class="areas__texto">A WebFiber é provedor de internet fibra no <b>Centro do Rio de Janeiro</b>, <b>Tijuca</b>, <b>Vila Isabel</b>, <b>Grajaú</b>, <b>Maracanã</b>, <b>Andaraí</b>, <b>Praça da Bandeira</b>, <b>Rio Comprido</b>, <b>São Cristóvão</b>, <b>Cidade Nova</b>, <b>Santa Teresa</b>, <b>Bairro de Fátima</b>, <b>Catumbi</b>, <b>Lapa</b>, <b>Santo Cristo</b> e <b>São Francisco Xavier</b> — internet residencial 100% fibra, sem fidelidade, com instalação rápida e suporte humanizado de provedor local.</p>
           <div class="areas__cta">
             <a class="btn btn--wa btn--xl" data-wa data-wa-msg="Olá! Quero saber se a WebFiber atende no meu endereço." href="#">Consultar disponibilidade no meu endereço</a>
           </div>
@@ -588,40 +739,44 @@
 
         <div class="faq reveal" data-rv id="faqList">
           <details class="faq__item" open>
-            <summary>Os planos têm fidelidade?</summary>
-            <p>Não! Nossos planos não possuem fidelidade obrigatória — você permanece porque gosta da qualidade, da estabilidade e do atendimento, não por contrato.</p>
+            <summary>Qual o valor da internet da WebFiber?</summary>
+            <p>Os planos residenciais de internet <b>100% fibra</b> começam em <b>R$ 99,90/mês</b> (700 Mega). O de 850 Mega com streaming Watch TV custa R$ 129,90/mês e o de 1 Giga com TV completa, R$ 159,90/mês — todos sem fidelidade. Consulte taxa de ativação.</p>
           </details>
           <details class="faq__item">
-            <summary>A internet é fibra óptica mesmo?</summary>
-            <p>Sim, 100%. Nossa conexão é FTTH (fibra até a sua casa): fibra pura do poste até dentro do seu imóvel, sem sinal de rádio, sem antena e sem cabo de cobre no meio do caminho.</p>
-          </details>
-          <details class="faq__item">
-            <summary>Como faço para contratar?</summary>
-            <p>Direto pelo WhatsApp: você chama no <b>(21) 98558-9201</b>, confirma a cobertura do seu endereço e agenda a instalação. Simples assim, sem burocracia.</p>
-          </details>
-          <details class="faq__item">
-            <summary>Em quais bairros a WebFiber atende?</summary>
-            <p>Atendemos os principais bairros do Rio de Janeiro e a rede está sempre em expansão. Consulte a disponibilidade no seu endereço pelo WhatsApp: <b>(21) 98558-9201</b>.</p>
+            <summary>A internet da WebFiber tem fidelidade?</summary>
+            <p>Não. Nenhum plano tem fidelidade obrigatória: você permanece porque gosta da qualidade da internet fibra e do atendimento — não por contrato.</p>
           </details>
           <details class="faq__item">
             <summary>A instalação é rápida?</summary>
-            <p>Sim! Equipe própria, qualificada e organizada: instalação limpa, concluída em poucos minutos e com o Wi-Fi já configurado funcionando.</p>
+            <p>Sim. A instalação é feita por equipe própria, qualificada e organizada — concluída em poucos minutos, com o Wi-Fi já configurado e funcionando.</p>
           </details>
           <details class="faq__item">
-            <summary>Posso contratar e tirar dúvidas pelo WhatsApp?</summary>
-            <p>Pode — o WhatsApp é nosso canal principal. Atendimento humanizado, com gente de verdade respondendo rápido: <b>(21) 98558-9201</b>.</p>
+            <summary>A WebFiber atende a Tijuca e Vila Isabel?</summary>
+            <p>Sim! Atendemos a <b>Tijuca</b>, <b>Vila Isabel</b> e os principais bairros do Rio de Janeiro — como Centro, São Cristóvão, Grajaú, Maracanã, Andaraí, Santa Teresa e Lapa — e a rede está sempre em expansão. Consulte seu endereço pelo WhatsApp <b>(21) 98558-9201</b>.</p>
           </details>
           <details class="faq__item">
-            <summary>1 Giga é ideal para quem?</summary>
-            <p>Para quem quer o máximo: casa cheia de aparelhos, streaming em 4K, jogos sem lag e home office — com TV completa inclusa para a família assistir ao vivo o que quiser.</p>
+            <summary>A internet é 100% fibra óptica mesmo?</summary>
+            <p>Sim, 100%. Nossa conexão é FTTH (fibra até a sua casa): fibra pura do poste até dentro do seu imóvel, sem sinal de rádio, sem antena e sem cabo de cobre no meio do caminho.</p>
           </details>
           <details class="faq__item">
-            <summary>Quais canais estão inclusos nos planos com TV?</summary>
-            <p>Os 60+ canais ao vivo do app Watch TV, incluindo <b>Telecine</b>, <b>SporTV</b>, <b>ESPN</b>, <b>CNN</b>, <b>Megapix</b>, <b>Multishow</b>, GloboNews, GNT, AMC, Universal e os principais canais abertos — além de um catálogo com mais de 30 mil filmes e séries.</p>
+            <summary>Funciona bem para home office?</summary>
+            <p>Sim. Alta velocidade com estabilidade e baixa latência: videochamada nítida, sistemas em nuvem respondendo rápido e upload folgado — ideal para quem trabalha de casa no Rio de Janeiro.</p>
           </details>
           <details class="faq__item">
-            <summary>Funciona bem para streaming e jogos?</summary>
-            <p>É a especialidade da fibra: alta velocidade com latência baixa e conexão estável. Filme em alta definição sem carregar e partida online sem lag, do início ao fim.</p>
+            <summary>Funciona para jogos online?</summary>
+            <p>Sim. A fibra óptica entrega <b>ping baixo</b> e conexão estável do início ao fim da partida — internet gamer de verdade, sem lag decidindo o seu jogo.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Qual a velocidade real dos planos?</summary>
+            <p>A velocidade contratada chega de verdade no seu Wi-Fi: <b>700 Mega</b>, <b>850 Mega</b> ou <b>1 Giga</b> de fibra óptica, com roteador de alta performance incluso em todos os planos.</p>
+          </details>
+          <details class="faq__item">
+            <summary>O suporte é humanizado?</summary>
+            <p>Sim. Aqui você fala com gente de verdade pelo WhatsApp, sem robô de call center. E o suporte externo funciona <b>24 horas</b> para urgências técnicas.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Como faço para contratar?</summary>
+            <p>Direto pelo WhatsApp: <b>(21) 98558-9201</b>. Você confirma a cobertura do seu endereço, escolhe o plano e agenda a instalação — simples, sem burocracia.</p>
           </details>
         </div>
       </div>
@@ -663,14 +818,14 @@
         <h4>Fale com a gente</h4>
         <ul>
           <li><a data-wa href="#">WhatsApp: (21) 98558-9201</a></li>
-          <li><a href="tel:+552122910825">Telefone: (21) 2291-0825</a></li>
+          <li><a href="tel:+552122910825" aria-label="Ligar para a WebFiber">Telefone: (21) 2291-0825</a></li>
           <li><a href="https://www.instagram.com/webfiber.provedor" target="_blank" rel="noopener">@webfiber.provedor</a></li>
           <li><a href="https://webfiberprovedor.com.br" target="_blank" rel="noopener">webfiberprovedor.com.br</a></li>
         </ul>
       </div>
       <div class="footer__col">
         <h4>Cobertura no Rio de Janeiro</h4>
-        <p class="footer__areas">Atendemos os principais bairros do Rio de Janeiro — e a rede está sempre em expansão. Consulte a disponibilidade no seu endereço pelo WhatsApp.</p>
+        <p class="footer__areas">Internet fibra no Centro do RJ · Tijuca · Vila Isabel · Grajaú · Maracanã · Andaraí · Praça da Bandeira · Rio Comprido · São Cristóvão · Cidade Nova · Santa Teresa · Bairro de Fátima · Catumbi · Lapa · Santo Cristo · São Francisco Xavier — e a rede está sempre em expansão.</p>
       </div>
     </div>
     <p class="footer__base container">© <span id="anoAtual">2026</span> WebFiber Telecom · Internet fibra no Rio de Janeiro · Planos sem fidelidade</p>
