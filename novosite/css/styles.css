@@ -1046,8 +1046,18 @@ body {
   .rotador .hero__mega { justify-content: center; }
   .rotador .hero__num  { font-size: clamp(6.3rem, 19.5vw, 8.3rem); }
   .rotador .hero__unit { font-size: clamp(3.1rem, 9.7vw, 4.1rem); }
-  .rotador .hero__price { justify-content: center; font-size: 1.36rem; }
-  .rotador .hero__price strong { font-size: clamp(3.3rem, 10.4vw, 3.9rem); }
+  /* preço em 2 linhas limpas: rótulo em cima, "R$ 159,90/mês" inteiro embaixo */
+  .rotador .hero__price {
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline;
+    column-gap: .12em; font-size: 1.36rem;
+  }
+  .rotador .hero__price #rotPre {
+    flex-basis: 100%; font-size: 1.05rem; font-weight: 600;
+    letter-spacing: .03em; margin-bottom: 2px; color: rgba(255, 255, 255, .85);
+  }
+  .rotador .hero__price strong { font-size: clamp(3rem, 9.8vw, 3.7rem); line-height: 1.05; white-space: nowrap; }
+  .rotador .hero__price strong small { font-size: .5em; }
+  .rotador .hero__price i:last-of-type { font-size: 1.15rem; }
   .rot-extra { text-align: center; }
   .rot-dots { justify-content: center; }
 

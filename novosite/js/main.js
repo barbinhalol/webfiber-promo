@@ -347,9 +347,9 @@ if (ano) ano.textContent = new Date().getFullYear();
   const rot = document.getElementById("rotador");
 
   const PLANOS = [
-    { num: "700", unit: "MEGA", pre: "por apenas",       preco: "R$ 99,90",  extra: "SÓ INTERNET TURBO",  watch: false },
-    { num: "850", unit: "MEGA", pre: "+ streaming por",  preco: "R$ 129,90", extra: "+ WATCH TV INCLUSO", watch: true },
-    { num: "1",   unit: "GIGA", pre: "+ TV completa por", preco: "R$ 159,90", extra: "+ WATCH TV INCLUSO", watch: true }
+    { num: "700", unit: "MEGA", pre: "por apenas",       preco: "99,90",  extra: "SÓ INTERNET TURBO",  watch: false },
+    { num: "850", unit: "MEGA", pre: "+ streaming por",  preco: "129,90", extra: "+ WATCH TV INCLUSO", watch: true },
+    { num: "1",   unit: "GIGA", pre: "+ TV completa por", preco: "159,90", extra: "+ WATCH TV INCLUSO", watch: true }
   ];
   let idx = 0, timer = null, trocando = false;
 
@@ -437,7 +437,7 @@ if (ano) ano.textContent = new Date().getFullYear();
   function setAll(p) {
     chars(elNum, p.num);
     chars(elUnit, p.unit);
-    elPreco.textContent = p.preco;   // valor sólido, sem flip/transparência
+    elPreco.innerHTML = '<small>R$&nbsp;</small>' + p.preco;   // R$ menor e colado no valor: nunca quebra de linha sozinho
     elPre.textContent = p.pre + " ";
     elExtra.innerHTML = '<span class="rot-extra__pill' + (p.watch ? " rot-extra__pill--watch" : "") + '">' + p.extra + "</span>";
   }
