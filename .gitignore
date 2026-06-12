@@ -1,0 +1,3 @@
+# só vai para o site o que o navegador precisa
+_build/
+*.bat
