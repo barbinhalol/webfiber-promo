@@ -6,12 +6,10 @@
 const CONFIG = {
   whatsappNumero: "5521985589201",
   whatsappMensagem: "Olá! Quero contratar o plano de 700 Mega por R$ 99,90 da WebFiber.",
-  velocidadePlano: 700,          // número que o velocímetro do hero atinge
-  // Conversão Google Ads (mesmo padrão do site oficial — dispara ao clicar em WhatsApp)
-  googleAdsSendTo: "AW-18086861405/Sb-JCLHf9LscEN20vrBD",
-  // só conta conversão no domínio oficial (testes em localhost/github.io não contaminam o Ads)
-  ativarRastreio: /webfiberprovedor\.com\.br$/.test(location.hostname)
+  velocidadePlano: 700           // número que o velocímetro do hero atinge
 };
+// Conversão Google Ads: feita pela função gtag_report_conversion (no <head> do index.html),
+// chamada no onclick de cada botão de WhatsApp — padrão oficial do Google Ads.
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -21,23 +19,12 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").match
    -------------------------------------------------------------------------- */
 document.querySelectorAll("[data-wa]").forEach(el => {
   const msg = el.getAttribute("data-wa-msg") || CONFIG.whatsappMensagem;
-  el.href = `https://wa.me/${CONFIG.whatsappNumero}?text=${encodeURIComponent(msg)}`;
-  el.target = "_blank";
-  el.rel = "noopener";
+  const url = `https://wa.me/${CONFIG.whatsappNumero}?text=${encodeURIComponent(msg)}`;
+  el.href = url;
+  // conversão do Google Ads no clique (função definida no <head>);
+  // o event_callback garante o envio antes de abrir o WhatsApp
+  el.setAttribute("onclick", `return gtag_report_conversion('${url.replace(/'/g, "%27")}');`);
 });
-
-/* Rastreador de conversão (idêntico ao do site oficial; ativar ao publicar) */
-if (CONFIG.ativarRastreio) {
-  let lastFire = 0;
-  document.addEventListener("click", ev => {
-    const a = ev.target.closest("a");
-    if (!a || !/wa\.me|whatsapp|5521985589201/i.test(a.href || "")) return;
-    const now = Date.now();
-    if (now - lastFire < 1500 || typeof gtag !== "function") return;
-    lastFire = now;
-    gtag("event", "conversion", { send_to: CONFIG.googleAdsSendTo });
-  }, true);
-}
 
 /* --------------------------------------------------------------------------
    2 · Header: ganha fundo ao rolar

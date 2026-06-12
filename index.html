@@ -4,24 +4,45 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <!-- Google tag (gtag.js) — carrega primeiro, no topo do head -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18086861405"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'AW-18086861405');
+  </script>
+
+  <!-- Event snippet for Clique WhatsApp - Site WebFiber conversion page -->
+  <script>
+  function gtag_report_conversion(url) {
+    // só conta conversão no domínio oficial (testes locais/preview não sujam o Ads)
+    if (!/webfiberprovedor\.com\.br$/.test(location.hostname)) {
+      if (typeof(url) != 'undefined') { window.location = url; }
+      return false;
+    }
+    var callback = function () {
+      if (typeof(url) != 'undefined') {
+        window.location = url;
+      }
+    };
+    gtag('event', 'conversion', {
+        'send_to': 'AW-18086861405/Sb-JCLHf9LscEN20vrBD',
+        'event_callback': callback
+    });
+    return false;
+  }
+  </script>
+
   <!-- ============================================================
-       WEBFIBER · LANDING EXPERIMENTAL "700 MEGA"  (PRÉVIA)
-       Página isolada — NÃO substitui o site oficial.
+       WEBFIBER · LANDING "700 MEGA"
        Textos e preços editáveis: veja CONFIG no topo de js/main.js
        ============================================================ -->
 
   <title>700 Mega por R$ 99,90 | Internet 100% Fibra sem Fidelidade no Rio de Janeiro — WebFiber</title>
   <meta name="description" content="Internet 100% fibra no Rio de Janeiro: 700 Mega por R$ 99,90, sem fidelidade e com instalação rápida. Provedor de internet local na Tijuca, Vila Isabel, Centro RJ, São Cristóvão e região. Contrate pelo WhatsApp.">
   <meta name="theme-color" content="#02071A">
-
-  <!-- Google tag (gtag.js) — Google Ads, mesmo ID do site oficial -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18086861405"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'AW-18086861405');
-  </script>
 
   <meta property="og:type" content="website">
   <meta property="og:title" content="700 Mega por R$ 99,90 — Internet 100% Fibra sem Fidelidade | WebFiber">
@@ -34,7 +55,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/styles.css?v=20260612a"> <!-- ?v= força navegadores a pegar o arquivo novo a cada atualização -->
+  <link rel="stylesheet" href="css/styles.css?v=20260612b"> <!-- ?v= força navegadores a pegar o arquivo novo a cada atualização -->
 
   <!-- Dados estruturados: provedor local + oferta + FAQ -->
   <script type="application/ld+json">
@@ -642,6 +663,6 @@
     <a class="btn btn--wa btn--sm" data-wa href="#">Chamar no WhatsApp</a>
   </div>
 
-  <script src="js/main.js?v=20260612a" defer></script>
+  <script src="js/main.js?v=20260612b" defer></script>
 </body>
 </html>
