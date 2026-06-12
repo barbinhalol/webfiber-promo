@@ -1033,3 +1033,34 @@ body {
 }
 .skip-link:focus { top: 0; }
 .areas__texto { max-width: 820px; margin: 0 auto 26px; font-size: .98rem; color: var(--txt-dim); line-height: 1.8; }
+
+/* ====== MOBILE: oferta do hero centralizada + ~30% maior, carrossel colado ====== */
+@media (max-width: 860px) {
+  /* centraliza toda a coluna da oferta */
+  .hero__copy { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .hero__copy > * { width: 100%; }
+  .badge { align-self: center; }
+
+  /* oferta ~30% maior */
+  .rotador { text-align: center; }
+  .rotador .hero__mega { justify-content: center; }
+  .rotador .hero__num  { font-size: clamp(5.5rem, 17vw, 7.2rem); }
+  .rotador .hero__unit { font-size: clamp(2.7rem, 8.4vw, 3.6rem); }
+  .rotador .hero__price { justify-content: center; font-size: 1.18rem; }
+  .rotador .hero__price strong { font-size: clamp(2.85rem, 9vw, 3.4rem); }
+  .rot-extra { text-align: center; }
+  .rot-dots { justify-content: center; }
+
+  /* elementos de apoio centralizados */
+  .hero__sub { margin-inline: auto; max-width: 34ch; }
+  .hero__seals { justify-content: center; }
+  .hero__actions { justify-content: center; }
+  .hero__actions .btn { width: 100%; }
+  .hero__micro { justify-content: center; text-align: center; }
+
+  /* Milo + carrossel: tira o "vazio" — menos ar e carrossel logo abaixo */
+  .hero__milotv { margin-top: 14px; }
+  .milotv { max-width: 380px; }
+  .section--watch { padding-top: 22px; }
+  .section--watch .posters { margin-top: 16px; }
+}
