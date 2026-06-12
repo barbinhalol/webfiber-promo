@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Google tag (gtag.js) — carrega primeiro, no topo do head -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18086861405"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'AW-18086861405');
+  </script>
+
+  <!-- Event snippet for Clique WhatsApp - Site WebFiber conversion page -->
+  <script>
+  function gtag_report_conversion(url) {
+    // só conta conversão no domínio oficial (testes locais/preview não sujam o Ads)
+    if (!/webfiberprovedor\.com\.br$/.test(location.hostname)) {
+      if (typeof(url) != 'undefined') { window.location = url; }
+      return false;
+    }
+    var callback = function () {
+      if (typeof(url) != 'undefined') {
+        window.location = url;
+      }
+    };
+    gtag('event', 'conversion', {
+        'send_to': 'AW-18086861405/Sb-JCLHf9LscEN20vrBD',
+        'event_callback': callback
+    });
+    return false;
+  }
+  </script>
+
+  <!-- ============================================================
+       WEBFIBER · LANDING "700 MEGA"
+       Textos e preços editáveis: veja CONFIG no topo de js/main.js
+       ============================================================ -->
+
+  <title>1 Giga + TV Completa por R$ 159,90 | Internet 100% Fibra + Watch TV — WebFiber</title>
+  <meta name="description" content="Internet 100% fibra no Rio de Janeiro: 1 Giga + TV completa por R$ 159,90 com Telecine, SporTV, ESPN, CNN, Megapix, Multishow e 60+ canais ao vivo no app Watch TV, além de 30 mil filmes e séries. Sem fidelidade.">
+  <meta name="theme-color" content="#02071A">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="1 Giga + TV Completa por R$ 159,90 | WebFiber">
+  <meta property="og:description" content="Ultra velocidade + Telecine, SporTV, ESPN e 60+ canais ao vivo, com 30 mil filmes e séries. Sem fidelidade. Chame no WhatsApp.">
+  <meta property="og:locale" content="pt_BR">
+
+  <link rel="icon" type="image/png" href="assets/logo_webfiber.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/styles.css?v=20260612d"> <!-- ?v= força navegadores a pegar o arquivo novo a cada atualização -->
+
+  <!-- Dados estruturados: provedor local + oferta + FAQ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "InternetServiceProvider",
+    "name": "WebFiber Telecom",
+    "url": "https://webfiberprovedor.com.br",
+    "telephone": "+55-21-2291-0825",
+    "areaServed": "Rio de Janeiro",
+    "makesOffer": {
+      "@type": "Offer",
+      "name": "Plano 1 Giga + TV Completa Watch TV",
+      "price": "159.90",
+      "priceCurrency": "BRL",
+      "description": "Internet residencial 100% fibra óptica de 1 Giga com TV completa no app Watch TV: Telecine, SporTV, ESPN, CNN, Megapix, Multishow e 60+ canais ao vivo, mais de 30 mil filmes e séries, sem fidelidade."
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <!-- ▸ Aurora de fundo global (camadas de luz fixas, custo zero de JS) -->
+  <div class="aurora" aria-hidden="true">
+    <span class="aurora__orb aurora__orb--a"></span>
+    <span class="aurora__orb aurora__orb--b"></span>
+    <span class="aurora__orb aurora__orb--c"></span>
+  </div>
+
+  <!-- ============================================================
+       HEADER fixo (glass)
+       ============================================================ -->
+  <header class="topbar" id="topbar">
+    <div class="container topbar__inner">
+      <a class="topbar__brand" href="#inicio" aria-label="WebFiber Telecom — início">
+        <img src="assets/logo_mark.png" alt="WebFiber Telecom" width="40" height="33">
+        <span class="topbar__name">webfiber<small>TELECOM</small></span>
+      </a>
+      <nav class="topbar__nav" aria-label="Seções da página">
+        <a href="#beneficios">Benefícios</a>
+        <a href="#watch">TV Completa</a>
+        <a href="#planos">Planos</a>
+        <a href="#cobertura">Cobertura</a>
+        <a href="#faq">Dúvidas</a>
+      </nav>
+      <a class="btn btn--wa btn--sm topbar__cta" data-wa href="#">
+        <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .1 0 .8-.3 1.4Z"/></svg>
+        <span class="topbar__ctatxt">Chamar no WhatsApp</span><span class="topbar__ctatxt--short">WhatsApp</span>
+      </a>
+    </div>
+  </header>
+
+  <main id="inicio">
+
+    <!-- ============================================================
+         1 · HERO — a oferta domina os 3 primeiros segundos
+         ============================================================ -->
+    <section class="hero" id="oferta">
+      <canvas id="fiberCanvas" class="hero__canvas" aria-hidden="true"></canvas>
+      <div class="hero__waves" aria-hidden="true"></div>
+
+      <div class="container hero__grid">
+
+        <!-- Coluna da oferta -->
+        <div class="hero__copy">
+          <p class="badge badge--magenta reveal" data-rv><span class="badge__dot"></span>Oferta especial</p>
+
+          <h1 class="hero__title">
+            <span class="hero__mega reveal" data-rv><b class="hero__num">1</b><b class="hero__unit">GIGA</b></span>
+            <span class="hero__price reveal" data-rv>+ TV completa por <strong>R$&nbsp;159<small>,90</small></strong><i>/mês</i></span>
+          </h1>
+
+          <p class="hero__sub reveal" data-rv>
+            Ultra velocidade <strong>100% fibra óptica</strong> + TV completa no app <strong>Watch TV</strong>:
+            Telecine, SporTV, ESPN e <em>60+ canais ao vivo</em> — sem fidelidade.
+          </p>
+
+          <ul class="hero__seals reveal" data-rv aria-label="Garantias do plano">
+            <li><svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>100% fibra</li>
+            <li><svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M12 2 3 6v6c0 5 3.8 8.4 9 10 5.2-1.6 9-5 9-10V6l-9-4Zm-1 13-3-3 1.4-1.4L11 12.2l4.6-4.6L17 9l-6 6Z"/></svg>Sem fidelidade</li>
+            <li><svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-6v2h3v2H7v-2h3v-2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm6 3v8l6-4-6-4Z"/></svg>60+ canais ao vivo</li>
+          </ul>
+
+          <div class="hero__actions reveal" data-rv>
+            <a class="btn btn--wa btn--xl" data-wa href="#">
+              <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .1 0 .8-.3 1.4Z"/></svg>
+              Chamar no WhatsApp
+            </a>
+            <a class="btn btn--ghost btn--xl" href="#beneficios">Ver benefícios</a>
+          </div>
+
+          <p class="hero__micro reveal" data-rv>
+            <span class="hero__pulse" aria-hidden="true"></span>
+            Atendimento humanizado — gente de verdade respondendo rapidinho no WhatsApp.
+          </p>
+        </div>
+
+        <!-- Composição 3D flutuante -->
+        <div class="hero__stage" data-tilt-scene aria-hidden="true">
+          <div class="stage" data-tilt>
+            <!-- TV / streaming -->
+            <figure class="stage__tv float-a">
+              <div class="stage__screen">
+                <img src="assets/streaming.jpg" alt="" width="900" height="504" fetchpriority="high">
+                <div class="stage__playbar">
+                  <span class="stage__play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7L8 5Z"/></svg></span>
+                  <span class="stage__track"><span class="stage__progress"></span></span>
+                  <span class="stage__hd">4K</span>
+                </div>
+              </div>
+              <figcaption class="stage__chip stage__chip--film">
+                <svg viewBox="0 0 24 24" class="ico"><path d="M4 4h16v16H4V4Zm2 2v2h2V6H6Zm4 0v2h8V6h-8Zm-4 4v2h2v-2H6Zm4 0v2h8v-2h-8Zm-4 4v2h2v-2H6Zm4 0v2h8v-2h-8Z"/></svg>
+                Telecine e SporTV ao vivo no app
+              </figcaption>
+            </figure>
+
+            <!-- Velocímetro -->
+            <div class="stage__speed float-b">
+              <svg viewBox="0 0 200 130" class="gauge" id="gauge">
+                <defs>
+                  <linearGradient id="gaugeGrad" x1="0" y1="1" x2="1" y2="0">
+                    <stop offset="0" stop-color="#00E0FF"/>
+                    <stop offset=".6" stop-color="#0064FF"/>
+                    <stop offset="1" stop-color="#FCD400"/>
+                  </linearGradient>
+                </defs>
+                <path class="gauge__bg" d="M20 115 A80 80 0 0 1 180 115" />
+                <path class="gauge__bar" id="gaugeBar" d="M20 115 A80 80 0 0 1 180 115" />
+                <g class="gauge__needle" id="gaugeNeedle">
+                  <line x1="100" y1="115" x2="100" y2="48"/>
+                  <circle cx="100" cy="115" r="7"/>
+                </g>
+              </svg>
+              <p class="stage__speedval"><b id="speedVal">0</b><span> Mega</span></p>
+              <p class="stage__speedlabel">velocidade pra família toda</p>
+            </div>
+
+            <!-- Chips orbitando -->
+            <span class="stage__orb stage__orb--game float-c">
+              <svg viewBox="0 0 24 24" class="ico"><path d="M7 7h10a5 5 0 0 1 5 5v1a4 4 0 0 1-4 4c-1.6 0-2.6-.8-3.4-2h-5.2c-.8 1.2-1.8 2-3.4 2a4 4 0 0 1-4-4v-1a5 5 0 0 1 5-5Zm1 2v2H6v2h2v-2h2V9H8Zm8 .5a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Zm2.5 2.5a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Z"/></svg>
+              Ping baixo
+            </span>
+            <span class="stage__orb stage__orb--wifi float-d">
+              <svg viewBox="0 0 24 24" class="ico"><path d="M12 18.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM3.5 9.6l2.1 2.1a9 9 0 0 1 12.8 0l2.1-2.1a12 12 0 0 0-17 0ZM7 13.1l2.1 2.1a4 4 0 0 1 5.8 0l2.1-2.1a7 7 0 0 0-10 0Z"/></svg>
+              Wi-Fi na casa toda
+            </span>
+            <span class="stage__orb stage__orb--call float-e">
+              <svg viewBox="0 0 24 24" class="ico"><path d="M17 10.5V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3.5l5 4v-11l-5 4Z"/></svg>
+              Chamada estável
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <a class="hero__scroll" href="#marquee" aria-label="Rolar para ver mais">
+        <span></span>
+      </a>
+    </section>
+
+    <!-- ============================================================
+         Faixa marquee em loop infinito
+         ============================================================ -->
+    <div class="marquee" id="marquee" aria-hidden="true">
+      <div class="marquee__track">
+        <!-- conteúdo duplicado via JS para loop perfeito -->
+        <div class="marquee__group">
+          <span>1 GIGA + TV COMPLETA POR R$ 159,90</span><i>✦</i>
+          <span>SEM FIDELIDADE</span><i>✦</i>
+          <span>100% FIBRA ÓPTICA</span><i>✦</i>
+          <span>TELECINE · SPORTV · ESPN INCLUSOS</span><i>✦</i>
+          <span>ATENDIMENTO HUMANIZADO</span><i>✦</i>
+          <span>CONTRATE PELO WHATSAPP</span><i>✦</i>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         2 · BENEFÍCIOS rápidos
+         ============================================================ -->
+    <section class="section" id="beneficios">
+      <div class="container">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">Por que WebFiber</p>
+          <h2>Benefícios que você sente <span class="grad-text">todo dia</span></h2>
+          <p class="section__lead">Internet de verdade não é só velocidade no papel — é tudo funcionando, o tempo todo, em todos os aparelhos da casa.</p>
+        </header>
+
+        <div class="bgrid">
+          <article class="bcard reveal" data-rv data-tilt-card>
+            <span class="bcard__ico bcard__ico--cyan"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg></span>
+            <h3>100% fibra óptica</h3>
+            <p>Fibra pura do poste até dentro da sua casa. Nada de cabo antigo, sinal de rádio ou gambiarra no meio do caminho.</p>
+          </article>
+          <article class="bcard reveal" data-rv data-tilt-card>
+            <span class="bcard__ico bcard__ico--yellow"><svg viewBox="0 0 24 24"><path d="M12 2 3 6v6c0 5 3.8 8.4 9 10 5.2-1.6 9-5 9-10V6l-9-4Zm-1 13-3-3 1.4-1.4L11 12.2l4.6-4.6L17 9l-6 6Z"/></svg></span>
+            <h3>Sem fidelidade</h3>
+            <p>Você fica porque a internet é boa — não porque o contrato te prende. Liberdade total, sem multa.</p>
+          </article>
+          <article class="bcard reveal" data-rv data-tilt-card>
+            <span class="bcard__ico bcard__ico--blue"><svg viewBox="0 0 24 24"><path d="M12 4a8 8 0 0 0-8 8h3l-4 5-4-5h3A10 10 0 1 1 12 22a10 10 0 0 1-9.5-6.8l1.9-.6A8 8 0 1 0 12 4Z" transform="translate(1 0)"/><circle cx="13" cy="12" r="2"/></svg></span>
+            <h3>Velocidade real</h3>
+            <p>1 Giga que chega de verdade no seu Wi-Fi 6 — perfeito para streaming em 4K, jogos online e home office.</p>
+          </article>
+          <article class="bcard reveal" data-rv data-tilt-card>
+            <span class="bcard__ico bcard__ico--magenta"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.4 1.2 4.4 3 5.6V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.4c1.8-1.2 3-3.2 3-5.6a7 7 0 0 0-7-7Zm-3 18h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1Z"/></svg></span>
+            <h3>Ideal para tudo</h3>
+            <p>Streaming, jogos, aula online, reunião e rede social — todo mundo conectado ao mesmo tempo, sem brigar pelo Wi-Fi.</p>
+          </article>
+          <article class="bcard reveal" data-rv data-tilt-card>
+            <span class="bcard__ico bcard__ico--green"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-10 10v5a3 3 0 0 0 3 3h2v-8H5v-.5a7 7 0 1 1 14 0V12h-2v8h2a3 3 0 0 0 3-3v-5A10 10 0 0 0 12 2Z"/></svg></span>
+            <h3>Atendimento humanizado</h3>
+            <p>Aqui você fala com gente de verdade, sem robô de call center te empurrando pra lá e pra cá.</p>
+          </article>
+          <article class="bcard reveal" data-rv data-tilt-card>
+            <span class="bcard__ico bcard__ico--cyan2"><svg viewBox="0 0 24 24"><path d="m12 2 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 7.7l5.4-.8L12 2Zm0 16.5 4 2.1-.4 2.4-3.6-1.9-3.6 1.9-.4-2.4 4-2.1Z"/></svg></span>
+            <h3>Suporte próximo</h3>
+            <p>Provedor local com equipe no seu bairro: suporte externo 24h e instalação profissional ultra rápida.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         3 · EXPERIÊNCIA DE USO + carrossel de entretenimento
+         ============================================================ -->
+    <section class="section section--exp" id="experiencia">
+      <div class="container">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">Sua casa conectada</p>
+          <h2>Feita para <span class="grad-text">maratonar, jogar e trabalhar</span></h2>
+          <p class="section__lead">Com 700 Mega, cada cômodo vira sala de cinema, arena gamer ou escritório — ao mesmo tempo.</p>
+        </header>
+
+        <div class="exp">
+          <article class="exp__card reveal" data-rv>
+            <img src="assets/streaming.jpg" loading="lazy" alt="Família assistindo filmes em streaming na TV com internet fibra" width="900" height="504">
+            <div class="exp__body">
+              <h3>Filmes e séries sem travar</h3>
+              <p>Aperte o play e esquece: alta definição instantânea, sem roda de carregamento e sem aquele "vai travar agora?".</p>
+            </div>
+          </article>
+          <article class="exp__card reveal" data-rv>
+            <img src="assets/gaming.jpg" loading="lazy" alt="Jogador em partida online com internet de baixa latência" width="900" height="550">
+            <div class="exp__body">
+              <h3>Jogo online com ping baixo</h3>
+              <p>Conexão estável do início ao fim da partida. Lag não decide mais o resultado do seu jogo.</p>
+            </div>
+          </article>
+          <article class="exp__card reveal" data-rv>
+            <img src="assets/homeoffice.jpg" loading="lazy" alt="Pessoa em videochamada de trabalho com internet estável" width="900" height="599">
+            <div class="exp__body">
+              <h3>Home office sem vergonha</h3>
+              <p>Vídeo nítido e voz limpa na reunião — chega de "sua imagem congelou" na frente do chefe.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <!-- Carrossel de capas em loop infinito (pôsteres reais do catálogo, duas direções) -->
+      <div class="posters reveal" data-rv>
+        <div class="posters__row posters__row--left" data-marquee-row>
+          <div class="posters__group">
+            <img class="poster-img" src="assets/posters/topgun.png" alt="Pôster de filme do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/sonic3.jpeg" alt="Pôster de filme do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/kungfupanda.jpeg" alt="Pôster de filme do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/revenant.png" alt="Pôster de filme do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/bumblebee.png" alt="Pôster de filme do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/smurfs.jpeg" alt="Pôster de filme do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/adastra.png" alt="Pôster de filme do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/madagascar3.png" alt="Pôster de filme do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/assassinscreed.png" alt="Pôster de filme do catálogo de streaming" loading="lazy">
+          </div>
+        </div>
+        <div class="posters__row posters__row--right" data-marquee-row>
+          <div class="posters__group">
+            <img class="poster-img" src="assets/posters/deferias.png" alt="Pôster de série do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/everybodyhates.png" alt="Pôster de série do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/dexter.png" alt="Pôster de série do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/yellowstone.png" alt="Pôster de série do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/fbi.png" alt="Pôster de série do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/csimiami.png" alt="Pôster de série do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/pawpatrolserie.png" alt="Pôster de série do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/henrydanger.png" alt="Pôster de série do catálogo de streaming" loading="lazy">
+            <img class="poster-img" src="assets/posters/hawaiifive.png" alt="Pôster de série do catálogo de streaming" loading="lazy">
+          </div>
+        </div>
+      </div>
+
+      <p class="exp__channels container reveal" data-rv>
+        No 1 Giga a TV completa já está inclusa: <b>Telecine</b> · <b>SporTV</b> · <b>ESPN</b> · <b>CNN</b> · <b>Megapix</b> · <b>Multishow</b> e mais 60+ canais ao vivo, além de 30 mil filmes e séries.
+      </p>
+    </section>
+
+    <!-- ============================================================
+         3B · STREAMING BY WATCH — TV COMPLETA (60+ canais)
+         ============================================================ -->
+    <section class="section section--watch" id="watch">
+      <div class="container">
+        <header class="section__head reveal" data-rv>
+          <img class="watch__logo" src="assets/watch/watch_logo.webp" alt="Streaming by Watch TV" width="240" height="74" loading="lazy">
+          <h2>TV completa <span class="watch__hl">inclusa no seu plano</span></h2>
+          <p class="section__lead">No 1 Giga você leva o app <b>Watch TV</b> com <b>60+ canais ao vivo</b> — Telecine, SporTV, ESPN, CNN, Megapix, Multishow, GloboNews, GNT, AMC, Universal e os principais canais abertos — além de um catálogo com <b>mais de 30 mil filmes e séries</b>. Tudo na TV, no celular, no tablet e no computador.</p>
+        </header>
+
+        <figure class="watch__hero reveal" data-rv data-tilt-scene>
+          <img data-tilt src="assets/watch/watch_devices.webp" alt="App Watch TV rodando na TV, no notebook e no celular" width="1280" height="706" loading="lazy">
+          <figcaption class="watch__hint" aria-hidden="true">passe o mouse — a tela acompanha você</figcaption>
+        </figure>
+
+        <div class="watch__grid">
+          <figure class="watch__card reveal" data-rv>
+            <img src="assets/watch/watch_filmes.webp" alt="Catálogo de filmes no app Watch TV" width="880" height="462" loading="lazy">
+            <figcaption>Filmes e séries para maratonar</figcaption>
+          </figure>
+          <figure class="watch__card reveal" data-rv>
+            <img src="assets/watch/watch_home.webp" alt="Tela inicial do app Watch TV" width="880" height="761" loading="lazy">
+            <figcaption>Os melhores conteúdos em um único lugar</figcaption>
+          </figure>
+          <figure class="watch__card reveal" data-rv>
+            <img src="assets/watch/watch_celular.webp" alt="App Watch TV no celular" width="387" height="800" loading="lazy">
+            <figcaption>Leve no bolso para onde você for</figcaption>
+          </figure>
+        </div>
+
+        <div class="watch__canais reveal" data-rv>
+          <p>Alguns dos 60+ canais ao vivo inclusos no 1 Giga:</p>
+        </div>
+      </div>
+
+      <!-- canais em loop infinito (mesma mecânica do carrossel de capas) -->
+      <div class="posters canais-marquee reveal" data-rv aria-label="Canais inclusos no plano 1 Giga">
+        <div class="posters__row" data-marquee-row>
+          <div class="posters__group">
+            <img src="assets/canais/telecine.png" alt="Telecine" loading="lazy">
+            <img src="assets/canais/sportv.png" alt="SporTV" loading="lazy">
+            <img src="assets/canais/espn.png" alt="ESPN" loading="lazy">
+            <img src="assets/canais/cnn.png" alt="CNN Brasil" loading="lazy">
+            <img src="assets/canais/megapix.png" alt="Megapix" loading="lazy">
+            <img src="assets/canais/globonews.png" alt="GloboNews" loading="lazy">
+            <img src="assets/canais/gnt.png" alt="GNT" loading="lazy">
+            <img src="assets/canais/amc.png" alt="AMC" loading="lazy">
+            <img src="assets/canais/universal.png" alt="Universal TV" loading="lazy">
+            <img src="assets/canais/bis.png" alt="BIS" loading="lazy">
+            <img src="assets/canais/globoplay.png" alt="Globoplay" loading="lazy">
+            <img src="assets/canais/comedycentral.png" alt="Comedy Central" loading="lazy">
+            <img src="assets/canais/tvglobo.png" alt="TV Globo" loading="lazy">
+            <img src="assets/canais/sbt.png" alt="SBT" loading="lazy">
+            <img src="assets/canais/band.png" alt="Band" loading="lazy">
+            <img src="assets/canais/record.png" alt="Record" loading="lazy">
+            <img src="assets/canais/redetv.png" alt="RedeTV!" loading="lazy">
+            <img src="assets/canais/gloobinho.png" alt="Gloobinho" loading="lazy">
+          </div>
+        </div>
+      </div>
+      <p class="watch__mais container reveal" data-rv style="text-align:center">e muito mais — Multishow e dezenas de outros canais dentro do app, sem custo extra.</p>
+    </section>
+
+    <!-- ============================================================
+         4 · PLANO EM DESTAQUE (1 Giga dominante) + upgrades
+         ============================================================ -->
+    <section class="section section--plans" id="planos">
+      <div class="container">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">Planos</p>
+          <h2>O plano que <span class="grad-text">cabe no bolso</span> e sobra velocidade</h2>
+          <p class="section__lead">Todos sem fidelidade e com Wi-Fi de alta performance incluso. Consulte taxa de ativação.</p>
+        </header>
+
+        <div class="plans">
+          <!-- Card herói -->
+          <article class="plan plan--hero reveal" data-rv>
+            <span class="plan__flag">Oferta especial</span>
+            <header class="plan__head">
+              <p class="plan__speed"><b>1</b><span>GIGA</span></p>
+              <p class="plan__tag">TV Completa + ultra velocidade · o plano topo de linha</p>
+            </header>
+            <p class="plan__price"><i>por apenas</i><b><small>R$</small>159<span>,90</span></b><i>/mês</i></p>
+            <ul class="plan__feats">
+              <li>1 Giga de velocidade real</li>
+              <li>Internet 100% fibra óptica</li>
+              <li>Wi-Fi 6 de última geração</li>
+              <li>60+ canais ao vivo: Telecine, SporTV, ESPN…</li>
+              <li>Mais de 30 mil filmes e séries</li>
+              <li>Sem fidelidade — sem multa</li>
+            </ul>
+            <a class="btn btn--wa btn--xl plan__cta" data-wa href="#">Contratar agora</a>
+            <p class="plan__safe">Sem fidelidade · cancele quando quiser</p>
+          </article>
+
+          <!-- Upgrades -->
+          <div class="plans__side">
+            <article class="plan plan--mini reveal" data-rv>
+              <p class="plan__speed"><b>850</b><span>MEGA</span></p>
+              <p class="plan__tag">+ streaming Watch TV</p>
+              <p class="plan__price plan__price--mini"><b><small>R$</small>129<span>,90</span></b><i>/mês</i></p>
+              <a class="btn btn--ghost btn--sm" data-wa data-wa-msg="Olá! Quero contratar o plano de 850 Mega + streaming por R$ 129,90 da WebFiber." href="#">Quero o 850</a>
+            </article>
+            <article class="plan plan--mini reveal" data-rv>
+              <p class="plan__speed"><b>700</b><span>MEGA</span></p>
+              <p class="plan__tag">Wi-Fi Turbo · só internet</p>
+              <p class="plan__price plan__price--mini"><b><small>R$</small>99<span>,90</span></b><i>/mês</i></p>
+              <a class="btn btn--ghost btn--sm" data-wa data-wa-msg="Olá! Quero contratar o plano de 700 Mega por R$ 99,90 da WebFiber." href="#">Quero só internet</a>
+            </article>
+            <p class="plans__note reveal" data-rv>Não sabe qual escolher? <a data-wa data-wa-msg="Olá! Pode me ajudar a escolher o melhor plano da WebFiber para minha casa?" href="#">Chama no WhatsApp</a> que a gente te ajuda em 1 minuto.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         5 · ANTES × DEPOIS (comparador arrastável)
+         ============================================================ -->
+    <section class="section section--compare" id="comparativo">
+      <div class="container">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">Antes × Depois</p>
+          <h2>Sua internet trava? <span class="grad-text">Isso acaba hoje.</span></h2>
+          <p class="section__lead">Veja a diferença entre conviver com internet ruim e ter fibra de verdade.</p>
+        </header>
+
+        <div class="cmp reveal" data-rv id="cmp" role="group" aria-label="Comparação: internet antiga versus WebFiber">
+          <!-- Lado DEPOIS (fundo) — conteúdo ancorado à DIREITA para aparecer com o corte no meio -->
+          <div class="cmp__after">
+            <p class="cmp__label cmp__label--after">Com WebFiber</p>
+            <ul class="cmp__list cmp__list--after">
+              <li><span class="ok">✓</span> Filme em 4K direto, sem carregar</li>
+              <li><span class="ok">✓</span> Jogo fluido, ping estável</li>
+              <li><span class="ok">✓</span> Chamada nítida do início ao fim</li>
+              <li><span class="ok">✓</span> Casa toda no Wi-Fi, sem brigas</li>
+            </ul>
+            <div class="cmp__scene cmp__scene--after">
+              <span class="cmp__play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7L8 5Z"/></svg></span>
+              <span class="cmp__bar"><span></span></span>
+            </div>
+          </div>
+          <!-- Lado ANTES (recortado) -->
+          <div class="cmp__before" id="cmpBefore">
+            <p class="cmp__label cmp__label--before">Internet antiga</p>
+            <ul class="cmp__list">
+              <li><span class="no">✗</span> Vídeo carregando… carregando…</li>
+              <li><span class="no">✗</span> Lag na hora decisiva do jogo</li>
+              <li><span class="no">✗</span> "Sua imagem congelou de novo"</li>
+              <li><span class="no">✗</span> Wi-Fi que só funciona na sala</li>
+            </ul>
+            <div class="cmp__scene cmp__scene--before">
+              <span class="cmp__spinner" aria-hidden="true"></span>
+              <span class="cmp__buffer">buffering…</span>
+            </div>
+          </div>
+          <!-- Alça -->
+          <div class="cmp__handle" id="cmpHandle" role="slider" tabindex="0" aria-label="Arraste para comparar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+            <span class="cmp__grip"><svg viewBox="0 0 24 24"><path d="M8 5 3 12l5 7V5Zm8 0v14l5-7-5-7Z"/></svg></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         6 · COBERTURA (bairros + busca)
+         ============================================================ -->
+    <section class="section section--areas" id="cobertura">
+      <div class="container">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">Cobertura</p>
+          <h2>A fibra da WebFiber <span class="grad-text">já chegou no seu bairro?</span></h2>
+          <p class="section__lead">Atendemos os principais bairros do Rio de Janeiro — e a rede está sempre em expansão.</p>
+        </header>
+
+        <div class="areas reveal" data-rv>
+          <div class="areas__cta">
+            <a class="btn btn--wa btn--xl" data-wa data-wa-msg="Olá! Quero saber se a WebFiber atende no meu endereço." href="#">Consultar disponibilidade no meu endereço</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         7 · DIFERENCIAIS (local × gigante)
+         ============================================================ -->
+    <section class="section section--versus" id="diferenciais">
+      <div class="container">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">Diferenciais</p>
+          <h2>Provedor local é <span class="grad-text">outro nível de cuidado</span></h2>
+          <p class="section__lead">A WebFiber é pioneira em fibra no Centro do Rio. Aqui você não é um número de protocolo.</p>
+        </header>
+
+        <div class="versus reveal" data-rv>
+          <div class="versus__col versus__col--them">
+            <h3>Operadora gigante</h3>
+            <ul>
+              <li><span class="no">✗</span> Robô no telefone e fila de espera</li>
+              <li><span class="no">✗</span> Fidelidade de 12 meses com multa</li>
+              <li><span class="no">✗</span> Técnico que "chega em até 5 dias úteis"</li>
+              <li><span class="no">✗</span> Velocidade que só existe no anúncio</li>
+            </ul>
+          </div>
+          <div class="versus__vs" aria-hidden="true">VS</div>
+          <div class="versus__col versus__col--us">
+            <h3>WebFiber <small>provedor local</small></h3>
+            <ul>
+              <li><span class="ok">✓</span> Gente de verdade no WhatsApp</li>
+              <li><span class="ok">✓</span> Sem fidelidade — fica quem quer</li>
+              <li><span class="ok">✓</span> Equipe própria nos bairros que atende</li>
+              <li><span class="ok">✓</span> Velocidade que chega de verdade</li>
+              <li><span class="ok">✓</span> Contratação simples, direto no WhatsApp</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         8 · CONFIANÇA (números + avaliações reais)
+         ============================================================ -->
+    <section class="section section--trust" id="confianca">
+      <div class="container">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">Confiança</p>
+          <h2>Quem tem WebFiber <span class="grad-text">recomenda</span></h2>
+        </header>
+
+        <div class="stats reveal" data-rv>
+          <div class="stat"><b data-count="10" data-suffix="+">0</b><span>anos no mercado</span></div>
+          <div class="stat"><b data-count="50000" data-format="mil">0</b><span>metros de fibra óptica</span></div>
+          <div class="stat"><b data-count="4.8" data-decimals="1">0</b><span>★ avaliação no Google</span></div>
+          <div class="stat"><b data-count="99.9" data-decimals="1" data-suffix="%">0</b><span>de uptime</span></div>
+        </div>
+      </div>
+
+      <div class="reviews reveal" data-rv aria-label="Avaliações reais de clientes no Google">
+        <div class="reviews__row" data-marquee-row data-marquee-slow>
+          <div class="reviews__group">
+            <img src="assets/reviews/review-1.jpeg" loading="lazy" alt="Avaliação real de cliente no Google" width="280" height="213">
+            <img src="assets/reviews/review-2.jpeg" loading="lazy" alt="Avaliação real de cliente no Google" width="280" height="175">
+            <img src="assets/reviews/review-3.jpeg" loading="lazy" alt="Avaliação real de cliente no Google" width="280" height="167">
+            <img src="assets/reviews/review-4.jpeg" loading="lazy" alt="Avaliação real de cliente no Google" width="280" height="170">
+            <img src="assets/reviews/review-5.jpeg" loading="lazy" alt="Avaliação real de cliente no Google" width="280" height="193">
+            <img src="assets/reviews/review-6.jpeg" loading="lazy" alt="Avaliação real de cliente no Google" width="280" height="204">
+            <img src="assets/reviews/review-7.jpeg" loading="lazy" alt="Avaliação real de cliente no Google" width="280" height="192">
+            <img src="assets/reviews/review-8.jpeg" loading="lazy" alt="Avaliação real de cliente no Google" width="280" height="194">
+            <img src="assets/reviews/review-9.jpeg" loading="lazy" alt="Avaliação real de cliente no Google" width="280" height="180">
+          </div>
+        </div>
+        <p class="reviews__note container">Avaliações reais do perfil da WebFiber no Google.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         9 · FAQ
+         ============================================================ -->
+    <section class="section section--faq" id="faq">
+      <div class="container container--narrow">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">Dúvidas frequentes</p>
+          <h2>Tudo o que você precisa saber <span class="grad-text">antes de assinar</span></h2>
+        </header>
+
+        <div class="faq reveal" data-rv id="faqList">
+          <details class="faq__item" open>
+            <summary>O plano de 1 Giga tem fidelidade?</summary>
+            <p>Não! Nossos planos não possuem fidelidade obrigatória — você permanece porque gosta da qualidade, da estabilidade e do atendimento, não por contrato.</p>
+          </details>
+          <details class="faq__item">
+            <summary>A internet é fibra óptica mesmo?</summary>
+            <p>Sim, 100%. Nossa conexão é FTTH (fibra até a sua casa): fibra pura do poste até dentro do seu imóvel, sem sinal de rádio, sem antena e sem cabo de cobre no meio do caminho.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Como faço para contratar?</summary>
+            <p>Direto pelo WhatsApp: você chama no <b>(21) 98558-9201</b>, confirma a cobertura do seu endereço e agenda a instalação. Simples assim, sem burocracia.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Em quais bairros a WebFiber atende?</summary>
+            <p>Atendemos os principais bairros do Rio de Janeiro e a rede está sempre em expansão. Consulte a disponibilidade no seu endereço pelo WhatsApp: <b>(21) 98558-9201</b>.</p>
+          </details>
+          <details class="faq__item">
+            <summary>A instalação é rápida?</summary>
+            <p>Sim! Equipe própria, qualificada e organizada: instalação limpa, concluída em poucos minutos e com o Wi-Fi já configurado funcionando.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Posso contratar e tirar dúvidas pelo WhatsApp?</summary>
+            <p>Pode — o WhatsApp é nosso canal principal. Atendimento humanizado, com gente de verdade respondendo rápido: <b>(21) 98558-9201</b>.</p>
+          </details>
+          <details class="faq__item">
+            <summary>1 Giga é ideal para quem?</summary>
+            <p>Para quem quer o máximo: casa cheia de aparelhos, streaming em 4K, jogos sem lag e home office — com TV completa inclusa para a família assistir ao vivo o que quiser.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Quais canais estão inclusos no 1 Giga?</summary>
+            <p>Os 60+ canais ao vivo do app Watch TV, incluindo <b>Telecine</b>, <b>SporTV</b>, <b>ESPN</b>, <b>CNN</b>, <b>Megapix</b>, <b>Multishow</b>, GloboNews, GNT, AMC, Universal e os principais canais abertos — além de um catálogo com mais de 30 mil filmes e séries.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Funciona bem para streaming e jogos?</summary>
+            <p>É a especialidade da fibra: alta velocidade com latência baixa e conexão estável. Filme em alta definição sem carregar e partida online sem lag, do início ao fim.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         10 · CTA FINAL
+         ============================================================ -->
+    <section class="final" id="contratar">
+      <div class="final__waves" aria-hidden="true"></div>
+      <div class="container final__grid">
+        <div class="final__copy reveal" data-rv>
+          <h2>Pronto para ter <span class="final__hl">internet de verdade?</span></h2>
+          <p class="final__offer">Contrate <b>1 Giga + TV completa</b> por <b class="final__price">R$ 159,90/mês</b> — 100% fibra, sem fidelidade.</p>
+          <a class="btn btn--wa btn--xl final__btn" data-wa href="#">
+            <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .1 0 .8-.3 1.4Z"/></svg>
+            Chamar no WhatsApp agora
+          </a>
+          <p class="final__micro">(21) 98558-9201 · resposta rápida em horário comercial</p>
+        </div>
+        <figure class="final__milo reveal" data-rv>
+          <img src="assets/milo_oficial.png" alt="Milo, o mascote da WebFiber, segurando um roteador Wi-Fi" width="640" height="800" loading="lazy">
+        </figure>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="footer">
+    <div class="container footer__grid">
+      <div class="footer__brand">
+        <img src="assets/logo_webfiber.png" alt="WebFiber Telecom" width="56" height="70" loading="lazy">
+        <p>Internet 100% fibra óptica para você e toda a sua família. Provedor de internet local, pioneiro no Centro do Rio de Janeiro.</p>
+      </div>
+      <div class="footer__col">
+        <h4>Fale com a gente</h4>
+        <ul>
+          <li><a data-wa href="#">WhatsApp: (21) 98558-9201</a></li>
+          <li><a href="tel:+552122910825">Telefone: (21) 2291-0825</a></li>
+          <li><a href="https://www.instagram.com/webfiber.provedor" target="_blank" rel="noopener">@webfiber.provedor</a></li>
+          <li><a href="https://webfiberprovedor.com.br" target="_blank" rel="noopener">webfiberprovedor.com.br</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4>Cobertura no Rio de Janeiro</h4>
+        <p class="footer__areas">Atendemos os principais bairros do Rio de Janeiro — e a rede está sempre em expansão. Consulte a disponibilidade no seu endereço pelo WhatsApp.</p>
+      </div>
+    </div>
+    <p class="footer__base container">© <span id="anoAtual">2026</span> WebFiber Telecom · Internet fibra no Rio de Janeiro · Planos sem fidelidade</p>
+  </footer>
+
+  <!-- FAB WhatsApp (desktop) -->
+  <a class="fab" data-wa href="#" aria-label="Chamar a WebFiber no WhatsApp">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .1 0 .8-.3 1.4Z"/></svg>
+  </a>
+
+  <!-- Barra CTA fixa (mobile) -->
+  <div class="stickybar" id="stickybar" aria-hidden="true">
+    <p><b>1 Giga</b> + TV por <b class="stickybar__price">R$ 159,90</b></p>
+    <a class="btn btn--wa btn--sm" data-wa href="#">Chamar no WhatsApp</a>
+  </div>
+
+  <script src="js/main.js?v=20260612d" defer></script>
+</body>
+</html>
