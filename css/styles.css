@@ -409,12 +409,13 @@ summary { cursor: pointer; }
 .posters { margin-top: clamp(40px, 6vw, 64px); display: grid; gap: 18px; overflow: hidden; }
 .posters__row { overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
 .posters__group { display: flex; gap: 18px; width: max-content; padding-right: 18px; }
-.posters__row--left  .posters__track { animation: marquee 36s linear infinite; }
-.posters__row--right .posters__track { animation: marquee 36s linear infinite reverse; }
-.posters__track { display: flex; width: max-content; }
+.posters__row--left  .posters__track { animation: marquee 44s linear infinite; }
+.posters__row--right .posters__track { animation: marquee 44s linear infinite reverse; }
+.posters__track { display: flex; width: max-content; will-change: transform; }
 /* Pôsteres reais do catálogo — mantém o formato/proporção original de cada imagem */
 .poster-img {
-  height: clamp(160px, 17vw, 235px); width: auto; flex: none;
+  height: clamp(160px, 17vw, 235px) !important; width: auto !important;
+  max-width: none; flex: none;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, .14);
   box-shadow: 0 14px 30px rgba(0, 0, 0, .45);
