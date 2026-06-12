@@ -9,9 +9,9 @@
 | LP 700 Mega | raiz desta pasta | 🟢 NO AR | webfiberprovedor.com.br/promo700mega |
 | LP 850 Mega + Watch | `850mega/` | 🟢 NO AR | webfiberprovedor.com.br/promo850mega |
 | LP 1 Giga + TV completa | `1giga/` | 🟢 NO AR | webfiberprovedor.com.br/promo1giga |
-| **NOVO SITE PRINCIPAL** | `novosite/` | 🟡 PRÉVIA (aguarda OK p/ substituir o original) | barbinhalol.github.io/webfiber-promo/novosite/ |
+| **NOVO SITE PRINCIPAL** | `novosite/` | 🟢 **NO AR NA RAIZ desde 2026-06-12** (substituiu a SPA antiga COM OK do dono) | **webfiberprovedor.com.br** |
 
-Preview local: `Abrir LP 700 Mega.bat` (porta 8840; novosite em /novosite/). O site oficial atual (SPA antiga) está INTACTO na raiz do domínio.
+Preview local: `Abrir LP 700 Mega.bat` (porta 8840; novosite em /novosite/). **A SPA antiga foi backupada em `public_html/backup-spa-20260612/`** (index.html, assets/ inteira, htaccess.txt, robots.txt, placeholder.svg) — rollback = restaurar esses arquivos.
 
 ## O ESTILO (site-modelo — replicar em tudo da WebFiber)
 
@@ -47,10 +47,17 @@ Preview local: `Abrir LP 700 Mega.bat` (porta 8840; novosite em /novosite/). O s
 - **Meta Pixel `1400292098619943` EM PRODUÇÃO**: PageView no `<head>` (com guard de domínio nas LPs/novosite — preview e localhost não sujam o dataset) + evento **Lead** no clique de todo botão WhatsApp (`[data-wa]` via main.js nas LPs; na SPA React da raiz, listener por texto: "assinar agora"/"assinar pelo whatsapp"/"contato"). No ar na raiz + 3 promo; novosite com tudo no código (prévia GitHub Pages). **Backup da SPA pré-pixel: `public_html/index-backup-antes-pixel.html`** (raiz agora tem 4477 bytes, não mais 3720).
 - **Mobile do novosite**: preço do rotador em 2 linhas limpas (rótulo pequeno em cima, "R$ 159,90/mês" inteiro embaixo, R$ em .5em via `<small>`) — commit `da7e9e3`.
 
+## ✅ NOVOSITE PUBLICADO NA RAIZ (2026-06-12, noite — OK explícito do dono)
+
+- 71 arquivos do commit `a609a06` subidos via ponte; **index.html por último = troca sem downtime**.
+- `.htaccess` da raiz TROCADO (o antigo catch-all da SPA está no backup): força HTTPS + www→apex (301), URLs antigas da SPA → 301 p/ home, mod_expires (imgs 30d, css/js 7d) + deflate. Brotli ativo no LiteSpeed (HTML 52,5KB → 11,5KB). Subpastas (promo*/corrida/parceriasindico) têm .htaccess próprio e ficaram intactas — TODAS testadas 200 após a troca.
+- **Search Console CONFIGURADO na conta marketingwebfiber**: propriedade `https://webfiberprovedor.com.br` verificada por arquivo HTML (`googlebbf6f8f3c52729db.html` na raiz — NÃO REMOVER); sitemap.xml enviado e **Processado (4 páginas: home + 3 promo)**; indexação prioritária da home solicitada via Inspeção de URL.
+- sitemap.xml agora lista home + as 3 LPs; robots.txt novo na raiz.
+
 ## ⏳ PENDÊNCIAS
 
-1. **Publicar o novosite no lugar do site original** — SÓ COM OK EXPLÍCITO do dono. Plano: backup da raiz do public_html (copiar index.html + assets/ da SPA antiga p/ pasta backup-spa-<data>/ via server-copy) → subir o conteúdo de `novosite/` na raiz (manter pastas corrida/, promo*/, parceriasindico/, robots.txt e sitemap.xml vão juntos) → testar tudo → Search Console + sitemap + Rich Results Test (checklist no relatório SEO). **Lembrar: a SPA atual da raiz agora tem o pixel — o novosite já tem o dele, não perder o evento Lead na troca.**
-2. DNS do subdomínio promo (opcional, parado): registro A `promo` → 45.132.157.77 na Locaweb (login é do dono).
+1. DNS do subdomínio promo (opcional, parado): registro A `promo` → 45.132.157.77 na Locaweb (login é do dono).
+2. Limpeza futura (sem pressa): assets órfãos da SPA antiga ainda misturados em `public_html/assets/` (inofensivos; o backup tem cópia) e os 2 index-backup-*.html soltos na raiz.
 
 ## Memórias permanentes relacionadas
 
