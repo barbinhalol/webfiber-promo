@@ -412,42 +412,18 @@ summary { cursor: pointer; }
 .posters__row--left  .posters__track { animation: marquee 36s linear infinite; }
 .posters__row--right .posters__track { animation: marquee 36s linear infinite reverse; }
 .posters__track { display: flex; width: max-content; }
-.poster {
-  display: flex; flex-direction: column; justify-content: flex-end; gap: 4px;
-  width: 190px; aspect-ratio: 16/9.4; flex: none;
-  border-radius: 14px; padding: 14px 16px;
+/* Pôsteres reais do catálogo — mantém o formato/proporção original de cada imagem */
+.poster-img {
+  height: clamp(160px, 17vw, 235px); width: auto; flex: none;
+  border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, .14);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .2);
-  position: relative; overflow: hidden;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .45);
+  transition: transform .35s ease, box-shadow .35s;
 }
-.poster::before { /* luz de projetor + vinheta: tira a cara de retângulo chapado */
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background:
-    radial-gradient(120% 90% at 82% 0%, rgba(255, 255, 255, .3), transparent 45%),
-    radial-gradient(140% 100% at 50% 115%, rgba(0, 0, 0, .42), transparent 55%);
+.poster-img:hover {
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 22px 44px rgba(0, 0, 0, .55), 0 0 34px rgba(0, 100, 255, .25);
 }
-.poster::after {
-  content: "▶"; position: absolute; top: 9px; right: 10px;
-  display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
-  font-size: .62rem; padding-left: 2px;
-  background: rgba(2, 8, 26, .5); border: 1px solid rgba(255, 255, 255, .35);
-  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-}
-.poster i, .poster b { position: relative; text-shadow: 0 2px 10px rgba(0, 0, 0, .45); }
-.poster i { font-style: normal; font-size: .58rem; font-weight: 700; letter-spacing: .18em; opacity: .8; }
-.poster b { font-family: var(--f-display); font-weight: 400; font-size: 1.05rem; letter-spacing: .03em; line-height: 1.1; }
-.poster--p1 { background: linear-gradient(150deg, #FF2E92, #7A1B4E 70%); }
-.poster--p2 { background: linear-gradient(150deg, #0064FF, #032456 70%); }
-.poster--p3 { background: linear-gradient(150deg, #00E0FF, #015A78 70%); color: #03222E; }
-.poster--p4 { background: linear-gradient(150deg, #FCD400, #8A6E00 70%); color: #221C00; }
-.poster--p5 { background: linear-gradient(150deg, #4A2EFF, #1A0E66 70%); }
-.poster--p6 { background: linear-gradient(150deg, #FF6B2E, #722806 70%); }
-.poster--p7 { background: linear-gradient(150deg, #2EFFB1, #0A5E3C 70%); color: #03291A; }
-.poster--p8 { background: linear-gradient(150deg, #B8C4D9, #44506B 70%); color: #10141D; }
-.poster--p9 { background: linear-gradient(150deg, #1B2B57, #060B1A 70%); }
-.poster--p10{ background: linear-gradient(150deg, #FF2EDB, #5E0A50 70%); }
-.poster--p11{ background: linear-gradient(150deg, #2E8BFF, #0A2C5E 70%); }
-.poster--p12{ background: linear-gradient(150deg, #FF4444, #5E0A0A 70%); }
 
 .exp__channels { margin-top: 28px; text-align: center; font-size: .92rem; color: var(--txt-faint); }
 .exp__channels b { color: var(--txt-dim); font-weight: 600; }
