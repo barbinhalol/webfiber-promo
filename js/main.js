@@ -24,6 +24,8 @@ document.querySelectorAll("[data-wa]").forEach(el => {
   // conversão do Google Ads no clique (função definida no <head>);
   // o event_callback garante o envio antes de abrir o WhatsApp
   el.setAttribute("onclick", `return gtag_report_conversion('${url.replace(/'/g, "%27")}');`);
+  // conversão do Meta Pixel no mesmo clique (fbq só existe no domínio oficial — guard no <head>)
+  el.addEventListener("click", () => { if (typeof fbq !== "undefined") fbq("track", "Lead"); });
 });
 
 /* --------------------------------------------------------------------------
