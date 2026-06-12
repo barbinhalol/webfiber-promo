@@ -842,79 +842,108 @@ summary { cursor: pointer; }
   .watch__hint { display: none; }
 }
 
-
 /* ==========================================================================
-   TEMA "SITE PRINCIPAL" — fundo azul royal da marca (#0064FF), como o original
-   (apêndice: sobrepõe o tema escuro por cascata)
+   TEMA "SITE PRINCIPAL" v2 — azul royal vibrante (igual às seções de referência)
+   Rodapé/CTA final ficam no azul escuro. Apêndice: sobrepõe o tema base.
    ========================================================================== */
 :root {
-  --azul-abismo: #0046BE;
-  --azul-noite: #0a6dff;
-  --glass: rgba(2, 18, 70, .30);
-  --glass-2: rgba(2, 18, 70, .44);
-  --stroke: rgba(255, 255, 255, .26);
+  --glass: rgba(2, 22, 80, .26);
+  --glass-2: rgba(2, 22, 80, .40);
+  --stroke: rgba(255, 255, 255, .28);
   --stroke-soft: rgba(255, 255, 255, .18);
-  --txt-dim: rgba(255, 255, 255, .86);
-  --txt-faint: rgba(255, 255, 255, .66);
+  --txt-dim: rgba(255, 255, 255, .88);
+  --txt-faint: rgba(255, 255, 255, .68);
 }
 body {
   background:
-    radial-gradient(1100px 700px at 88% -8%, rgba(0, 224, 255, .18), transparent 60%),
-    radial-gradient(900px 650px at -8% 30%, rgba(255, 255, 255, .08), transparent 55%),
-    linear-gradient(180deg, #0a6dff 0%, #0064FF 34%, #0046BE 100%);
+    radial-gradient(1200px 820px at 80% -14%, rgba(86, 160, 255, .55), transparent 56%),
+    radial-gradient(1000px 720px at -6% 8%, rgba(120, 180, 255, .28), transparent 52%),
+    linear-gradient(168deg, #1166ff 0%, #0a55ee 46%, #0a4ad6 100%);
+  background-attachment: fixed;
 }
-.aurora__orb--a { background: rgba(0, 224, 255, .22); }
-.aurora__orb--b { background: rgba(255, 255, 255, .10); }
-.aurora__orb--c { background: rgba(252, 212, 0, .10); }
-.hero__canvas { display: none; } /* sobre o royal, o hero fica limpo como o original */
-.topbar.is-scrolled { background: rgba(0, 64, 180, .88); }
-.marquee { background: linear-gradient(90deg, rgba(2, 18, 70, .35), rgba(2, 18, 70, .22), rgba(2, 18, 70, .35)); }
+.aurora { display: none; }              /* o azul vibrante já é o fundo; sem orbs */
+.hero__canvas { display: none; }
+.hero__waves { opacity: .5; }
+.topbar.is-scrolled { background: rgba(8, 64, 200, .90); }
+.marquee { background: linear-gradient(90deg, rgba(2, 22, 80, .34), rgba(2, 22, 80, .20), rgba(2, 22, 80, .34)); }
 .section--plans { background: none; }
-.final { background: radial-gradient(800px 400px at 20% 20%, rgba(0, 224, 255, .14), transparent 60%), linear-gradient(135deg, #0040B0 0%, #002878 60%, #001A52 100%); }
-.footer { background: #00123F; }
-.stickybar { background: rgba(0, 34, 102, .95); }
-.cmp__after { background: linear-gradient(225deg, #0046BE, #002878 70%); }
-.versus__col--us { background: linear-gradient(165deg, rgba(2, 18, 70, .45), rgba(2, 18, 70, .30)); }
-.faq__item[open] { background: rgba(2, 18, 70, .38); }
+.section--watch { background: radial-gradient(900px 520px at 50% 0%, rgba(255, 90, 40, .12), transparent 62%); }
+.bcard, .exp__card, .faq__item, .stat, .areas__cta, .plan--mini { backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.final { background: radial-gradient(800px 400px at 20% 20%, rgba(0, 224, 255, .14), transparent 60%), linear-gradient(135deg, #003fae 0%, #00256f 58%, #001846 100%); }
+.footer { background: #00102F; }
+.stickybar { background: rgba(0, 32, 96, .95); }
+.cmp__after { background: linear-gradient(225deg, #0a4ad6, #00256f 70%); }
+.versus__col--us { background: linear-gradient(165deg, rgba(2, 22, 80, .42), rgba(2, 22, 80, .28)); }
+.faq__item[open] { background: rgba(2, 22, 80, .40); }
 
 /* ---------- ROTADOR 3D de planos (hero) ---------- */
-.rotador { perspective: 950px; display: block; }
+.rotador { perspective: 950px; display: block; position: relative; }
+.rotador .hero__mega { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 .1em; }
+.rotador .hero__num { font-size: clamp(4.2rem, 11.5vw, 8.8rem); }
+.rotador .hero__unit { font-size: clamp(2rem, 5vw, 3.8rem); }
 .rot-flip { display: inline-block; }
 .rot-flip .ch {
   display: inline-block; backface-visibility: hidden; will-change: transform;
   transition: transform .55s cubic-bezier(.25, .8, .25, 1.15), opacity .42s ease, filter .42s ease;
   transform-origin: 50% 58%;
 }
-.rot-flip.out .ch { transform: rotateX(88deg) translateZ(26px) translateY(-8px); opacity: 0; filter: blur(5px); }
-.rot-extra { display: block; margin: 6px 0 4px; min-height: 2.1em; transition: opacity .4s, transform .5s; }
+.rot-flip.out .ch { transform: rotateX(90deg) translateZ(28px) translateY(-10px); opacity: 0; filter: blur(6px); }
+/* o background-clip do pai não pinta os <i> filhos: cor sólida garante visibilidade */
+.hero__num .ch { color: #fff; -webkit-text-fill-color: #fff; text-shadow: 0 6px 26px rgba(0, 0, 0, .35); }
+.hero__unit .ch { color: var(--amarelo); -webkit-text-fill-color: var(--amarelo); text-shadow: 0 0 28px rgba(252, 212, 0, .45); }
+
+.rot-fx { position: absolute; left: 50%; top: 40%; width: 132%; height: 158%; transform: translate(-50%, -50%); pointer-events: none; z-index: 0; }
+.rotador .hero__mega, .rotador .rot-extra, .rotador .hero__price, .rotador .rot-dots { position: relative; z-index: 1; }
+
+.rot-extra { display: block; margin: 8px 0 6px; min-height: 2.1em; transition: opacity .4s, transform .5s; }
 .rot-extra.out { opacity: 0; transform: translateY(10px); }
 .rot-extra__pill {
   display: inline-flex; align-items: center; gap: .5em;
-  font-size: clamp(.8rem, 1.4vw, 1rem); font-weight: 800; letter-spacing: .14em;
+  font-size: clamp(.78rem, 1.4vw, 1rem); font-weight: 800; letter-spacing: .14em;
   padding: .5em 1.2em; border-radius: 999px;
-  background: rgba(2, 18, 70, .40); border: 1px solid var(--stroke);
+  background: rgba(2, 22, 80, .40); border: 1px solid var(--stroke);
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
 }
 .rot-extra__pill--watch {
   background: linear-gradient(135deg, #FF6A3D, #FF4E20); border-color: rgba(255, 255, 255, .35);
   color: #fff; box-shadow: 0 10px 30px rgba(255, 78, 32, .45);
 }
-.rot-dots { display: flex; gap: 10px; margin-top: 14px; }
-.rot-dot {
-  width: 34px; height: 6px; border-radius: 99px; border: 0; cursor: pointer;
-  background: rgba(255, 255, 255, .30); transition: background .3s, width .3s;
-}
+.rot-dots { display: flex; gap: 10px; margin-top: 16px; }
+.rot-dot { width: 34px; height: 6px; border-radius: 99px; border: 0; cursor: pointer; background: rgba(255, 255, 255, .32); transition: background .3s, width .3s; }
 .rot-dot.on { background: var(--amarelo); width: 52px; }
 
-/* ---------- Milo no hero ---------- */
-.stage__milo {
-  position: absolute; left: -38px; bottom: -64px; width: clamp(130px, 13vw, 185px);
-  transform: translateZ(110px);
-  filter: drop-shadow(0 24px 38px rgba(0, 0, 0, .45)) drop-shadow(0 0 28px rgba(0, 224, 255, .25));
-  animation: floaty 6.5s ease-in-out .9s infinite;
+/* ---------- Milo no sofá + TV com velocímetro DENTRO da tela ---------- */
+.hero__milotv { perspective: 1100px; display: grid; place-items: center; margin: 0; }
+.milotv {
+  position: relative; width: 100%; max-width: 540px;
+  transition: transform .35s ease-out; transform-style: preserve-3d;
+}
+.milotv__img {
+  width: 100%; height: auto; display: block;
+  filter: drop-shadow(0 30px 50px rgba(0, 0, 0, .45));
+}
+.milotv__screen {
+  position: absolute; left: 37.6%; top: 29.8%; width: 55.7%; height: 39.2%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-radius: 7px; overflow: hidden;
+  background: radial-gradient(120% 130% at 50% 18%, #0a2350, #04122e 60%, #02060f);
+  box-shadow: inset 0 0 26px rgba(0, 100, 255, .35), 0 0 30px rgba(0, 224, 255, .25);
+}
+.milotv__screen::before { /* brilho sutil de tela ligada */
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .10), transparent 40%);
   pointer-events: none;
 }
-.stage__milo img { width: 100%; height: auto; }
+.milotv__screen .gauge { width: 56%; height: auto; }
+.milotv__screen .gauge__bg, .milotv__screen .gauge__bar { stroke-width: 13; stroke-linecap: round; fill: none; }
+.milotv__screen .gauge__bg { stroke: rgba(255, 255, 255, .12); }
+.milotv__screen .gauge__bar { stroke: url(#gaugeGrad); stroke-dasharray: 251.3; stroke-dashoffset: 251.3; }
+.milotv__screen .gauge__needle { stroke: #fff; stroke-width: 4; transform-origin: 100px 115px; transform: rotate(-90deg); }
+.milotv__screen .gauge__needle circle { fill: #fff; stroke: none; }
+.milotv__val { line-height: 1; margin-top: 1%; }
+.milotv__val b { font-family: var(--f-display); font-weight: 400; font-size: clamp(1rem, 3.6vw, 2.1rem); color: var(--amarelo); }
+.milotv__val span { font-size: .5em; color: #cfe6ff; margin-left: 3px; }
+.milotv__label { font-size: clamp(.42rem, 1.15vw, .66rem); color: rgba(255, 255, 255, .62); margin-top: 2px; }
 
 /* ---------- Trio de planos (cards brancos, como o site original) ---------- */
 .plans { grid-template-columns: repeat(3, 1fr); align-items: stretch; }
@@ -942,14 +971,12 @@ body {
 .plan--popular {
   border: 2px solid var(--amarelo);
   box-shadow: 0 34px 80px rgba(0, 20, 80, .5), 0 0 50px rgba(252, 212, 0, .35);
-  transform: scale(1.035);
-  position: relative; z-index: 2;
+  transform: scale(1.035); position: relative; z-index: 2;
 }
 .plan--popular:hover { transform: scale(1.035) translateY(-8px); }
 .plan--popular .plan__flag {
   background: linear-gradient(135deg, #FFE45C, var(--amarelo)); color: #221C00;
-  box-shadow: 0 10px 26px rgba(252, 212, 0, .45);
-  left: 50%; transform: translateX(-50%);
+  box-shadow: 0 10px 26px rgba(252, 212, 0, .45); left: 50%; transform: translateX(-50%);
 }
 .plans__note--trio { margin-top: 26px; text-align: center; }
 
@@ -959,7 +986,8 @@ body {
   .plan--popular:hover { transform: translateY(-8px); }
 }
 @media (max-width: 860px) {
-  .stage__milo { left: -10px; bottom: -52px; width: 128px; }
+  .hero__milotv { margin-top: 26px; }
+  .milotv { max-width: 380px; }
   .rot-dots { justify-content: flex-start; }
 }
 

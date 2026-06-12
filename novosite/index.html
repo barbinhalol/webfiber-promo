@@ -55,7 +55,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/styles.css?v=novosite1"> <!-- ?v= força navegadores a pegar o arquivo novo a cada atualização -->
+  <link rel="stylesheet" href="css/styles.css?v=novosite3"> <!-- ?v= força navegadores a pegar o arquivo novo a cada atualização -->
 
   <!-- Dados estruturados: provedor local + oferta + FAQ -->
   <script type="application/ld+json">
@@ -125,6 +125,7 @@
 
           <!-- ROTADOR DE PLANOS: letras viram em 3D entre 700 / 850 / 1 GIGA (config no main.js) -->
           <h1 class="hero__title rotador reveal" data-rv id="rotador">
+            <canvas class="rot-fx" id="rotFx" aria-hidden="true"></canvas>
             <span class="hero__mega">
               <b class="hero__num rot-flip" id="rotNum" aria-live="polite">700</b><b class="hero__unit rot-flip" id="rotUnit">MEGA</b>
             </span>
@@ -160,28 +161,13 @@
           </p>
         </div>
 
-        <!-- Composição 3D flutuante -->
-        <div class="hero__stage" data-tilt-scene aria-hidden="true">
-          <div class="stage" data-tilt>
-            <!-- TV / streaming -->
-            <figure class="stage__tv float-a">
-              <div class="stage__screen">
-                <img src="assets/streaming.jpg" alt="" width="900" height="504" fetchpriority="high">
-                <div class="stage__playbar">
-                  <span class="stage__play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7L8 5Z"/></svg></span>
-                  <span class="stage__track"><span class="stage__progress"></span></span>
-                  <span class="stage__hd">4K</span>
-                </div>
-              </div>
-              <figcaption class="stage__chip stage__chip--film">
-                <svg viewBox="0 0 24 24" class="ico"><path d="M4 4h16v16H4V4Zm2 2v2h2V6H6Zm4 0v2h8V6h-8Zm-4 4v2h2v-2H6Zm4 0v2h8v-2h-8Zm-4 4v2h2v-2H6Zm4 0v2h8v-2h-8Z"/></svg>
-                Telecine e SporTV ao vivo no app
-              </figcaption>
-            </figure>
-
-            <!-- Velocímetro -->
-            <div class="stage__speed float-b">
-              <svg viewBox="0 0 200 130" class="gauge" id="gauge">
+        <!-- Milo no sofá assistindo TV — o velocímetro roda DENTRO da tela -->
+        <figure class="hero__milotv reveal" data-rv data-tilt-scene>
+          <div class="milotv" data-tilt>
+            <img class="milotv__img" src="assets/watch/milo_tv.webp" alt="Milo, o mascote da WebFiber, assistindo TV no sofá" width="1080" height="1350" fetchpriority="high">
+            <!-- tela da TV: cobre as capas e mostra a velocidade da fibra -->
+            <div class="milotv__screen" aria-hidden="true">
+              <svg viewBox="0 0 200 122" class="gauge" id="gauge">
                 <defs>
                   <linearGradient id="gaugeGrad" x1="0" y1="1" x2="1" y2="0">
                     <stop offset="0" stop-color="#00E0FF"/>
@@ -196,30 +182,11 @@
                   <circle cx="100" cy="115" r="7"/>
                 </g>
               </svg>
-              <p class="stage__speedval"><b id="speedVal">0</b><span> Mega</span></p>
-              <p class="stage__speedlabel">velocidade pra família toda</p>
+              <p class="milotv__val"><b id="speedVal">1000</b><span>Mega</span></p>
+              <p class="milotv__label">velocidade que não trava</p>
             </div>
-
-            <!-- Chips orbitando -->
-            <span class="stage__orb stage__orb--game float-c">
-              <svg viewBox="0 0 24 24" class="ico"><path d="M7 7h10a5 5 0 0 1 5 5v1a4 4 0 0 1-4 4c-1.6 0-2.6-.8-3.4-2h-5.2c-.8 1.2-1.8 2-3.4 2a4 4 0 0 1-4-4v-1a5 5 0 0 1 5-5Zm1 2v2H6v2h2v-2h2V9H8Zm8 .5a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Zm2.5 2.5a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Z"/></svg>
-              Ping baixo
-            </span>
-            <span class="stage__orb stage__orb--wifi float-d">
-              <svg viewBox="0 0 24 24" class="ico"><path d="M12 18.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM3.5 9.6l2.1 2.1a9 9 0 0 1 12.8 0l2.1-2.1a12 12 0 0 0-17 0ZM7 13.1l2.1 2.1a4 4 0 0 1 5.8 0l2.1-2.1a7 7 0 0 0-10 0Z"/></svg>
-              Wi-Fi na casa toda
-            </span>
-            <span class="stage__orb stage__orb--call float-e">
-              <svg viewBox="0 0 24 24" class="ico"><path d="M17 10.5V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3.5l5 4v-11l-5 4Z"/></svg>
-              Chamada estável
-            </span>
-
-            <!-- Milo dá as boas-vindas no início do site -->
-            <figure class="stage__milo" aria-hidden="true">
-              <img src="assets/milo_oficial.png" alt="" width="640" height="800" fetchpriority="high">
-            </figure>
           </div>
-        </div>
+        </figure>
       </div>
 
       <a class="hero__scroll" href="#marquee" aria-label="Rolar para ver mais">
@@ -736,6 +703,6 @@
     <a class="btn btn--wa btn--sm" data-wa href="#">Chamar no WhatsApp</a>
   </div>
 
-  <script src="js/main.js?v=novosite1" defer></script>
+  <script src="js/main.js?v=novosite3" defer></script>
 </body>
 </html>

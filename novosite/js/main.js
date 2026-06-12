@@ -193,15 +193,17 @@ if (mq) mq.appendChild(mq.firstElementChild.cloneNode(true));
   }
 
   function startBreathe() {
-    // o NÚMERO fica cravado em 700; só o ponteiro vibra de leve (tela viva).
+    // a fibra "bate" continuamente entre 990 e 1000 (não zera) — tela viva dentro da TV.
     // Pausa fora da viewport para não gastar bateria.
     if (breathing) return;
     breathing = true;
-    val.textContent = MAX;
     const t0 = performance.now();
     (function frame(now) {
-      if (!visible || document.hidden) { breathing = false; render(1, false); return; }
-      render(.992 + Math.sin((now - t0) / 800) * .008, false);
+      if (!visible || document.hidden) { breathing = false; render(1); return; }
+      // oscila 0.99→1.00 → número 990↔1000, com leve "tremor" pra parecer medição real
+      const base = 0.99 + (Math.sin((now - t0) / 360) * 0.5 + 0.5) * 0.01;
+      const jitter = Math.sin((now - t0) / 70) * 0.0012;
+      render(Math.min(1, base + jitter));
       raf = requestAnimationFrame(frame);
     })(t0);
   }
@@ -351,6 +353,76 @@ if (ano) ano.textContent = new Date().getFullYear();
   ];
   let idx = 0, timer = null, trocando = false;
 
+  /* --- efeito "conexões de fibra chegando" ao trocar de plano (canvas leve) --- */
+  const fx = document.getElementById("rotFx");
+  let fxCtx = null, fxParts = [], fxRaf = 0, fxW = 0, fxH = 0, fxLast = 0;
+  const FX_DPR = Math.min(window.devicePixelRatio || 1, 2);
+  function fxResize() {
+    if (!fx) return;
+    fxW = fx.clientWidth; fxH = fx.clientHeight;
+    fx.width = fxW * FX_DPR; fx.height = fxH * FX_DPR;
+    fxCtx = fx.getContext("2d");
+    fxCtx.setTransform(FX_DPR, 0, 0, FX_DPR, 0, 0);
+  }
+  function dispararRaios() {
+    if (!fx || reduceMotion) return;
+    if (!fxCtx) fxResize();
+    const cx = fxW * 0.31, cy = fxH * 0.45;        // perto do número-herói
+    const cores = ["0,224,255", "252,212,0", "255,255,255", "120,180,255"];
+    const n = fxW < 480 ? 11 : 17;
+    for (let i = 0; i < n; i++) {
+      fxParts.push({
+        ang: (Math.PI * 2 * i) / n + (i % 2 ? 0.18 : -0.16),
+        len: 9 + Math.random() * 24,
+        reach: fxW * (0.16 + Math.random() * 0.22),
+        t: 0, dur: 420 + Math.random() * 280,
+        cor: cores[(Math.random() * cores.length) | 0],
+        seg: 2 + ((Math.random() * 3) | 0), cx, cy
+      });
+    }
+    for (let i = 0; i < 6; i++) {                   // pontos de "conexão" piscando
+      fxParts.push({ node: true, x: cx + (Math.random() - .5) * fxW * .5, y: cy + (Math.random() - .5) * fxH * .6, t: 0, dur: 480 + Math.random() * 320, cor: "0,224,255" });
+    }
+    if (!fxRaf) { fxLast = performance.now(); fxRaf = requestAnimationFrame(loopFx); }
+  }
+  function loopFx() {
+    const now = performance.now(), dt = now - fxLast; fxLast = now;
+    fxCtx.clearRect(0, 0, fxW, fxH);
+    fxParts = fxParts.filter(p => (p.t += dt) < p.dur);
+    for (const p of fxParts) {
+      const k = p.t / p.dur, fade = 1 - k;
+      if (p.node) {
+        const r = 2.4 + Math.sin(k * Math.PI) * 2.6;
+        fxCtx.beginPath(); fxCtx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        fxCtx.fillStyle = "rgba(" + p.cor + "," + (Math.sin(k * Math.PI) * .8).toFixed(3) + ")";
+        fxCtx.fill();
+        continue;
+      }
+      const grow = Math.min(1, k * 1.6);
+      const dx = Math.cos(p.ang), dy = Math.sin(p.ang);
+      let x = p.cx, y = p.cy;
+      fxCtx.beginPath(); fxCtx.moveTo(x, y);
+      for (let s = 1; s <= p.seg; s++) {
+        const d = (p.reach * grow) * (s / p.seg);
+        x = p.cx + dx * d + (-dy) * (Math.sin(s * 2 + p.ang) * p.len * .5);
+        y = p.cy + dy * d + (dx) * (Math.sin(s * 2 + p.ang) * p.len * .5);
+        fxCtx.lineTo(x, y);
+      }
+      fxCtx.strokeStyle = "rgba(" + p.cor + "," + (fade * .9).toFixed(3) + ")";
+      fxCtx.lineWidth = 1.6;
+      fxCtx.shadowColor = "rgba(" + p.cor + "," + fade.toFixed(3) + ")";
+      fxCtx.shadowBlur = 8;
+      fxCtx.stroke();
+      fxCtx.shadowBlur = 0;
+      fxCtx.beginPath(); fxCtx.arc(x, y, 1.8 * fade + .6, 0, Math.PI * 2);
+      fxCtx.fillStyle = "rgba(255,255,255," + fade.toFixed(3) + ")";
+      fxCtx.fill();
+    }
+    if (fxParts.length) fxRaf = requestAnimationFrame(loopFx);
+    else { fxRaf = 0; fxCtx.clearRect(0, 0, fxW, fxH); }
+  }
+  if (fx) window.addEventListener("resize", fxResize, { passive: true });
+
   function chars(el, txt) {
     el.innerHTML = "";
     [...txt].forEach((ch, i) => {
@@ -380,6 +452,7 @@ if (ano) ano.textContent = new Date().getFullYear();
       setAll(PLANOS[n]);
       idx = n;
       marcaDot();
+      dispararRaios();   // conexões de fibra "chegam" junto com o novo plano
       requestAnimationFrame(() => requestAnimationFrame(() => {
         [elNum, elUnit, elPreco].forEach(el => el.classList.remove("out"));
         elExtra.classList.remove("out");
