@@ -991,3 +991,8 @@ body {
   .rot-dots { justify-content: flex-start; }
 }
 
+
+/* seção watch reordenada: canais/filmes no topo (colados no marquee), apresentação depois */
+.section--watch { padding-top: clamp(34px, 5vw, 56px); }
+.watch__canais { margin-top: 0; }
+.watch__apresenta { margin-top: clamp(46px, 7vw, 86px); }

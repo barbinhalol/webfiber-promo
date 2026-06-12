@@ -55,7 +55,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/styles.css?v=novosite3"> <!-- ?v= força navegadores a pegar o arquivo novo a cada atualização -->
+  <link rel="stylesheet" href="css/styles.css?v=novosite4"> <!-- ?v= força navegadores a pegar o arquivo novo a cada atualização -->
 
   <!-- Dados estruturados: provedor local + oferta + FAQ -->
   <script type="application/ld+json">
@@ -215,39 +215,14 @@
          3B · STREAMING BY WATCH — TV COMPLETA (60+ canais)
          ============================================================ -->
     <section class="section section--watch" id="watch">
+
+      <!-- 1) Canais ao vivo — logo abaixo do looping do hero -->
       <div class="container">
-        <header class="section__head reveal" data-rv>
-          <img class="watch__logo" src="assets/watch/watch_logo.webp" alt="Streaming by Watch TV" width="240" height="74" loading="lazy">
-          <h2>TV e streaming <span class="watch__hl">para a casa toda</span></h2>
-          <p class="section__lead">Nos planos <b>850 Mega</b> e <b>1 Giga</b> você leva o app <b>Watch TV</b>: canais ao vivo — Telecine, SporTV, ESPN, CNN, Megapix, Multishow, GloboNews e mais — além de um catálogo com <b>mais de 30 mil filmes e séries</b>. Tudo na TV, no celular, no tablet e no computador.</p>
-        </header>
-
-        <figure class="watch__hero reveal" data-rv data-tilt-scene>
-          <img data-tilt src="assets/watch/watch_devices.webp" alt="App Watch TV rodando na TV, no notebook e no celular" width="1280" height="706" loading="lazy">
-        </figure>
-
-        <div class="watch__grid">
-          <figure class="watch__card reveal" data-rv>
-            <img src="assets/watch/watch_filmes.webp" alt="Catálogo de filmes no app Watch TV" width="880" height="462" loading="lazy">
-            <figcaption>Filmes e séries para maratonar</figcaption>
-          </figure>
-          <figure class="watch__card reveal" data-rv>
-            <img src="assets/watch/watch_home.webp" alt="Tela inicial do app Watch TV" width="880" height="761" loading="lazy">
-            <figcaption>Os melhores conteúdos em um único lugar</figcaption>
-          </figure>
-          <figure class="watch__card reveal" data-rv>
-            <img src="assets/watch/watch_celular.webp" alt="App Watch TV no celular" width="387" height="800" loading="lazy">
-            <figcaption>Leve no bolso para onde você for</figcaption>
-          </figure>
-        </div>
-
         <div class="watch__canais reveal" data-rv>
           <p>Alguns dos canais ao vivo inclusos nos planos com TV:</p>
         </div>
       </div>
-
-      <!-- canais em loop infinito (mesma mecânica do carrossel de capas) -->
-      <div class="posters canais-marquee reveal" data-rv aria-label="Canais inclusos no plano 1 Giga">
+      <div class="posters canais-marquee reveal" data-rv aria-label="Canais inclusos nos planos com TV">
         <div class="posters__row posters__row--left" data-marquee-row>
           <div class="posters__group">
             <img src="assets/canais/telecine.png" alt="Telecine" loading="lazy">
@@ -270,7 +245,8 @@
         </div>
       </div>
       <p class="watch__mais container reveal" data-rv style="text-align:center">e muito mais — <b>ESPN</b>, <b>SporTV</b>, <b>GloboNews</b>, <b>Telecine</b>, <b>Multishow</b> e dezenas de outros canais dentro do app, sem custo extra.</p>
-            <!-- Carrossel de capas em loop infinito (pôsteres reais do catálogo, duas direções) -->
+
+      <!-- 2) Filmes e séries do catálogo (duas direções) -->
       <div class="posters reveal" data-rv>
         <div class="posters__row posters__row--left" data-marquee-row>
           <div class="posters__group">
@@ -303,6 +279,34 @@
       <p class="exp__channels container reveal" data-rv>
         Nos planos com TV os canais já estão inclusos: <b>Telecine</b> · <b>SporTV</b> · <b>ESPN</b> · <b>CNN</b> · <b>Megapix</b> · <b>Multishow</b> e mais 60+ canais ao vivo, além de 30 mil filmes e séries.
       </p>
+
+      <!-- 3) Apresentação do app Watch TV -->
+      <div class="container watch__apresenta">
+        <header class="section__head reveal" data-rv>
+          <img class="watch__logo" src="assets/watch/watch_logo.webp" alt="Streaming by Watch TV" width="240" height="74" loading="lazy">
+          <h2>TV e streaming <span class="watch__hl">para a casa toda</span></h2>
+          <p class="section__lead">Nos planos <b>850 Mega</b> e <b>1 Giga</b> você leva o app <b>Watch TV</b>: canais ao vivo — Telecine, SporTV, ESPN, CNN, Megapix, Multishow, GloboNews e mais — além de um catálogo com <b>mais de 30 mil filmes e séries</b>. Tudo na TV, no celular, no tablet e no computador.</p>
+        </header>
+
+        <figure class="watch__hero reveal" data-rv data-tilt-scene>
+          <img data-tilt src="assets/watch/watch_devices.webp" alt="App Watch TV rodando na TV, no notebook e no celular" width="1280" height="706" loading="lazy">
+        </figure>
+
+        <div class="watch__grid">
+          <figure class="watch__card reveal" data-rv>
+            <img src="assets/watch/watch_filmes.webp" alt="Catálogo de filmes no app Watch TV" width="880" height="462" loading="lazy">
+            <figcaption>Filmes e séries para maratonar</figcaption>
+          </figure>
+          <figure class="watch__card reveal" data-rv>
+            <img src="assets/watch/watch_home.webp" alt="Tela inicial do app Watch TV" width="880" height="761" loading="lazy">
+            <figcaption>Os melhores conteúdos em um único lugar</figcaption>
+          </figure>
+          <figure class="watch__card reveal" data-rv>
+            <img src="assets/watch/watch_celular.webp" alt="App Watch TV no celular" width="387" height="800" loading="lazy">
+            <figcaption>Leve no bolso para onde você for</figcaption>
+          </figure>
+        </div>
+      </div>
     </section>
 
     <!-- ============================================================
@@ -703,6 +707,6 @@
     <a class="btn btn--wa btn--sm" data-wa href="#">Chamar no WhatsApp</a>
   </div>
 
-  <script src="js/main.js?v=novosite3" defer></script>
+  <script src="js/main.js?v=novosite4" defer></script>
 </body>
 </html>
