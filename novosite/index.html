@@ -55,7 +55,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/styles.css?v=novosite4"> <!-- ?v= força navegadores a pegar o arquivo novo a cada atualização -->
+  <link rel="stylesheet" href="css/styles.css?v=novosite5"> <!-- ?v= força navegadores a pegar o arquivo novo a cada atualização -->
 
   <!-- Dados estruturados: provedor local + oferta + FAQ -->
   <script type="application/ld+json">
@@ -131,7 +131,7 @@
             </span>
             <span class="rot-extra" id="rotExtra"><span class="rot-extra__pill">SÓ INTERNET TURBO</span></span>
             <span class="hero__price">
-              <i id="rotPre">por apenas</i> <strong class="rot-flip" id="rotPreco">R$&nbsp;99,90</strong><i>/mês</i>
+              <i id="rotPre">por apenas</i> <strong id="rotPreco">R$&nbsp;99,90</strong><i>/mês</i>
             </span>
             <span class="rot-dots" id="rotDots" aria-hidden="true"></span>
           </h1>
@@ -165,26 +165,6 @@
         <figure class="hero__milotv reveal" data-rv data-tilt-scene>
           <div class="milotv" data-tilt>
             <img class="milotv__img" src="assets/watch/milo_tv.webp" alt="Milo, o mascote da WebFiber, assistindo TV no sofá" width="1080" height="1350" fetchpriority="high">
-            <!-- tela da TV: cobre as capas e mostra a velocidade da fibra -->
-            <div class="milotv__screen" aria-hidden="true">
-              <svg viewBox="0 0 200 122" class="gauge" id="gauge">
-                <defs>
-                  <linearGradient id="gaugeGrad" x1="0" y1="1" x2="1" y2="0">
-                    <stop offset="0" stop-color="#00E0FF"/>
-                    <stop offset=".6" stop-color="#0064FF"/>
-                    <stop offset="1" stop-color="#FCD400"/>
-                  </linearGradient>
-                </defs>
-                <path class="gauge__bg" d="M20 115 A80 80 0 0 1 180 115" />
-                <path class="gauge__bar" id="gaugeBar" d="M20 115 A80 80 0 0 1 180 115" />
-                <g class="gauge__needle" id="gaugeNeedle">
-                  <line x1="100" y1="115" x2="100" y2="48"/>
-                  <circle cx="100" cy="115" r="7"/>
-                </g>
-              </svg>
-              <p class="milotv__val"><b id="speedVal">1000</b><span>Mega</span></p>
-              <p class="milotv__label">velocidade que não trava</p>
-            </div>
           </div>
         </figure>
       </div>
@@ -707,6 +687,6 @@
     <a class="btn btn--wa btn--sm" data-wa href="#">Chamar no WhatsApp</a>
   </div>
 
-  <script src="js/main.js?v=novosite4" defer></script>
+  <script src="js/main.js?v=novosite5" defer></script>
 </body>
 </html>

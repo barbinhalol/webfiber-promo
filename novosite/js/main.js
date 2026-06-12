@@ -437,7 +437,7 @@ if (ano) ano.textContent = new Date().getFullYear();
   function setAll(p) {
     chars(elNum, p.num);
     chars(elUnit, p.unit);
-    chars(elPreco, p.preco);
+    elPreco.textContent = p.preco;   // valor sólido, sem flip/transparência
     elPre.textContent = p.pre + " ";
     elExtra.innerHTML = '<span class="rot-extra__pill' + (p.watch ? " rot-extra__pill--watch" : "") + '">' + p.extra + "</span>";
   }
@@ -446,7 +446,7 @@ if (ano) ano.textContent = new Date().getFullYear();
   function flipTo(n) {
     if (n === idx || trocando) return;
     trocando = true;
-    [elNum, elUnit, elPreco].forEach(el => el.classList.add("out"));
+    [elNum, elUnit].forEach(el => el.classList.add("out"));
     elExtra.classList.add("out");
     setTimeout(() => {
       setAll(PLANOS[n]);
@@ -454,7 +454,7 @@ if (ano) ano.textContent = new Date().getFullYear();
       marcaDot();
       dispararRaios();   // conexões de fibra "chegam" junto com o novo plano
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        [elNum, elUnit, elPreco].forEach(el => el.classList.remove("out"));
+        [elNum, elUnit].forEach(el => el.classList.remove("out"));
         elExtra.classList.remove("out");
         trocando = false;
       }));
