@@ -44,7 +44,7 @@ Preview local: `Abrir LP 700 Mega.bat` (porta 8840; novosite em /novosite/). **A
 ## ✅ Feito em 2026-06-12 (tarde)
 
 - **Logo corrigida PUBLICADA nos 3 promo** (era a pendência 1 — foi junto com o pacote do pixel, commit `5086ec1`).
-- **Meta Pixel `1400292098619943` EM PRODUÇÃO**: PageView no `<head>` (com guard de domínio nas LPs/novosite — preview e localhost não sujam o dataset) + evento **Lead** no clique de todo botão WhatsApp (`[data-wa]` via main.js nas LPs; na SPA React da raiz, listener por texto: "assinar agora"/"assinar pelo whatsapp"/"contato"). No ar na raiz + 3 promo; novosite com tudo no código (prévia GitHub Pages). **Backup da SPA pré-pixel: `public_html/index-backup-antes-pixel.html`** (raiz agora tem 4477 bytes, não mais 3720).
+- **Meta Pixel `1400292098619943` EM PRODUÇÃO NO DOMÍNIO INTEIRO**: PageView no `<head>` (com guard de domínio — preview e localhost não sujam o dataset) + evento **Lead** SÓ no clique de botão WhatsApp. Cobertura (2026-06-12, noite): raiz (novosite) + /promo700mega + /promo850mega + /promo1giga (Lead via handler [data-wa] no main.js) **+ /corrida (só PageView, é jogo) + /parceriasindico + /promo (Lead por delegação em links wa.me)**. Backups: `index-antes-pixel.html` dentro de corrida/, parceriasindico/ e promo/. Fontes locais de CorridaWebFiber\ e WebFiber-Condominio-Parceiro\ também receberam o pixel (sincronizados c/ servidor). /700mega/ não é página (301 → home).
 - **Mobile do novosite**: preço do rotador em 2 linhas limpas (rótulo pequeno em cima, "R$ 159,90/mês" inteiro embaixo, R$ em .5em via `<small>`) — commit `da7e9e3`.
 
 ## ✅ NOVOSITE PUBLICADO NA RAIZ (2026-06-12, noite — OK explícito do dono)
