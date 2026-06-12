@@ -712,15 +712,14 @@ summary { cursor: pointer; }
 }
 
 .stickybar {
+  /* SEMPRE fixa no mobile (regra do dono): visível do topo ao fim da rolagem */
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
   display: none; align-items: center; justify-content: space-between; gap: 12px;
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   background: rgba(2, 7, 24, .92);
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   border-top: 1px solid var(--stroke);
-  transform: translateY(110%); transition: transform .4s cubic-bezier(.2, .8, .3, 1);
 }
-.stickybar.show { transform: none; }
 .stickybar p { font-size: .92rem; line-height: 1.25; }
 .stickybar__price { color: var(--amarelo); }
 .stickybar .btn { flex: none; }

@@ -319,19 +319,10 @@ if (mq) mq.appendChild(mq.firstElementChild.cloneNode(true));
   }
 })();
 
-/* --------------------------------------------------------------------------
-   10 · Barra fixa mobile: aparece depois do hero
-   -------------------------------------------------------------------------- */
-(function stickybar() {
-  const bar = document.getElementById("stickybar");
-  if (!bar) return;
-  const show = () => bar.classList.toggle("show", window.scrollY > window.innerHeight * .72);
-  show();
-  window.addEventListener("scroll", show, { passive: true });
-})();
+/* (Barra fixa mobile: SEMPRE visível — regra do dono; controlada 100% pelo CSS) */
 
 /* --------------------------------------------------------------------------
-   12 · Detalhe: ano do rodapé
+   10 · Detalhe: ano do rodapé
    -------------------------------------------------------------------------- */
 const ano = document.getElementById("anoAtual");
 if (ano) ano.textContent = new Date().getFullYear();
