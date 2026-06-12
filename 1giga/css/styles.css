@@ -827,9 +827,11 @@ summary { cursor: pointer; }
 .canais-marquee { overflow: hidden; margin-top: 8px; }
 .canais-marquee .posters__group { align-items: center; gap: 14px; }
 .canais-marquee img {
-  height: 56px; width: auto; flex: none;
-  background: rgba(255, 255, 255, .07); border: 1px solid var(--stroke-soft);
-  border-radius: 14px; padding: 10px 18px;
+  /* fundo claro: logos escuras (AMC, Universal, CNN…) ficam visíveis no tema azul */
+  height: 95px; width: auto; flex: none;
+  background: rgba(255, 255, 255, .92); border: 1px solid rgba(255, 255, 255, .3);
+  border-radius: 16px; padding: 16px 26px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .35);
 }
 
 @media (max-width: 860px) {
