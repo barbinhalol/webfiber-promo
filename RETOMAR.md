@@ -10,6 +10,7 @@
 | LP 850 Mega + Watch | `850mega/` | 🟢 NO AR | webfiberprovedor.com.br/promo850mega |
 | LP 1 Giga + TV completa | `1giga/` | 🟢 NO AR | webfiberprovedor.com.br/promo1giga |
 | **NOVO SITE PRINCIPAL** | `novosite/` | 🟢 **NO AR NA RAIZ desde 2026-06-12** (substituiu a SPA antiga COM OK do dono) | **webfiberprovedor.com.br** |
+| **SITE EMPRESARIAL** | `empresarial/` | 🟢 **NO AR desde 2026-06-13** (B2B premium azul marinho: internet empresarial, link dedicado, IP fixo) | **webfiberprovedor.com.br/empresarial** |
 
 Preview local: `Abrir LP 700 Mega.bat` (porta 8840; novosite em /novosite/). **A SPA antiga foi backupada em `public_html/backup-spa-20260612/`** (index.html, assets/ inteira, htaccess.txt, robots.txt, placeholder.svg) — rollback = restaurar esses arquivos.
 
@@ -53,6 +54,13 @@ Preview local: `Abrir LP 700 Mega.bat` (porta 8840; novosite em /novosite/). **A
 - `.htaccess` da raiz TROCADO (o antigo catch-all da SPA está no backup): força HTTPS + www→apex (301), URLs antigas da SPA → 301 p/ home, mod_expires (imgs 30d, css/js 7d) + deflate. Brotli ativo no LiteSpeed (HTML 52,5KB → 11,5KB). Subpastas (promo*/corrida/parceriasindico) têm .htaccess próprio e ficaram intactas — TODAS testadas 200 após a troca.
 - **Search Console CONFIGURADO na conta marketingwebfiber**: propriedade `https://webfiberprovedor.com.br` verificada por arquivo HTML (`googlebbf6f8f3c52729db.html` na raiz — NÃO REMOVER); sitemap.xml enviado e **Processado (4 páginas: home + 3 promo)**; indexação prioritária da home solicitada via Inspeção de URL.
 - sitemap.xml agora lista home + as 3 LPs; robots.txt novo na raiz.
+
+## ✅ Feito em 2026-06-13 (Site Empresarial)
+
+- **`/empresarial` PUBLICADO** (commit `60f897d`): site B2B premium azul marinho (Sora+Inter, sem Milo), 14 seções + blocos SEO + schema `LocalBusiness`/`FAQPage`/`BreadcrumbList`. Pasta `empresarial/` no repo com `.htaccess` próprio (DirectoryIndex, fura o catch-all da SPA). Fonte de trabalho separada também em `C:\Users\AdminUser\WebFiber-Empresarial\` (a do repo é a canônica/deployada). WhatsApp (21) 98558-9201; gtag+pixel com guard de domínio; CTAs com href real (robusto sem JS).
+- **Link "Empresarial"** no menu (header) e no rodapé do `novosite` (aponta p/ `/empresarial`) — discreto. `index.html` da raiz re-publicado (backup em `index-backup-antes-empresarial.html`); `sitemap.xml` agora lista `/empresarial`.
+- Auditoria multi-agente (36 agentes, 23 achados aplicados) antes do deploy. Logo oficial colorida **aparada** + favicon dedicado do símbolo (16/32/apple-touch). og-empresarial.jpg gerado.
+- ⏳ Pré-existente p/ enriquecer depois (opcional): `address` do JSON-LD só tem cidade/UF (sem rua/CEP — não inventado); versão monocromática da logo é opção do dono.
 
 ## ⏳ PENDÊNCIAS
 
