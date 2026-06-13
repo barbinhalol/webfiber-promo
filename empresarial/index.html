@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Enhancement progressivo: marca que o JS está ativo (1ª coisa a rodar).
+       Sem isso, o conteúdo com data-rv aparece normal mesmo se o JS falhar. -->
+  <script>document.documentElement.classList.add('js');</script>
+  <noscript><style>[data-rv]{opacity:1!important;transform:none!important}</style></noscript>
+
+  <meta name="robots" content="index,follow">
+
+  <!-- Google tag (gtag.js) — conversão Google Ads (mesma conta do site oficial) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18086861405"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'AW-18086861405');
+  </script>
+  <!-- A conversão do Google Ads (send_to AW-18086861405/Sb-JCLHf9LscEN20vrBD) é disparada
+       no clique de cada botão [data-wa] em js/main.js, com guard de domínio (preview não conta). -->
+
+  <!-- Meta Pixel — só dispara no domínio oficial (preview/local não sujam o dataset) -->
+  <script>
+  if (/webfiberprovedor\.com\.br$/.test(location.hostname)) {
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '1400292098619943');
+    fbq('track', 'PageView');
+  }
+  </script>
+  <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1400292098619943&ev=PageView&noscript=1" /></noscript>
+
+  <!-- ============================================================
+       WEBFIBER · EMPRESARIAL
+       Textos, WhatsApp e CONFIG editáveis: veja o topo de js/main.js
+       ============================================================ -->
+
+  <title>Internet Empresarial e Link Dedicado no Centro do RJ | WebFiber</title>
+  <meta name="description" content="Internet empresarial, link dedicado, IP fixo e fibra óptica para empresas no Centro do Rio de Janeiro. Soluções para CNPJ sob consulta. Fale com a WebFiber.">
+  <meta name="theme-color" content="#061A40">
+  <meta name="author" content="WebFiber Telecom">
+  <link rel="canonical" href="https://webfiberprovedor.com.br/empresarial">
+
+  <!-- Open Graph / compartilhamento -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Internet Empresarial e Link Dedicado no Centro do Rio | WebFiber">
+  <meta property="og:description" content="Link dedicado, IP fixo e fibra óptica para empresas. Consulte uma solução empresarial WebFiber no Centro do Rio de Janeiro.">
+  <meta property="og:url" content="https://webfiberprovedor.com.br/empresarial">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:site_name" content="WebFiber Telecom">
+  <meta property="og:image" content="https://webfiberprovedor.com.br/empresarial/assets/og-empresarial.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Internet Empresarial e Link Dedicado no Centro do Rio | WebFiber">
+  <meta name="twitter:description" content="Link dedicado, IP fixo e fibra óptica para empresas no Centro do Rio de Janeiro.">
+
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=20260613b">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png?v=20260613b">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20260613b">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/styles.css?v=20260613c">
+
+  <!-- ============================================================
+       DADOS ESTRUTURADOS (JSON-LD) — sem dados inventados
+       ============================================================ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://webfiberprovedor.com.br/#organization",
+        "name": "WebFiber Telecom",
+        "url": "https://webfiberprovedor.com.br",
+        "logo": "https://webfiberprovedor.com.br/empresarial/assets/logo_webfiber.png",
+        "telephone": "+55-21-2291-0825",
+        "areaServed": { "@type": "City", "name": "Rio de Janeiro" },
+        "address": { "@type": "PostalAddress", "addressLocality": "Rio de Janeiro", "addressRegion": "RJ", "addressCountry": "BR" },
+        "sameAs": ["https://www.instagram.com/webfiber.provedor"]
+      },
+      {
+        "@type": "LocalBusiness",
+        "@id": "https://webfiberprovedor.com.br/empresarial/#isp",
+        "name": "WebFiber Telecom — Soluções Empresariais",
+        "url": "https://webfiberprovedor.com.br/empresarial",
+        "image": "https://webfiberprovedor.com.br/empresarial/assets/logo_webfiber.png",
+        "telephone": "+55-21-98558-9201",
+        "parentOrganization": { "@id": "https://webfiberprovedor.com.br/#organization" },
+        "areaServed": { "@type": "Place", "name": "Centro do Rio de Janeiro" },
+        "address": { "@type": "PostalAddress", "addressLocality": "Rio de Janeiro", "addressRegion": "RJ", "addressCountry": "BR" },
+        "description": "Provedor de internet empresarial em fibra óptica no Centro do Rio de Janeiro. Internet empresarial, link dedicado, IP fixo e soluções para CNPJ sob consulta.",
+        "knowsAbout": ["Internet empresarial", "Link dedicado", "IP fixo", "Fibra óptica empresarial", "Banda larga empresarial", "SLA"]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://webfiberprovedor.com.br/empresarial/#faq",
+        "mainEntity": [
+          { "@type": "Question", "name": "Em quanto tempo a WebFiber instala na minha empresa?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Após a consulta de viabilidade técnica para o endereço da empresa, agendamos a instalação profissional. Informe o seu endereço pelo WhatsApp para confirmarmos o prazo no seu caso." } },
+          { "@type": "Question", "name": "A internet empresarial tem fidelidade ou contrato?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Em muitos casos, trabalhamos sem fidelidade contratual. As condições variam conforme a solução escolhida para a sua empresa — fale com um consultor pelo WhatsApp para consultar a melhor condição para o seu caso." } },
+          { "@type": "Question", "name": "E se a conexão da minha empresa cair?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Sua empresa conta com suporte técnico especializado da WebFiber. Em soluções de link dedicado há maior disponibilidade e possibilidade de SLA, quando contratado. Fale com o consultor para detalhar o atendimento da sua operação." } },
+          { "@type": "Question", "name": "Qual o melhor provedor de internet empresarial no Centro do Rio?",
+            "acceptedAnswer": { "@type": "Answer", "text": "A WebFiber é um provedor de internet em fibra óptica com atuação no Centro do Rio de Janeiro, com soluções empresariais como internet dedicada, link dedicado e IP fixo. A melhor solução depende da operação da sua empresa — consulte a viabilidade pelo WhatsApp." } },
+          { "@type": "Question", "name": "O que é internet empresarial?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Internet empresarial é uma conexão projetada para a operação de empresas, com foco em estabilidade, suporte técnico especializado e opções como IP fixo e link dedicado — diferente do uso doméstico." } },
+          { "@type": "Question", "name": "Qual a diferença entre internet empresarial e link dedicado?",
+            "acceptedAnswer": { "@type": "Answer", "text": "A internet empresarial é uma conexão profissional em fibra para o dia a dia da empresa. O link dedicado é uma solução com maior disponibilidade e desempenho, indicada para operações críticas, podendo incluir SLA e velocidade simétrica quando contratados." } },
+          { "@type": "Question", "name": "Minha empresa precisa de IP fixo?",
+            "acceptedAnswer": { "@type": "Answer", "text": "O IP fixo é indicado para empresas que usam VPN, câmeras, servidores, acessos remotos e sistemas internos que precisam de uma identificação estável na rede." } },
+          { "@type": "Question", "name": "A WebFiber atende empresas com CNPJ?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Sim. A WebFiber atende empresas e oferece soluções para CNPJ, com proposta personalizada conforme a necessidade e mediante análise de viabilidade técnica." } },
+          { "@type": "Question", "name": "Internet empresarial serve para câmeras e VPN?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Sim. Com opção de IP fixo, a internet empresarial é indicada para câmeras, VPN, servidores, acessos remotos e sistemas corporativos." } },
+          { "@type": "Question", "name": "A instalação depende de viabilidade técnica?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Sim. A instalação é realizada mediante análise de viabilidade técnica para o endereço da empresa." } },
+          { "@type": "Question", "name": "Como solicitar uma cotação empresarial?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Solicite a cotação pelo WhatsApp comercial da WebFiber. Você recebe uma proposta personalizada após a consulta de viabilidade para o seu endereço." } }
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "WebFiber", "item": "https://webfiberprovedor.com.br" },
+          { "@type": "ListItem", "position": 2, "name": "Empresarial", "item": "https://webfiberprovedor.com.br/empresarial" }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <a class="skip-link" href="#inicio">Pular para o conteúdo</a>
+
+  <!-- H1 estável para SEO/crawler (visual fica no hero) -->
+  <h1 class="sr-only">Internet Empresarial e Link Dedicado no Centro do Rio de Janeiro — WebFiber</h1>
+
+  <!-- Aurora de fundo (luz tecnológica) -->
+  <div class="aurora" aria-hidden="true">
+    <span class="aurora__orb aurora__orb--a"></span>
+    <span class="aurora__orb aurora__orb--b"></span>
+    <span class="aurora__orb aurora__orb--c"></span>
+    <span class="aurora__grid"></span>
+  </div>
+
+  <!-- ============================================================
+       HEADER PREMIUM (glass, fixo)
+       ============================================================ -->
+  <header class="topbar" id="topbar">
+    <div class="container topbar__inner">
+      <a class="topbar__brand" href="#inicio" aria-label="WebFiber Telecom — início">
+        <img src="assets/logo_webfiber.png" alt="WebFiber Telecom — Empresarial" width="44" height="49">
+        <span class="topbar__tag">Empresarial</span>
+      </a>
+      <nav class="topbar__nav" aria-label="Seções da página">
+        <a href="#inicio">Início</a>
+        <a href="#solucoes">Soluções</a>
+        <a href="#beneficios">Benefícios</a>
+        <a href="#link-dedicado">Link Dedicado</a>
+        <a href="#ip-fixo">IP Fixo</a>
+        <a href="#cobertura">Cobertura</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <a class="btn btn--gold btn--sm topbar__cta" data-wa href="https://wa.me/5521985589201">Solicitar cotação</a>
+      <button class="topbar__burger" id="burger" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileNav">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <nav class="mobilenav" id="mobileNav" aria-label="Menu">
+      <a href="#inicio">Início</a>
+      <a href="#solucoes">Soluções</a>
+      <a href="#beneficios">Benefícios</a>
+      <a href="#link-dedicado">Link Dedicado</a>
+      <a href="#ip-fixo">IP Fixo</a>
+      <a href="#cobertura">Cobertura</a>
+      <a href="#faq">FAQ</a>
+      <a class="btn btn--wa btn--lg mobilenav__cta" data-wa href="https://wa.me/5521985589201">Solicitar cotação no WhatsApp</a>
+    </nav>
+  </header>
+
+  <main id="inicio" tabindex="-1">
+
+    <!-- ============================================================
+         1 · HERO (parallax + cards flutuantes)
+         ============================================================ -->
+    <section class="hero" id="oferta">
+      <canvas id="fiberCanvas" class="hero__canvas" aria-hidden="true"></canvas>
+      <div class="hero__beam" aria-hidden="true" data-parallax="0.18"></div>
+
+      <div class="container hero__grid">
+        <div class="hero__copy">
+          <p class="badge reveal" data-rv>
+            <span class="badge__dot"></span>WebFiber Empresarial · Pioneira em fibra óptica no Rio de Janeiro
+          </p>
+
+          <h2 class="hero__title reveal" data-rv>
+            Internet Empresarial para<br>
+            <span class="grad-text">negócios que não podem parar</span>
+          </h2>
+
+          <p class="hero__sub reveal" data-rv>
+            Fibra óptica para empresas do <strong>Rio de Janeiro</strong> —
+            <strong>internet empresarial, link dedicado e IP fixo</strong>, com atendimento direto pelo
+            WhatsApp e proposta sob medida para o seu CNPJ.
+          </p>
+
+          <ul class="hero__pills reveal" data-rv aria-label="Soluções empresariais">
+            <li>Internet Empresarial</li>
+            <li>Link Dedicado</li>
+            <li>IP Fixo</li>
+            <li>SLA quando contratado</li>
+            <li>Conexão estável</li>
+            <li>Suporte técnico</li>
+          </ul>
+
+          <div class="hero__actions reveal" data-rv>
+            <a class="btn btn--wa btn--xl" data-wa href="https://wa.me/5521985589201">
+              <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .1 0 .8-.3 1.4Z"/></svg>
+              Solicitar cotação no WhatsApp
+            </a>
+            <a class="btn btn--ghost btn--xl" data-wa data-wa-msg="Olá! Quero consultar a viabilidade de internet empresarial da WebFiber para o endereço da minha empresa." href="https://wa.me/5521985589201">Consultar viabilidade</a>
+          </div>
+
+          <p class="hero__micro reveal" data-rv>
+            <span class="hero__pulse" aria-hidden="true"></span>
+            Atendimento empresarial humanizado · proposta personalizada para o seu CNPJ.
+          </p>
+        </div>
+
+        <!-- Composição com cards flutuantes -->
+        <div class="hero__stage" aria-hidden="true">
+          <div class="hero__core">
+            <svg viewBox="0 0 24 24" class="hero__core-ico"><path d="M12 2 3 6v6c0 5 3.8 8.4 9 10 5.2-1.6 9-5 9-10V6l-9-4Zm-1 13-3-3 1.4-1.4L11 12.2l4.6-4.6L17 9l-6 6Z"/></svg>
+            <span class="hero__core-ring"></span>
+            <span class="hero__core-ring hero__core-ring--2"></span>
+          </div>
+          <span class="floatcard floatcard--a" data-parallax="0.06">
+            <b>SLA</b><i>disponibilidade contratada</i>
+          </span>
+          <span class="floatcard floatcard--b" data-parallax="0.1">
+            <b>IP Fixo</b><i>VPN · câmeras · servidores</i>
+          </span>
+          <span class="floatcard floatcard--c" data-parallax="0.08">
+            <b>Fibra óptica</b><i>conexão profissional</i>
+          </span>
+          <span class="floatcard floatcard--d" data-parallax="0.12">
+            <b>Link Dedicado</b><i>alta disponibilidade</i>
+          </span>
+          <span class="floatcard floatcard--e" data-parallax="0.05">
+            <b>Suporte</b><i>técnico especializado</i>
+          </span>
+        </div>
+      </div>
+
+      <a class="hero__scroll" href="#confianca" aria-label="Rolar para ver mais"><span></span></a>
+    </section>
+
+    <!-- ============================================================
+         Faixa marquee
+         ============================================================ -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee__track">
+        <div class="marquee__group">
+          <span>INTERNET EMPRESARIAL</span><i>◆</i>
+          <span>LINK DEDICADO</span><i>◆</i>
+          <span>IP FIXO</span><i>◆</i>
+          <span>FIBRA ÓPTICA</span><i>◆</i>
+          <span>SOLUÇÕES PARA CNPJ</span><i>◆</i>
+          <span>SUPORTE TÉCNICO</span><i>◆</i>
+          <span>CONSULTE A VIABILIDADE</span><i>◆</i>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         2 · FAIXA DE CONFIANÇA (sem dados inventados)
+         ============================================================ -->
+    <section class="section section--trust" id="confianca">
+      <div class="container">
+        <ul class="trust">
+          <li class="reveal" data-rv><svg viewBox="0 0 24 24" class="ico"><path d="M3 13h2l3 5 4-12 3 7h6"/></svg><b>Atendimento empresarial</b><span>foco em CNPJ</span></li>
+          <li class="reveal" data-rv><svg viewBox="0 0 24 24" class="ico"><path d="M12 2 3 6v6c0 5 3.8 8.4 9 10 5.2-1.6 9-5 9-10V6l-9-4Z"/></svg><b>Fibra óptica</b><span>conexão profissional</span></li>
+          <li class="reveal" data-rv><svg viewBox="0 0 24 24" class="ico"><path d="M12 2a7 7 0 0 0-7 7c0 2.4 1.2 4.4 3 5.6V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.4c1.8-1.2 3-3.2 3-5.6a7 7 0 0 0-7-7Z"/></svg><b>Suporte técnico</b><span>especializado</span></li>
+          <li class="reveal" data-rv><svg viewBox="0 0 24 24" class="ico"><path d="M4 4h16v12H4zM2 20h20"/></svg><b>Planos sob consulta</b><span>proposta personalizada</span></li>
+          <li class="reveal" data-rv><svg viewBox="0 0 24 24" class="ico"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg><b>Consulta de viabilidade</b><span>para o seu endereço</span></li>
+          <li class="reveal" data-rv><svg viewBox="0 0 24 24" class="ico"><path d="M9 11V6a3 3 0 0 1 6 0v5m-9 0h12v9H6z"/></svg><b>Soluções para CNPJ</b><span>operação segura</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         3 · SOLUÇÕES PARA EMPRESAS (6 cards)
+         ============================================================ -->
+    <section class="section" id="solucoes">
+      <div class="container">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">Soluções para empresas</p>
+          <h2>Internet empresarial em fibra óptica <span class="grad-text">para a sua empresa</span></h2>
+          <p class="section__lead">Conexão profissional, estável e com suporte técnico — pensada para a operação de quem depende da internet todos os dias.</p>
+        </header>
+
+        <div class="cards">
+          <article class="card reveal" data-rv>
+            <span class="card__ico"><svg viewBox="0 0 24 24"><path d="M5 12.5a7 7 0 0 1 14 0M8 16a4 4 0 0 1 8 0M12 19h.01"/></svg></span>
+            <h3>Internet Empresarial</h3>
+            <p>Conexão em fibra óptica para empresas que precisam de estabilidade no dia a dia, com atendimento e suporte focados em CNPJ.</p>
+          </article>
+          <article class="card reveal" data-rv>
+            <span class="card__ico"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16M7 4v16"/></svg></span>
+            <h3>Link Dedicado</h3>
+            <p>Solução profissional para empresas que precisam de maior desempenho, disponibilidade e suporte especializado para operações críticas.</p>
+          </article>
+          <article class="card reveal" data-rv>
+            <span class="card__ico"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4zM4 10h16M8 14h4"/></svg></span>
+            <h3>IP Fixo</h3>
+            <p>Ideal para VPN, câmeras, servidores, acessos remotos, sistemas internos e aplicações corporativas que precisam de identificação estável na rede.</p>
+          </article>
+          <article class="card reveal" data-rv>
+            <span class="card__ico"><svg viewBox="0 0 24 24"><path d="M3 17a9 9 0 0 1 18 0M6.5 12.5a5 5 0 0 1 11 0M12 17h.01"/></svg></span>
+            <h3>Banda Larga Empresarial</h3>
+            <p>Planos empresariais para comércios, escritórios e operações que dependem de uma internet estável para funcionar sem interrupções.</p>
+          </article>
+          <article class="card reveal" data-rv>
+            <span class="card__ico"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2ZM9 21h6"/></svg></span>
+            <h3>Suporte Técnico</h3>
+            <p>Atendimento humanizado e suporte técnico especializado para manter a sua empresa conectada e a operação rodando.</p>
+          </article>
+          <article class="card reveal" data-rv>
+            <span class="card__ico"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>
+            <h3>Consultoria de Viabilidade</h3>
+            <p>Análise técnica para identificar a melhor solução de internet para o endereço da empresa, antes de qualquer contratação.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         4 · POR QUE EMPRESAS ESCOLHEM A WEBFIBER
+         ============================================================ -->
+    <section class="section section--why" id="beneficios">
+      <div class="container">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">Por que a WebFiber</p>
+          <h2>Por que empresas escolhem a <span class="grad-text">WebFiber</span></h2>
+          <p class="section__lead">Mais estabilidade para a sua operação, atendimento e sistemas — com a proximidade de um provedor de fibra do Centro do Rio.</p>
+        </header>
+
+        <div class="why">
+          <ul class="why__list reveal" data-rv>
+            <li><svg viewBox="0 0 24 24" class="ico"><path d="m5 13 4 4L19 7"/></svg>Conexão em fibra óptica</li>
+            <li><svg viewBox="0 0 24 24" class="ico"><path d="m5 13 4 4L19 7"/></svg>Atendimento direto pelo WhatsApp</li>
+            <li><svg viewBox="0 0 24 24" class="ico"><path d="m5 13 4 4L19 7"/></svg>Soluções para CNPJ</li>
+            <li><svg viewBox="0 0 24 24" class="ico"><path d="m5 13 4 4L19 7"/></svg>Planos sob consulta</li>
+            <li><svg viewBox="0 0 24 24" class="ico"><path d="m5 13 4 4L19 7"/></svg>Opções com IP fixo</li>
+          </ul>
+          <ul class="why__list reveal" data-rv>
+            <li><svg viewBox="0 0 24 24" class="ico"><path d="m5 13 4 4L19 7"/></svg>Possibilidade de link dedicado</li>
+            <li><svg viewBox="0 0 24 24" class="ico"><path d="m5 13 4 4L19 7"/></svg>Suporte técnico especializado</li>
+            <li><svg viewBox="0 0 24 24" class="ico"><path d="m5 13 4 4L19 7"/></svg>Instalação mediante viabilidade</li>
+            <li><svg viewBox="0 0 24 24" class="ico"><path d="m5 13 4 4L19 7"/></svg>Ideal para nuvem, câmeras, VPN e maquininhas</li>
+            <li><svg viewBox="0 0 24 24" class="ico"><path d="m5 13 4 4L19 7"/></svg>Mais estabilidade para a operação do negócio</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         5 · LINK DEDICADO (seção premium)
+         ============================================================ -->
+    <section class="section section--feature" id="link-dedicado">
+      <div class="container feature__grid">
+        <div class="feature__copy reveal" data-rv>
+          <p class="kicker kicker--gold">Link Dedicado</p>
+          <h2>Link dedicado para empresas que precisam de <span class="grad-text">alta disponibilidade</span></h2>
+          <p class="feature__lead">Uma solução profissional para operações que dependem de conexão estável, melhor performance, suporte técnico e estrutura preparada para demandas corporativas.</p>
+          <ul class="feature__list">
+            <li><svg viewBox="0 0 24 24" class="ico"><path d="m5 13 4 4L19 7"/></svg>Velocidade simétrica, quando aplicável</li>
+            <li><svg viewBox="0 0 24 24" class="ico"><path d="m5 13 4 4L19 7"/></svg>IP fixo, quando contratado</li>
+            <li><svg viewBox="0 0 24 24" class="ico"><path d="m5 13 4 4L19 7"/></svg>SLA, quando contratado</li>
+            <li><svg viewBox="0 0 24 24" class="ico"><path d="m5 13 4 4L19 7"/></svg>Suporte técnico especializado</li>
+            <li><svg viewBox="0 0 24 24" class="ico"><path d="m5 13 4 4L19 7"/></svg>Mais estabilidade para operação crítica</li>
+          </ul>
+          <a class="btn btn--gold btn--lg" data-wa data-wa-msg="Olá! Quero solicitar uma proposta de Link Dedicado da WebFiber para a minha empresa." href="https://wa.me/5521985589201">Solicitar proposta de Link Dedicado</a>
+          <p class="feature__note">Planos e condições sob consulta · proposta personalizada conforme a necessidade da empresa.</p>
+        </div>
+        <div class="feature__art reveal" data-rv aria-hidden="true">
+          <div class="dedi">
+            <div class="dedi__node dedi__node--hub"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H4zM8 20h8M12 16v4"/></svg><span>Sua empresa</span></div>
+            <div class="dedi__line"></div>
+            <div class="dedi__node dedi__node--cloud"><svg viewBox="0 0 24 24"><path d="M6 18a4 4 0 0 1 0-8 6 6 0 0 1 11.7-1.5A4 4 0 0 1 18 18Z"/></svg><span>Backbone dedicado</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         6 · IP FIXO
+         ============================================================ -->
+    <section class="section section--ip" id="ip-fixo">
+      <div class="container">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">IP Fixo</p>
+          <h2>IP fixo para a sua empresa ter <span class="grad-text">mais controle e segurança</span></h2>
+          <p class="section__lead">O IP fixo é indicado para empresas que utilizam VPN, câmeras, servidores, sistemas internos, acessos remotos e aplicações que precisam de identificação estável na rede.</p>
+        </header>
+
+        <div class="minicards">
+          <div class="minicard reveal" data-rv><svg viewBox="0 0 24 24" class="ico"><path d="M12 2 3 6v6c0 5 3.8 8.4 9 10 5.2-1.6 9-5 9-10V6l-9-4Z"/></svg><h3>VPN</h3><p>Acesso remoto seguro à rede da empresa.</p></div>
+          <div class="minicard reveal" data-rv><svg viewBox="0 0 24 24" class="ico"><path d="M3 7h13v10H3zM16 10l5-3v10l-5-3"/></svg><h3>Câmeras</h3><p>Monitoramento acessível de qualquer lugar.</p></div>
+          <div class="minicard reveal" data-rv><svg viewBox="0 0 24 24" class="ico"><path d="M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01"/></svg><h3>Servidores</h3><p>Hospedagem e serviços internos estáveis.</p></div>
+          <div class="minicard reveal" data-rv><svg viewBox="0 0 24 24" class="ico"><path d="M4 12h7M4 12 8 8M4 12l4 4M20 12h-7M20 12l-4-4M20 12l-4 4"/></svg><h3>Acesso remoto</h3><p>Conexão estável para trabalho à distância.</p></div>
+          <div class="minicard reveal" data-rv><svg viewBox="0 0 24 24" class="ico"><path d="M4 4h16v12H4zM2 20h20M9 8h6"/></svg><h3>Sistemas corporativos</h3><p>ERP, CRM e sistemas internos sempre acessíveis.</p></div>
+          <div class="minicard reveal" data-rv><svg viewBox="0 0 24 24" class="ico"><path d="M6 18a4 4 0 0 1 0-8 6 6 0 0 1 11.7-1.5A4 4 0 0 1 18 18Z"/></svg><h3>Aplicações em nuvem</h3><p>Integração estável com serviços na nuvem.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         7 · PARA QUEM É INDICADO
+         ============================================================ -->
+    <section class="section section--for" id="para-quem">
+      <div class="container">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">Para quem é indicado</p>
+          <h2>Internet estável para <span class="grad-text">escritórios, lojas e comércios</span></h2>
+          <p class="section__lead">Soluções para negócios de diferentes segmentos que dependem de conexão para operar com segurança.</p>
+        </header>
+
+        <ul class="tags reveal" data-rv>
+          <li>Escritórios</li><li>Clínicas</li><li>Restaurantes</li><li>Lojas</li>
+          <li>Mercados</li><li>Academias</li><li>Coworkings</li><li>Empresas com câmeras</li>
+          <li>Empresas com servidores</li><li>Sistemas online</li>
+          <li>WhatsApp, delivery, ERP ou CRM</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         8 · COMPARATIVO residencial × empresarial
+         ============================================================ -->
+    <section class="section section--versus" id="comparativo">
+      <div class="container">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">Comparativo</p>
+          <h2>Internet comum × <span class="grad-text">solução empresarial WebFiber</span></h2>
+          <p class="section__lead">Cada uma tem o seu lugar. Para a operação de uma empresa, a diferença aparece no dia a dia.</p>
+        </header>
+
+        <div class="versus reveal" data-rv>
+          <div class="versus__col versus__col--them">
+            <h3>Internet residencial</h3>
+            <ul>
+              <li><span class="no">—</span> Uso doméstico</li>
+              <li><span class="no">—</span> Menor prioridade operacional</li>
+              <li><span class="no">—</span> Sem foco em operação crítica</li>
+              <li><span class="no">—</span> Pouca previsibilidade para a empresa</li>
+            </ul>
+          </div>
+          <div class="versus__vs" aria-hidden="true">VS</div>
+          <div class="versus__col versus__col--us">
+            <h3>Empresarial WebFiber</h3>
+            <ul>
+              <li><span class="ok">✓</span> Foco em negócios</li>
+              <li><span class="ok">✓</span> Possibilidade de IP fixo</li>
+              <li><span class="ok">✓</span> Possibilidade de link dedicado</li>
+              <li><span class="ok">✓</span> Suporte técnico especializado</li>
+              <li><span class="ok">✓</span> Consulta técnica de viabilidade</li>
+              <li><span class="ok">✓</span> Solução conforme a necessidade da empresa</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         9 · PROCESSO (jornada)
+         ============================================================ -->
+    <section class="section section--steps" id="processo">
+      <div class="container">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">Como funciona</p>
+          <h2>Da solicitação à <span class="grad-text">empresa conectada</span></h2>
+          <p class="section__lead">Um processo simples e profissional, do primeiro contato até a sua operação no ar.</p>
+        </header>
+
+        <ol class="steps">
+          <li class="step reveal" data-rv><span class="step__n">1</span><h3>Solicitação pelo WhatsApp</h3><p>Você fala com a gente e conta a necessidade da sua empresa.</p></li>
+          <li class="step reveal" data-rv><span class="step__n">2</span><h3>Consulta de viabilidade</h3><p>Verificamos a disponibilidade técnica para o endereço da empresa.</p></li>
+          <li class="step reveal" data-rv><span class="step__n">3</span><h3>Análise da necessidade</h3><p>Entendemos a operação para indicar a melhor solução.</p></li>
+          <li class="step reveal" data-rv><span class="step__n">4</span><h3>Proposta personalizada</h3><p>Você recebe uma proposta sob medida, sob consulta.</p></li>
+          <li class="step reveal" data-rv><span class="step__n">5</span><h3>Instalação técnica</h3><p>Equipe profissional realiza a instalação no seu endereço.</p></li>
+          <li class="step reveal" data-rv><span class="step__n">6</span><h3>Empresa conectada</h3><p>Sua operação no ar, com suporte técnico próximo.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         10 · COBERTURA
+         ============================================================ -->
+    <section class="section section--cover" id="cobertura">
+      <div class="container cover reveal" data-rv>
+        <div class="cover__copy">
+          <p class="kicker">Cobertura</p>
+          <h2>Consulte a viabilidade <span class="grad-text">para a sua empresa</span></h2>
+          <p>A WebFiber atende empresas no Centro do Rio de Janeiro e em diversos outros bairros — como <strong>São Cristóvão, Tijuca, Vila Isabel, Grajaú, Andaraí, Bairro de Fátima e Santa Teresa</strong> —, com expansão para a Zona Sul e outras localidades. Informe o seu endereço para verificarmos a melhor solução disponível para a sua empresa.</p>
+        </div>
+        <a class="btn btn--wa btn--xl" data-wa data-wa-msg="Olá! Quero consultar a viabilidade de internet empresarial da WebFiber para o endereço da minha empresa." href="https://wa.me/5521985589201">Consultar viabilidade no WhatsApp</a>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         11 · CONTEÚDO SEO (blocos explicativos)
+         ============================================================ -->
+    <section class="section section--learn" id="conteudo">
+      <div class="container">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">Entenda as soluções</p>
+          <h2>Tudo sobre <span class="grad-text">internet empresarial</span></h2>
+        </header>
+
+        <div class="learn">
+          <article class="learn__block reveal" data-rv>
+            <h3>O que é internet empresarial?</h3>
+            <p>Internet empresarial é uma conexão em fibra óptica projetada para a operação de empresas. O foco está em estabilidade, suporte técnico especializado e em recursos como IP fixo e link dedicado — diferente do uso doméstico, ela é pensada para quem depende da conexão para trabalhar.</p>
+          </article>
+          <article class="learn__block reveal" data-rv>
+            <h3>Qual a diferença entre internet empresarial e residencial?</h3>
+            <p>A internet residencial é voltada ao uso doméstico. A internet corporativa prioriza a operação do negócio, com atendimento para CNPJ, opções de IP fixo, possibilidade de link dedicado e suporte técnico — entregando mais previsibilidade para a empresa.</p>
+          </article>
+          <article class="learn__block reveal" data-rv>
+            <h3>Quando uma empresa precisa de link dedicado?</h3>
+            <p>O link dedicado é indicado quando a operação não pode parar e precisa de maior disponibilidade e desempenho. É a escolha de empresas com sistemas críticos, muitos usuários simultâneos ou serviços que exigem conexão estável e suporte especializado, com SLA quando contratado.</p>
+          </article>
+          <article class="learn__block reveal" data-rv>
+            <h3>Por que contratar internet com IP fixo?</h3>
+            <p>O IP fixo dá à empresa uma identificação estável na rede, essencial para VPN, câmeras, servidores, acessos remotos e sistemas internos. Ele facilita o acesso seguro à infraestrutura da empresa de qualquer lugar.</p>
+          </article>
+          <article class="learn__block reveal" data-rv>
+            <h3>Como escolher um provedor de internet para empresas?</h3>
+            <p>Avalie a tecnologia (fibra óptica), o suporte técnico, as opções de IP fixo e link dedicado e a proximidade do provedor. Um provedor para empresas que faz consulta de viabilidade e oferece proposta personalizada tende a entregar a solução mais adequada à sua operação.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         12 · INSTITUCIONAL LOCAL (SEO)
+         ============================================================ -->
+    <section class="section section--local" id="local">
+      <div class="container local reveal" data-rv>
+        <p class="kicker kicker--gold">Provedor local</p>
+        <h2>Provedor de internet no <span class="grad-text">Centro do Rio de Janeiro</span></h2>
+        <p>A WebFiber é um provedor de internet com atuação no Centro do Rio de Janeiro e em diversos outros bairros, oferecendo soluções em fibra óptica para empresas que precisam de mais estabilidade, suporte e performance no dia a dia. Com opções de internet empresarial, link dedicado, IP fixo e soluções sob consulta, a WebFiber atende negócios que dependem de conexão para operar com segurança.</p>
+        <p class="local__pioneer">WebFiber — pioneira em fibra óptica no Rio de Janeiro.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         13 · FAQ
+         ============================================================ -->
+    <section class="section section--faq" id="faq">
+      <div class="container container--narrow">
+        <header class="section__head reveal" data-rv>
+          <p class="kicker">Perguntas frequentes</p>
+          <h2>Perguntas frequentes sobre <span class="grad-text">internet empresarial</span></h2>
+        </header>
+
+        <div class="faq reveal" data-rv>
+          <details class="faq__item" open>
+            <summary>Em quanto tempo a WebFiber instala na minha empresa?</summary>
+            <p>Após a consulta de viabilidade técnica para o endereço da empresa, agendamos a instalação profissional. Informe o seu endereço pelo WhatsApp para confirmarmos o prazo no seu caso.</p>
+          </details>
+          <details class="faq__item">
+            <summary>A internet empresarial tem fidelidade ou contrato?</summary>
+            <p>Em muitos casos, trabalhamos <strong>sem fidelidade contratual</strong>. As condições variam conforme a solução escolhida para a sua empresa — fale com um consultor pelo WhatsApp para consultar a melhor condição para o seu caso.</p>
+          </details>
+          <details class="faq__item">
+            <summary>E se a conexão da minha empresa cair?</summary>
+            <p>Sua empresa conta com suporte técnico especializado da WebFiber. Em soluções de link dedicado há maior disponibilidade e possibilidade de SLA, quando contratado. Fale com o consultor para detalhar o atendimento da sua operação.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Qual o melhor provedor de internet empresarial no Centro do Rio?</summary>
+            <p>A WebFiber é um provedor de fibra óptica com atuação no Centro do Rio de Janeiro e soluções empresariais como internet dedicada, link dedicado e IP fixo. A melhor solução depende da operação da sua empresa — consulte a viabilidade pelo WhatsApp.</p>
+          </details>
+          <details class="faq__item">
+            <summary>O que é internet empresarial?</summary>
+            <p>É uma conexão em fibra projetada para empresas, com foco em estabilidade, suporte técnico especializado e recursos como IP fixo e link dedicado, diferente do uso doméstico.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Qual a diferença entre internet empresarial e link dedicado?</summary>
+            <p>A internet empresarial é uma conexão profissional para o dia a dia. O link dedicado é uma solução com maior disponibilidade e desempenho para operações críticas, podendo incluir SLA e velocidade simétrica quando contratados.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Minha empresa precisa de IP fixo?</summary>
+            <p>O IP fixo é indicado para empresas que usam VPN, câmeras, servidores, acessos remotos e sistemas internos que precisam de identificação estável na rede.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Link dedicado é melhor que internet comum?</summary>
+            <p>São soluções diferentes. O link dedicado entrega maior disponibilidade e desempenho para operações que não podem parar; a internet comum atende usos mais leves. A escolha depende da necessidade da empresa.</p>
+          </details>
+          <details class="faq__item">
+            <summary>A WebFiber atende empresas com CNPJ?</summary>
+            <p>Sim. Atendemos empresas e oferecemos soluções para CNPJ, com proposta personalizada conforme a necessidade e mediante análise de viabilidade técnica.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Internet empresarial serve para câmeras e VPN?</summary>
+            <p>Sim. Com opção de IP fixo, é indicada para câmeras, VPN, servidores, acessos remotos e sistemas corporativos.</p>
+          </details>
+          <details class="faq__item">
+            <summary>A instalação depende de viabilidade técnica?</summary>
+            <p>Sim. A instalação é realizada mediante análise de viabilidade técnica para o endereço da empresa.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Como solicitar uma cotação empresarial?</summary>
+            <p>Solicite pelo WhatsApp comercial da WebFiber. Você recebe uma proposta personalizada após a consulta de viabilidade para o seu endereço.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         14 · CTA FINAL
+         ============================================================ -->
+    <section class="final" id="contratar">
+      <div class="final__glow" aria-hidden="true"></div>
+      <div class="container final__inner reveal" data-rv>
+        <h2>Sua empresa precisa de uma <span class="final__hl">internet mais profissional?</span></h2>
+        <p class="final__lead">Solicite agora uma cotação empresarial e consulte a melhor solução WebFiber para o seu endereço.</p>
+        <div class="final__actions">
+          <a class="btn btn--wa btn--xl" data-wa data-wa-msg="Olá! Quero solicitar uma cotação empresarial da WebFiber. Pode verificar a viabilidade para a minha empresa?" href="https://wa.me/5521985589201">
+            <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .1 0 .8-.3 1.4Z"/></svg>
+            Solicitar cotação no WhatsApp
+          </a>
+          <a class="btn btn--gold btn--xl" data-wa data-wa-msg="Olá! Quero consultar a viabilidade de internet empresarial da WebFiber para o endereço da minha empresa." href="https://wa.me/5521985589201">Consultar viabilidade</a>
+        </div>
+        <p class="final__micro">WhatsApp (21) 98558-9201 · proposta personalizada para o seu CNPJ</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="footer">
+    <div class="container footer__grid">
+      <div class="footer__brand">
+        <img src="assets/logo_webfiber.png" alt="Logo WebFiber Telecom — internet empresarial" width="60" height="66" loading="lazy">
+        <p>Soluções de internet empresarial em fibra óptica para empresas — internet dedicada, link dedicado e IP fixo. Provedor de internet no Centro do Rio de Janeiro.</p>
+      </div>
+      <div class="footer__col">
+        <h3>Navegação</h3>
+        <ul>
+          <li><a href="#inicio">Início</a></li>
+          <li><a href="#solucoes">Soluções</a></li>
+          <li><a href="#link-dedicado">Link Dedicado</a></li>
+          <li><a href="#ip-fixo">IP Fixo</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h3>Fale com a gente</h3>
+        <ul>
+          <li><a data-wa href="https://wa.me/5521985589201">WhatsApp: (21) 98558-9201</a></li>
+          <li><a href="tel:+552122910825">Telefone: (21) 2291-0825</a></li>
+          <li><a href="https://www.instagram.com/webfiber.provedor" target="_blank" rel="noopener">@webfiber.provedor</a></li>
+          <li><a href="https://webfiberprovedor.com.br" target="_blank" rel="noopener">Site principal: webfiberprovedor.com.br</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="footer__base container">
+      © <span id="anoAtual">2026</span> WebFiber Telecom · Internet empresarial e link dedicado no Centro do Rio de Janeiro ·
+      <em>Soluções sujeitas à análise de viabilidade técnica.</em>
+    </p>
+  </footer>
+
+  <!-- FAB WhatsApp -->
+  <a class="fab" data-wa href="https://wa.me/5521985589201" aria-label="Falar com a WebFiber Empresarial no WhatsApp">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .1 0 .8-.3 1.4Z"/></svg>
+  </a>
+
+  <!-- Barra CTA fixa (mobile) -->
+  <div class="stickybar" id="stickybar">
+    <p><b>Internet empresarial</b><span>proposta sob consulta</span></p>
+    <a class="btn btn--wa btn--sm" data-wa href="https://wa.me/5521985589201">Solicitar cotação</a>
+  </div>
+
+  <script src="js/main.js?v=20260613b" defer></script>
+</body>
+</html>
