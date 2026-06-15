@@ -108,6 +108,15 @@ summary { cursor: pointer; }
 }
 .btn--ghost:hover { background: var(--glass-2); transform: translateY(-3px); border-color: rgba(255,255,255,.25); }
 
+/* Botão "Baixe sua Fatura" — amarelo da marca, destaque sólido sobre o azul royal */
+.btn--fatura {
+  background: linear-gradient(135deg, #FFE45C, #FCD400);
+  color: #1A1500;
+  box-shadow: 0 8px 28px rgba(252, 212, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .5);
+}
+.btn--fatura .ico { fill: #1A1500; }
+.btn--fatura:hover { transform: translateY(-3px); box-shadow: 0 14px 36px rgba(252, 212, 0, .55); }
+
 .btn--xl { font-size: clamp(1rem, 1.1vw + .6rem, 1.18rem); padding: 1.05em 1.9em; }
 .btn--lg { font-size: 1.05rem; padding: .95em 1.7em; }
 .btn--sm { font-size: .92rem; padding: .7em 1.25em; }

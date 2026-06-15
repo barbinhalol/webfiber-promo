@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "lp-webfiber",
+      "runtimeExecutable": "C:\\Users\\AdminUser\\PainelCadastroMYCORE\\runtime\\python\\python.exe",
+      "runtimeArgs": ["-m", "http.server", "8840", "--directory", "C:\\Users\\AdminUser\\WebFiber-LP-700Mega"],
+      "port": 8840
+    }
+  ]
+}
