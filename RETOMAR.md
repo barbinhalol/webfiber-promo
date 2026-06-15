@@ -62,6 +62,10 @@ Preview local: `Abrir LP 700 Mega.bat` (porta 8840; novosite em /novosite/). **A
 - Auditoria multi-agente (36 agentes, 23 achados aplicados) antes do deploy. Logo oficial colorida **aparada** + favicon dedicado do símbolo (16/32/apple-touch). og-empresarial.jpg gerado.
 - ⏳ Pré-existente p/ enriquecer depois (opcional): `address` do JSON-LD só tem cidade/UF (sem rua/CEP — não inventado); versão monocromática da logo é opção do dono.
 
+## ✅ Feito em 2026-06-13 (botão Baixe sua Fatura)
+
+- **Botão "Baixe sua Fatura" PUBLICADO na raiz** (commit `81dd632`): no hero do `novosite`, ENTRE "Chamar no WhatsApp" e "Ver benefícios". Classe `.btn--fatura` (amarelo #FCD400 da marca, ícone de fatura), `target=_blank`, link `https://areadocliente.webfiberprovedor.com.br/`. Cache CSS `?v=fatura1`. Deploy via ponte (base da sessão: `8ee212e2fa0a0a09`; index.html + css/styles.css em public_html/ raiz). Testado: raiz + 3 promo + empresarial + corrida = 200.
+
 ## ⏳ PENDÊNCIAS
 
 1. DNS do subdomínio promo (opcional, parado): registro A `promo` → 45.132.157.77 na Locaweb (login é do dono).
