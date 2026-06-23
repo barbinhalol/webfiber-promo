@@ -106,7 +106,9 @@ function prepararChute(){
   if(window.WF3D && WF3D.pronto){ WF3D.resetChute(); WF3D.posAlvos(); WF3D.mirar(true); }
   $("#campo").classList.add("mirar");
   $("#dica-chute").style.display = "block";
-  $("#dica-chute").innerHTML = `👆 Chute <b>${estado.chute+1} de ${TOTAL_CHUTES}</b> — toque no canto do gol!`;
+  $("#dica-chute").innerHTML = estado.chute===0
+    ? `👆 Toque num <b>canto do gol</b> pra chutar — o goleiro pula pro outro lado!`
+    : `👆 Chute <b>${estado.chute+1} de ${TOTAL_CHUTES}</b> — escolha o canto!`;
 }
 
 /* ============================================================
@@ -342,7 +344,7 @@ function meuLink(){
 function compartilharLink(){
   const link = meuLink();
   const msg = `⚽ Tô na *Copa da Indicação da WebFiber*!\n`
-            + `Se você quer fibra que não trava nos jogos, contrata pelo meu link e a gente *dois ganha desconto*. 🟦\n\n`
+            + `Se você quer fibra que não trava nos jogos, contrata pelo meu link e *nós dois ganhamos desconto*. 🟦\n\n`
             + `👉 ${link}\n\n`
             + `É só bater os pênaltis e garantir. 🦊`;
   if(navigator.share){

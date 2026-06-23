@@ -344,7 +344,7 @@ function meuLink(){
 function compartilharLink(){
   const link = meuLink();
   const msg = `⚽ Tô na *Copa da Indicação da WebFiber*!\n`
-            + `Se você quer fibra que não trava nos jogos, contrata pelo meu link e a gente *dois ganha desconto*. 🟦\n\n`
+            + `Se você quer fibra que não trava nos jogos, contrata pelo meu link e *nós dois ganhamos desconto*. 🟦\n\n`
             + `👉 ${link}\n\n`
             + `É só bater os pênaltis e garantir. 🦊`;
   if(navigator.share){
