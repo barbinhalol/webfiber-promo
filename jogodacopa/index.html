@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#071A45">
+<title>Pênaltis Premiados • WebFiber</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ====== MOLDURA (vira "celular" no PC) ====== -->
+<div class="app" id="app">
+
+  <!-- ======================= TELA: INTRO ======================= -->
+  <section class="screen active" id="tela-intro">
+    <div class="intro-bg"></div>
+    <div class="intro-content">
+      <img class="logo-intro" src="assets/logo-webfiber-telecom.png" alt="WebFiber Telecom">
+
+      <div class="badge-copa">⚽ COPA DA INDICAÇÃO</div>
+
+      <h1 class="intro-titulo" id="intro-titulo">Bata <b>5 pênaltis</b><br>e leve seus prêmios</h1>
+      <p class="intro-sub" id="intro-sub">Cada gol libera um <b>prêmio de verdade</b>. Quantos você marca? ⚽</p>
+
+      <div class="premios-preview" id="premios-preview"><!-- montado via JS --></div>
+
+      <button class="btn-principal" id="btn-comecar">
+        <span>BATER PÊNALTIS</span>
+        <i>⚽</i>
+      </button>
+      <p class="intro-rodape">Leva 30 segundos • prêmios de verdade</p>
+    </div>
+  </section>
+
+  <!-- ======================= TELA: JOGO ======================= -->
+  <section class="screen" id="tela-jogo">
+
+    <header class="hud">
+      <img class="hud-logo" src="assets/logo-mark.png" alt="WebFiber">
+      <div class="hud-premios" id="hud-premios"><!-- 3 slots via JS --></div>
+    </header>
+
+    <!-- Campo 3D -->
+    <div class="campo" id="campo">
+      <canvas id="c3d"></canvas>
+      <div class="alvos" id="alvos">
+        <button class="alvo" data-zona="0"></button>
+        <button class="alvo" data-zona="1"></button>
+        <button class="alvo" data-zona="2"></button>
+        <button class="alvo" data-zona="3"></button>
+        <button class="alvo" data-zona="4"></button>
+      </div>
+      <div class="dica-chute" id="dica-chute">👆 Toque no canto do gol pra chutar!</div>
+    </div>
+  </section>
+
+  <!-- ======================= TELA: FIM ======================= -->
+  <section class="screen" id="tela-fim">
+    <div class="fim-bg"></div>
+    <div class="fim-content">
+      <div class="trofeu">🏆</div>
+      <h2 id="fim-titulo">Que time! 👏</h2>
+      <p id="fim-sub">Olha tudo que você já liberou:</p>
+      <div class="sacola" id="sacola"><!-- via JS --></div>
+      <div id="fim-acoes"><!-- CTAs via JS --></div>
+    </div>
+  </section>
+
+</div><!-- /app -->
+
+<!-- ======================= MODAL: PRÊMIO ======================= -->
+<div class="modal" id="modal-premio">
+  <div class="modal-card" id="modal-premio-card">
+    <div class="modal-gol">⚽ GOOOL!</div>
+    <div class="premio-icone" id="mp-icone">🔥</div>
+    <div class="premio-tag" id="mp-tag">DESBLOQUEADO</div>
+    <h3 id="mp-premio">R$10 de desconto</h3>
+    <p class="mp-sub" id="mp-sub">na sua próxima fatura</p>
+    <div class="mp-como" id="mp-como">📲 Envie seu link para 5 amigos</div>
+    <button class="btn-principal btn-zap" id="mp-enviar"><span>ENVIAR NO WHATSAPP</span><i>📲</i></button>
+    <button class="btn-ghost" id="mp-depois">Continuar batendo →</button>
+  </div>
+</div>
+
+<!-- ======================= MODAL: DADOS DO INDICADOR ======================= -->
+<div class="modal" id="modal-dados">
+  <div class="modal-card">
+    <h3 class="md-titulo">Quase lá! ⚽</h3>
+    <p class="md-sub">Pra gerar o <b>seu link</b> e creditar seus prêmios, preencha:</p>
+    <label class="campo-label">Seu nome</label>
+    <input class="campo-input" id="in-nome" placeholder="Ex: Bruno" autocomplete="off">
+    <label class="campo-label">Seu WhatsApp</label>
+    <input class="campo-input" id="in-zap" placeholder="(21) 9____-____" inputmode="numeric">
+    <label class="campo-check"><input type="checkbox" id="in-aceite"> Sou cliente WebFiber e aceito participar da campanha.</label>
+    <button class="btn-principal" id="md-confirmar"><span>GERAR MEU LINK</span><i>🔗</i></button>
+    <p class="md-erro" id="md-erro"></p>
+  </div>
+</div>
+
+<!-- ======================= MODAL: CADASTRO DO INDICADO ======================= -->
+<div class="modal" id="modal-cadastro">
+  <div class="modal-card">
+    <h3 class="md-titulo" id="cad-titulo">Garanta seus descontos 🎁</h3>
+    <p class="md-sub">Preencha e nossa equipe te chama no WhatsApp:</p>
+    <label class="campo-label">Nome</label>
+    <input class="campo-input" id="cad-nome" placeholder="Seu nome" autocomplete="off">
+    <label class="campo-label">WhatsApp</label>
+    <input class="campo-input" id="cad-zap" placeholder="(21) 9____-____" inputmode="numeric">
+    <label class="campo-label">Bairro</label>
+    <input class="campo-input" id="cad-bairro" placeholder="Onde você mora" autocomplete="off">
+    <label class="campo-label">Plano de interesse</label>
+    <select class="campo-input" id="cad-plano">
+      <option value="700 Mega">700 Mega</option>
+      <option value="850 Mega">850 Mega</option>
+      <option value="1 Giga">1 Giga</option>
+      <option value="Não sei / me ajudem">Não sei, me ajudem</option>
+    </select>
+    <label class="campo-check"><input type="checkbox" id="cad-aceite"> Aceito receber contato da WebFiber pelo WhatsApp.</label>
+    <button class="btn-principal btn-zap" id="cad-enviar"><span>QUERO MEUS DESCONTOS</span><i>📲</i></button>
+    <p class="md-erro" id="cad-erro"></p>
+  </div>
+</div>
+
+<!-- confete -->
+<canvas id="confete"></canvas>
+
+<script type="importmap">{ "imports": { "three": "./assets/three.module.js" } }</script>
+<script type="module" src="cena3d.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
