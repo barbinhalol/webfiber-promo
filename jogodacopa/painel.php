@@ -4,7 +4,7 @@
    Troque a SENHA abaixo. Acesso: .../jogodacopa/painel.php
    =========================================================== */
 session_start();
-$SENHA = 'copa@webfiber2026';   // << TROQUE AQUI
+$SENHA = '01webfiber01';   // << senha do dono
 
 if(isset($_GET['sair'])){ session_destroy(); header('Location: painel.php'); exit; }
 if(isset($_POST['senha'])){ if(hash_equals($SENHA, $_POST['senha'])){ $_SESSION['ok']=true; } else { $erro='Senha incorreta.'; } }
