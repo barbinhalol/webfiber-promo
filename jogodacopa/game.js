@@ -59,6 +59,8 @@ function nomeDoRef(code){
   return base.charAt(0).toUpperCase() + base.slice(1);
 }
 const INDICADOR_NOME = nomeDoRef(refCode);
+/* registra a abertura do link (pro painel contar) */
+if(refCode){ try{ new Image().src = "api/abrir.php?ref=" + encodeURIComponent(refCode) + "&t=" + Date.now(); }catch(e){} }
 
 /* ---------- ATALHOS ---------- */
 const $  = s => document.querySelector(s);
@@ -334,7 +336,7 @@ function salvarDados(nome, zap){
   const code = slug(nome.split(" ")[0]) + "-" + rand();
   estado.dados = { nome, zap, code, criado:new Date().toISOString() };
   localStorage.setItem("wf_penaltis", JSON.stringify(estado.dados));
-  // >>> aqui, na Hostinger, dispara fetch('api/save.php', {indicador}) <<<
+  fetch("api/save.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tipo:"indicador",codigo:code,nome,whatsapp:zap})}).catch(()=>{});
 }
 
 function meuLink(){
@@ -368,7 +370,7 @@ function enviarCadastro(){
   if(!ok){ erro.textContent="Marque o aceite pra continuar."; return; }
   erro.textContent="";
 
-  // >>> na Hostinger: fetch('api/save.php', {lead, ref:refCode}) <<<
+  fetch("api/save.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tipo:"lead",ref:refCode,nome,whatsapp:zap,bairro,plano})}).catch(()=>{});
 
   const msg = `Olá! Vim pela *Copa da Indicação* (indicado por ${INDICADOR_NOME}). Quero garantir meus descontos 👇\n\n`
             + `*Nome:* ${nome}\n*WhatsApp:* ${zap}\n*Bairro:* ${bairro}\n*Plano:* ${plano}\n`
