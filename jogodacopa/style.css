@@ -182,6 +182,7 @@ body{
 .sacola-item .si-status{margin-left:auto;font-size:10px;font-weight:800;padding:4px 9px;border-radius:20px;flex-shrink:0}
 .si-status.lib{background:rgba(67,216,84,.2);color:#7dffa0}
 .si-status.cond{background:rgba(255,196,0,.18);color:var(--amarelo)}
+.si-status.falta{background:rgba(255,84,84,.22);color:#ff9a9a}
 #fim-acoes{width:100%;display:flex;flex-direction:column;gap:9px;margin-top:6px}
 
 /* ============ MODAIS ============ */

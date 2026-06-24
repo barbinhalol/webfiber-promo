@@ -11,11 +11,11 @@ const BASE_LINK     = location.origin + location.pathname; // vira o domínio na
 const PREMIOS = {
   indicador: [
     { ic:"🔥", titulo:"Esquentou!",  premio:"R$10 de desconto", sub:"na sua próxima fatura",
-      como:"Envie seu link para 5 amigos", cond:false, curto:"R$10 OFF" },
+      como:"Envie seu link para 5 amigos", env:5, curto:"R$10 OFF" },
     { ic:"🥅", titulo:"Na rede!",    premio:"R$30 de desconto", sub:"na sua próxima fatura",
       como:"Quando 1 amigo fechar contrato", cond:true, curto:"R$30 OFF" },
     { ic:"🏆", titulo:"GOLAÇO!",     premio:"700 → 850 Mega",   sub:"upgrade por 1 mês, na hora",
-      como:"Envie para +5 contatos novos", cond:false, curto:"850 Mega" },
+      como:"Envie para +5 contatos novos", env:10, curto:"850 Mega" },
   ],
   indicado: [
     { ic:"🎁", titulo:"Boas-vindas!", premio:"R$30 de desconto", sub:"na sua 1ª mensalidade",
@@ -23,7 +23,7 @@ const PREMIOS = {
     { ic:"🔧", titulo:"Instalação!",  premio:"R$50 de desconto", sub:"na taxa de instalação",
       como:"No fechamento do contrato", cond:true, curto:"R$50 instalação" },
     { ic:"🚀", titulo:"Turbo!",       premio:"850 Mega por 1 mês", sub:"contratando o 700 Mega",
-      como:"Indicando para +5 pessoas", cond:false, curto:"850 Mega" },
+      como:"Indicando para +5 pessoas", env:5, curto:"850 Mega" },
   ],
 };
 
@@ -296,14 +296,15 @@ function revelarPremio(i){
   $("#mp-icone").textContent = p.ic;
   $("#mp-premio").textContent = p.premio;
   $("#mp-sub").textContent = p.sub;
-  $("#mp-tag").textContent = p.cond ? "CUPOM LIBERADO" : "DESBLOQUEADO";
-  $("#mp-como").innerHTML = (p.cond ? "✅ " : "📲 ") + p.como;
+  $("#mp-tag").textContent = p.env ? "ENVIE PRA LIBERAR" : (p.cond ? "AO FECHAR" : "LIBERADO");
+  $("#mp-tag").style.background = (p.env || p.cond) ? "#E0900A" : "#1f9d4d";
+  $("#mp-como").innerHTML = (p.env ? "📲 " : p.cond ? "✅ " : "🎁 ") + p.como;
 
   // texto do botão depende do modo
   const btn = $("#mp-enviar").querySelector("span");
-  btn.textContent = MODO==="indicado" ? "GARANTIR ESTE DESCONTO" : "ENVIAR LINK NO WHATSAPP";
+  btn.textContent = MODO==="indicado" ? "GARANTIR ESTE DESCONTO" : "ENVIAR PRA LIBERAR 👇";
 
-  $("#mp-depois").textContent = (i<2) ? "Continuar batendo →" : "Ver tudo que ganhei →";
+  $("#mp-depois").textContent = (i<2) ? "Pular (não libera) →" : "Ver meus cupons →";
   $("#modal-premio").classList.add("show");
 }
 
@@ -358,7 +359,6 @@ function compartilharLink(){
 }
 
 /* ---------- contagem de envios + progresso gamificado ---------- */
-const META_ENVIOS = 5;
 function registrarEnvio(){
   if(!estado.dados) return;
   estado.dados.envios = (estado.dados.envios||0) + 1;
@@ -366,22 +366,29 @@ function registrarEnvio(){
   fetch("api/save.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tipo:"envio",codigo:estado.dados.code})}).catch(()=>{});
   setTimeout(mostrarProgressoEnvios, 550);
 }
+const META_R10 = 5, META_850 = 10;   // R$10 aos 5 envios; upgrade 850 aos 10
 function mostrarProgressoEnvios(){
   const n = (estado.dados && estado.dados.envios) || 0;
-  const meta = META_ENVIOS, falta = Math.max(0, meta-n);
+  const meta = n < META_R10 ? META_R10 : META_850;
   $("#prog-contador").textContent = `${Math.min(n,meta)} de ${meta}`;
   $("#prog-barra").style.width = Math.min(100, Math.round(n/meta*100)) + "%";
-  if(n >= meta){
+  if(n >= META_850){
+    $("#prog-icone").textContent = "🏆";
+    $("#prog-titulo").textContent = "TUDO LIBERADO! 🎉";
+    $("#prog-sub").innerHTML = `Você mandou pra <b>10+ amigos</b> — <b>R$10</b> e o <b>upgrade pra 850 Mega</b> garantidos! 🚀<br>Agora é só os amigos fecharem pros <b>R$30</b>.`;
+    $("#prog-btn").querySelector("span").textContent = "MANDAR PRA MAIS GENTE 💪";
+    somGol();
+  } else if(n >= META_R10){
     $("#prog-icone").textContent = "🎉";
-    $("#prog-titulo").textContent = "PARABÉNS! R$10 garantido! 🟦";
-    $("#prog-sub").innerHTML = `Você mandou pra <b>5 amigos</b> — seu <b>R$10 de desconto</b> com a WebFiber tá garantido!<br>Agora bora rumo aos <b>R$30</b>: é só um amigo seu fechar. 💪`;
-    $("#prog-btn").querySelector("span").textContent = "MANDAR PRA MAIS UM 🚀";
+    $("#prog-titulo").textContent = "R$10 GARANTIDO! 🟦";
+    $("#prog-sub").innerHTML = `Mandou pra <b>5 amigos</b> — seu <b>R$10</b> tá no bolso!<br>Falta <b>${META_850-n}</b> pro <b>upgrade 700→850 Mega</b>. Bora? 🚀`;
+    $("#prog-btn").querySelector("span").textContent = `MANDAR PRA MAIS (falta ${META_850-n} pro 850)`;
     somGol();
   } else {
     $("#prog-icone").textContent = "🔥";
-    $("#prog-titulo").textContent = `Você já mandou pra ${n} de ${meta}!`;
-    $("#prog-sub").innerHTML = `Falta só <b>${falta}</b> pra desbloquear seu <b>R$10 de desconto</b>. Não para agora! 🟦`;
-    $("#prog-btn").querySelector("span").textContent = `ENVIAR PRA MAIS UM (falta ${falta})`;
+    $("#prog-titulo").textContent = `Você já mandou pra ${n} de ${META_R10}!`;
+    $("#prog-sub").innerHTML = `Falta só <b>${META_R10-n}</b> pra desbloquear seu <b>R$10 de desconto</b>. Não para agora! 🟦`;
+    $("#prog-btn").querySelector("span").textContent = `ENVIAR PRA MAIS UM (falta ${META_R10-n})`;
   }
   $("#modal-progresso").classList.add("show");
 }
@@ -419,17 +426,25 @@ function enviarCadastro(){
 function montarFim(cadastrou=false){
   ambiente(false);              // desliga torcida de fundo
   $("#fim-titulo").textContent = MODO==="indicado" ? "Tá feito! ⚽" : "Que craque! 👏";
-  $("#fim-sub").textContent = MODO==="indicado"
+  const envF = (estado.dados && estado.dados.envios) || 0;
+  const faltaEnvio = LISTA.some(p => p.env && envF < p.env);
+  $("#fim-sub").innerHTML = MODO==="indicado"
       ? "Seus descontos ficam vinculados à indicação:"
-      : "Tudo que você já liberou (não some):";
+      : (faltaEnvio
+          ? "⚠️ Pra <b>LIBERAR</b> seus prêmios, você precisa <b>ENVIAR seu link</b>! 👇"
+          : "Você liberou seus prêmios! 🎉 (não somem)");
 
   $("#sacola").innerHTML = LISTA.map((p,i)=>{
-    const lib = estado.desbloqueados.includes(i);
-    const cond = p.cond;
+    let label, cls;
+    if(p.env){                                  // precisa ENVIAR pra liberar
+      if(envF >= p.env){ label='LIBERADO'; cls='lib'; }
+      else { label=`FALTA ENVIAR`; cls='falta'; }
+    } else if(p.cond){ label='AO FECHAR'; cls='cond'; }
+    else { label='LIBERADO'; cls='lib'; }
     return `<div class="sacola-item">
       <span class="si-ic">${p.ic}</span>
       <span class="si-tx"><b>${p.premio}</b><span>${p.sub} — ${p.como.toLowerCase()}</span></span>
-      <span class="si-status ${cond?'cond':'lib'}">${cond?'AO FECHAR':'LIBERADO'}</span>
+      <span class="si-status ${cls}">${label}</span>
     </div>`;
   }).join("");
 
@@ -444,11 +459,14 @@ function montarFim(cadastrou=false){
     $("#fim-indicar").onclick = ()=> { if(!estado.dados){$("#modal-dados").classList.add("show");} else compartilharLink(); };
   } else {
     const env = (estado.dados && estado.dados.envios) || 0;
-    const aviso = (estado.dados && env < META_ENVIOS)
-      ? `<div class="fim-aviso">⚠️ Falta <b>${META_ENVIOS-env}</b> pra garantir seu <b>R$10</b>! Você mandou pra ${env} de ${META_ENVIOS}.</div>`
-      : (estado.dados ? `<div class="fim-aviso ok">✅ Você já mandou pra ${env}! R$10 garantido. Rumo aos R$30! 🚀</div>` : '');
+    let aviso = '';
+    if(estado.dados){
+      if(env < META_R10) aviso = `<div class="fim-aviso">⚠️ Falta <b>${META_R10-env}</b> pra garantir seu <b>R$10</b>! Você mandou pra ${env} de ${META_R10}.</div>`;
+      else if(env < META_850) aviso = `<div class="fim-aviso ok">✅ R$10 garantido! Falta <b>${META_850-env}</b> pro upgrade <b>850 Mega</b>. 🚀</div>`;
+      else aviso = `<div class="fim-aviso ok">✅ Você liberou R$10 + 850 Mega! Agora rumo aos R$30! 🎉</div>`;
+    }
     acoes.innerHTML = aviso + `
-      <button class="btn-principal btn-zap" id="fim-enviar"><span>${env<META_ENVIOS?'ENVIAR PRA MAIS UM AMIGO':'MANDAR PRA MAIS GENTE'}</span><i>📲</i></button>
+      <button class="btn-principal btn-zap" id="fim-enviar"><span>${env<META_R10?'ENVIAR PRA LIBERAR MEU R$10':'MANDAR PRA MAIS GENTE'}</span><i>📲</i></button>
       <button class="btn-ghost" id="fim-copiar" style="color:#9fc0ff">📋 Copiar meu link</button>`;
     $("#fim-enviar").onclick = ()=> { if(!estado.dados){$("#modal-dados").classList.add("show");} else compartilharLink(); };
     $("#fim-copiar").onclick = ()=>{
@@ -575,7 +593,7 @@ if(ver){
     if(ver==="chute"){ estado.sequencia=[true,true,true,true,true]; iniciarJogo(); estado.sequencia=[true,true,true,true,true]; setTimeout(()=> chutar(zona), 500); }
     if(ver==="premio"){ iniciarJogo(); setTimeout(()=>{ estado.chute=0; revelarPremio(0); }, 250); }
     if(ver==="prog"){ estado.dados={nome:'Bruno',zap:'21999990000',code:'bruno-x1',envios:+(params.get('n')||2)}; tela('tela-fim'); setTimeout(mostrarProgressoEnvios,150); }
-    if(ver==="fim"){ iniciarJogo(); estado.desbloqueados=[0,1,2]; LISTA.forEach((_,i)=>{const s=$("#slot-"+i); if(s)s.classList.add("on");}); montarFim(); tela("tela-fim"); }
+    if(ver==="fim"){ iniciarJogo(); estado.desbloqueados=[0,1,2]; const e=params.get('env'); if(e) estado.dados={nome:'B',zap:'21',code:'b-1',envios:+e}; LISTA.forEach((_,i)=>{const s=$("#slot-"+i); if(s)s.classList.add("on");}); montarFim(); tela("tela-fim"); }
   };
   let tries=0; (function wait(){ if(window.WF3D || tries++>60) start(); else setTimeout(wait,40); })();
 }
