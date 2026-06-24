@@ -354,6 +354,36 @@ function compartilharLink(){
   } else {
     window.open("https://wa.me/?text="+encodeURIComponent(msg), "_blank");
   }
+  registrarEnvio();
+}
+
+/* ---------- contagem de envios + progresso gamificado ---------- */
+const META_ENVIOS = 5;
+function registrarEnvio(){
+  if(!estado.dados) return;
+  estado.dados.envios = (estado.dados.envios||0) + 1;
+  localStorage.setItem("wf_penaltis", JSON.stringify(estado.dados));
+  fetch("api/save.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tipo:"envio",codigo:estado.dados.code})}).catch(()=>{});
+  setTimeout(mostrarProgressoEnvios, 550);
+}
+function mostrarProgressoEnvios(){
+  const n = (estado.dados && estado.dados.envios) || 0;
+  const meta = META_ENVIOS, falta = Math.max(0, meta-n);
+  $("#prog-contador").textContent = `${Math.min(n,meta)} de ${meta}`;
+  $("#prog-barra").style.width = Math.min(100, Math.round(n/meta*100)) + "%";
+  if(n >= meta){
+    $("#prog-icone").textContent = "🎉";
+    $("#prog-titulo").textContent = "PARABÉNS! R$10 garantido! 🟦";
+    $("#prog-sub").innerHTML = `Você mandou pra <b>5 amigos</b> — seu <b>R$10 de desconto</b> com a WebFiber tá garantido!<br>Agora bora rumo aos <b>R$30</b>: é só um amigo seu fechar. 💪`;
+    $("#prog-btn").querySelector("span").textContent = "MANDAR PRA MAIS UM 🚀";
+    somGol();
+  } else {
+    $("#prog-icone").textContent = "🔥";
+    $("#prog-titulo").textContent = `Você já mandou pra ${n} de ${meta}!`;
+    $("#prog-sub").innerHTML = `Falta só <b>${falta}</b> pra desbloquear seu <b>R$10 de desconto</b>. Não para agora! 🟦`;
+    $("#prog-btn").querySelector("span").textContent = `ENVIAR PRA MAIS UM (falta ${falta})`;
+  }
+  $("#modal-progresso").classList.add("show");
 }
 
 /* ============================================================
@@ -413,8 +443,12 @@ function montarFim(cadastrou=false){
         : $("#modal-cadastro").classList.add("show");
     $("#fim-indicar").onclick = ()=> { if(!estado.dados){$("#modal-dados").classList.add("show");} else compartilharLink(); };
   } else {
-    acoes.innerHTML = `
-      <button class="btn-principal btn-zap" id="fim-enviar"><span>ENVIAR MEU LINK PRA 5 AMIGOS</span><i>📲</i></button>
+    const env = (estado.dados && estado.dados.envios) || 0;
+    const aviso = (estado.dados && env < META_ENVIOS)
+      ? `<div class="fim-aviso">⚠️ Falta <b>${META_ENVIOS-env}</b> pra garantir seu <b>R$10</b>! Você mandou pra ${env} de ${META_ENVIOS}.</div>`
+      : (estado.dados ? `<div class="fim-aviso ok">✅ Você já mandou pra ${env}! R$10 garantido. Rumo aos R$30! 🚀</div>` : '');
+    acoes.innerHTML = aviso + `
+      <button class="btn-principal btn-zap" id="fim-enviar"><span>${env<META_ENVIOS?'ENVIAR PRA MAIS UM AMIGO':'MANDAR PRA MAIS GENTE'}</span><i>📲</i></button>
       <button class="btn-ghost" id="fim-copiar" style="color:#9fc0ff">📋 Copiar meu link</button>`;
     $("#fim-enviar").onclick = ()=> { if(!estado.dados){$("#modal-dados").classList.add("show");} else compartilharLink(); };
     $("#fim-copiar").onclick = ()=>{
@@ -508,6 +542,8 @@ $$(".alvo").forEach(a=> a.addEventListener("click",()=> chutar(+a.dataset.zona))
 $("#mp-enviar").onclick = acaoEnviar;
 $("#mp-depois").onclick = fecharPremioEseguir;
 $("#cad-enviar").onclick = enviarCadastro;
+$("#prog-btn").onclick = ()=>{ $("#modal-progresso").classList.remove("show"); compartilharLink(); };
+$("#prog-fechar").onclick = ()=> $("#modal-progresso").classList.remove("show");
 $("#md-confirmar").onclick = ()=>{
   const nome=$("#in-nome").value.trim(), zap=$("#in-zap").value.trim(), ok=$("#in-aceite").checked;
   const erro=$("#md-erro");
@@ -538,6 +574,7 @@ if(ver){
     if(ver==="jogo"){ iniciarJogo(); }
     if(ver==="chute"){ estado.sequencia=[true,true,true,true,true]; iniciarJogo(); estado.sequencia=[true,true,true,true,true]; setTimeout(()=> chutar(zona), 500); }
     if(ver==="premio"){ iniciarJogo(); setTimeout(()=>{ estado.chute=0; revelarPremio(0); }, 250); }
+    if(ver==="prog"){ estado.dados={nome:'Bruno',zap:'21999990000',code:'bruno-x1',envios:+(params.get('n')||2)}; tela('tela-fim'); setTimeout(mostrarProgressoEnvios,150); }
     if(ver==="fim"){ iniciarJogo(); estado.desbloqueados=[0,1,2]; LISTA.forEach((_,i)=>{const s=$("#slot-"+i); if(s)s.classList.add("on");}); montarFim(); tela("tela-fim"); }
   };
   let tries=0; (function wait(){ if(window.WF3D || tries++>60) start(); else setTimeout(wait,40); })();

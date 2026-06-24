@@ -217,5 +217,12 @@ select.campo-input{appearance:none;background-image:url("data:image/svg+xml,%3Cs
 .campo-check input{width:19px;height:19px;flex-shrink:0;accent-color:var(--azul);margin-top:1px}
 .md-erro{color:#d12f2f;font-size:12.5px;font-weight:700;min-height:16px;margin-top:6px}
 
+.prog-wrap{position:relative;background:#e6ecf6;border-radius:30px;height:28px;margin:14px 0 8px;overflow:hidden;box-shadow:inset 0 2px 5px rgba(0,0,0,.1)}
+.prog-barra{height:100%;background:linear-gradient(90deg,#43d854,#1faf3a);border-radius:30px;transition:width .7s cubic-bezier(.2,.9,.3,1.1);width:0}
+.prog-contador{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#0e1b33}
+.fim-aviso{background:rgba(255,196,0,.16);border:1px solid rgba(255,196,0,.5);color:#ffe08a;font-size:13px;font-weight:700;padding:10px 12px;border-radius:12px;margin-bottom:6px;text-align:center;line-height:1.4}
+.fim-aviso b{color:#fff}
+.fim-aviso.ok{background:rgba(67,216,84,.16);border-color:rgba(67,216,84,.5);color:#9effb3}
+
 #confete{position:fixed;inset:0;z-index:300;pointer-events:none;display:none}
 #confete.on{display:block}

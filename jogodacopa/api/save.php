@@ -22,6 +22,14 @@ try {
     echo json_encode(['ok'=>true]); exit;
   }
 
+  if($tipo === 'envio'){
+    $cod = so_cod($in['codigo'] ?? '');
+    if($cod === ''){ http_response_code(400); echo json_encode(['erro'=>'invalido']); exit; }
+    $pdo->prepare("UPDATE indicadores SET envios = envios + 1 WHERE codigo = ?")->execute([$cod]);
+    $q = $pdo->prepare("SELECT envios FROM indicadores WHERE codigo = ?"); $q->execute([$cod]);
+    echo json_encode(['ok'=>true, 'envios'=>(int)$q->fetchColumn()]); exit;
+  }
+
   if($tipo === 'lead'){
     $ref    = so_cod($in['ref'] ?? '');
     $nome   = limpa($in['nome'] ?? '');

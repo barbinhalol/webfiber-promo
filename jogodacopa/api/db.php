@@ -7,7 +7,8 @@ function db(){
   $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
   $pdo->exec("CREATE TABLE IF NOT EXISTS indicadores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    codigo TEXT UNIQUE, nome TEXT, whatsapp TEXT, criado TEXT)");
+    codigo TEXT UNIQUE, nome TEXT, whatsapp TEXT, envios INTEGER DEFAULT 0, criado TEXT)");
+  try { $pdo->exec("ALTER TABLE indicadores ADD COLUMN envios INTEGER DEFAULT 0"); } catch(Exception $e){}
   $pdo->exec("CREATE TABLE IF NOT EXISTS aberturas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     codigo TEXT, iphash TEXT, criado TEXT)");

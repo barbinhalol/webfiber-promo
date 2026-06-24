@@ -53,7 +53,7 @@ $tot_ind  = $pdo->query("SELECT COUNT(*) FROM indicadores")->fetchColumn();
 $tot_abr  = $pdo->query("SELECT COUNT(*) FROM aberturas")->fetchColumn();
 $tot_lead = $pdo->query("SELECT COUNT(*) FROM leads")->fetchColumn();
 $tot_pago = $pdo->query("SELECT COUNT(*) FROM leads WHERE status='pago'")->fetchColumn();
-$indicadores = $pdo->query("SELECT i.codigo,i.nome,i.whatsapp,i.criado,
+$indicadores = $pdo->query("SELECT i.codigo,i.nome,i.whatsapp,i.envios,i.criado,
   (SELECT COUNT(*) FROM aberturas a WHERE a.codigo=i.codigo) ab,
   (SELECT COUNT(*) FROM leads l WHERE l.ref=i.codigo) lc
   FROM indicadores i ORDER BY lc DESC, ab DESC, i.id DESC")->fetchAll(PDO::FETCH_ASSOC);
@@ -125,12 +125,13 @@ select.st{border:0;border-radius:20px;color:#fff;padding:5px 10px;font-weight:70
   <h2>🏆 Quem está indicando</h2>
   <?php if(!$indicadores): ?><div class="vazio">Nenhum indicador entrou no jogo ainda.</div>
   <?php else: ?>
-  <table><tr><th>Nome</th><th>WhatsApp</th><th>Código</th><th>Abriram o link</th><th>Viraram lead</th></tr>
-  <?php foreach($indicadores as $i): $zap=preg_replace('/[^0-9]/','',$i['whatsapp']); if($zap&&strlen($zap)<=11)$zap='55'.$zap; ?>
+  <table><tr><th>Nome</th><th>WhatsApp</th><th>Código</th><th>Enviou (declarado)</th><th>Abriram de verdade</th><th>Viraram lead</th></tr>
+  <?php foreach($indicadores as $i): $zap=preg_replace('/[^0-9]/','',$i['whatsapp']); if($zap&&strlen($zap)<=11)$zap='55'.$zap; $env=(int)$i['envios']; ?>
     <tr>
       <td><b><?=e($i['nome'])?></b></td>
       <td><?php if($zap):?><a class="zap" href="https://wa.me/<?=e($zap)?>" target="_blank">📲 <?=e($i['whatsapp'])?></a><?php else:echo '—';endif;?></td>
       <td><span class="tag"><?=e($i['codigo'])?></span></td>
+      <td><b><?=$env?></b><?php if($env>=5):?> <span style="background:#1f9d4d;color:#fff;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:800">✓ R$10</span><?php endif;?></td>
       <td><b><?=$i['ab']?></b> pessoas</td>
       <td><b style="color:#1f9d4d"><?=$i['lc']?></b></td>
     </tr>
