@@ -183,6 +183,8 @@ body{
 .si-status.lib{background:rgba(67,216,84,.2);color:#7dffa0}
 .si-status.cond{background:rgba(255,196,0,.18);color:var(--amarelo)}
 .si-status.falta{background:rgba(255,84,84,.22);color:#ff9a9a}
+@keyframes shakeNo{0%,100%{transform:none}20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(5px)}}
+.modal-card.shake-no{animation:shakeNo .42s}
 #fim-acoes{width:100%;display:flex;flex-direction:column;gap:9px;margin-top:6px}
 
 /* ============ MODAIS ============ */

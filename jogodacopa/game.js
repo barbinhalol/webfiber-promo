@@ -304,7 +304,13 @@ function revelarPremio(i){
   const btn = $("#mp-enviar").querySelector("span");
   btn.textContent = MODO==="indicado" ? "GARANTIR ESTE DESCONTO" : "ENVIAR PRA LIBERAR 👇";
 
-  $("#mp-depois").textContent = (i<2) ? "Pular (não libera) →" : "Ver meus cupons →";
+  // INDICADOR: só avança ENVIANDO (sem botão de pular). INDICADO: pode continuar.
+  if(MODO==="indicado"){
+    $("#mp-depois").style.display = "";
+    $("#mp-depois").textContent = (i<2) ? "Continuar batendo →" : "Ver meus cupons →";
+  } else {
+    $("#mp-depois").style.display = "none";   // só sai daqui ENVIANDO
+  }
   $("#modal-premio").classList.add("show");
 }
 
@@ -323,8 +329,8 @@ function acaoEnviar(){
     if(!estado.dados){
       $("#modal-dados").classList.add("show");        // por cima do prêmio (não fecha)
     } else {
-      compartilharLink();
-      fecharPremioEseguir();                          // já compartilhou → segue o jogo
+      $("#modal-premio").classList.remove("show");
+      compartilharLink();   // conta o envio + abre o progresso (que tem "continuar batendo")
     }
   }
 }
@@ -390,7 +396,14 @@ function mostrarProgressoEnvios(){
     $("#prog-sub").innerHTML = `Falta só <b>${META_R10-n}</b> pra desbloquear seu <b>R$10 de desconto</b>. Não para agora! 🟦`;
     $("#prog-btn").querySelector("span").textContent = `ENVIAR PRA MAIS UM (falta ${META_R10-n})`;
   }
+  const noJogo = estado.travado && $("#tela-jogo").classList.contains("active");
+  $("#prog-fechar").textContent = noJogo ? "CONTINUAR BATENDO ⚽" : "Agora não";
+  $("#prog-fechar").className = noJogo ? "btn-principal" : "btn-ghost";
   $("#modal-progresso").classList.add("show");
+}
+function progContinuar(){
+  $("#modal-progresso").classList.remove("show");
+  if(estado.travado && $("#tela-jogo").classList.contains("active")) avancarChute();
 }
 
 /* ============================================================
@@ -561,7 +574,7 @@ $("#mp-enviar").onclick = acaoEnviar;
 $("#mp-depois").onclick = fecharPremioEseguir;
 $("#cad-enviar").onclick = enviarCadastro;
 $("#prog-btn").onclick = ()=>{ $("#modal-progresso").classList.remove("show"); compartilharLink(); };
-$("#prog-fechar").onclick = ()=> $("#modal-progresso").classList.remove("show");
+$("#prog-fechar").onclick = progContinuar;
 $("#md-confirmar").onclick = ()=>{
   const nome=$("#in-nome").value.trim(), zap=$("#in-zap").value.trim(), ok=$("#in-aceite").checked;
   const erro=$("#md-erro");
@@ -571,13 +584,17 @@ $("#md-confirmar").onclick = ()=>{
   erro.textContent="";
   salvarDados(nome, zap);
   $("#modal-dados").classList.remove("show");
-  compartilharLink();
-  if($("#modal-premio").classList.contains("show")) fecharPremioEseguir();   // segue o jogo
+  $("#modal-premio").classList.remove("show");
+  compartilharLink();   // conta o envio + abre o progresso (o avanço vem dali)
 };
 
 /* fechar modal tocando fora do card — o prêmio AVANÇA o jogo (não trava!) */
 $$(".modal").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m){
-  if(m.id==="modal-premio"){ fecharPremioEseguir(); }
+  if(m.id==="modal-premio"){
+    if(MODO==="indicado"){ fecharPremioEseguir(); }
+    else { const c=m.querySelector(".modal-card"); if(c){ c.classList.remove("shake-no"); void c.offsetWidth; c.classList.add("shake-no"); } }   // força o envio
+  }
+  else if(m.id==="modal-progresso"){ progContinuar(); }
   else { m.classList.remove("show"); }
 }}));
 
