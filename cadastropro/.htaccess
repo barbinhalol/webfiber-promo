@@ -1,0 +1,6 @@
+AddType application/x-chrome-extension .crx
+<Files "update.xml">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </IfModule>
+</Files>
