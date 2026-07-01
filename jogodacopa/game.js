@@ -14,16 +14,16 @@ const PREMIOS = {
       como:"Envie seu link para 5 amigos", env:5, curto:"R$10 OFF" },
     { ic:"🥅", titulo:"Na rede!",    premio:"R$30 de desconto", sub:"na sua próxima fatura",
       como:"Quando 1 amigo fechar contrato", cond:true, curto:"R$30 OFF" },
-    { ic:"🏆", titulo:"GOLAÇO!",     premio:"700 → 850 Mega",   sub:"upgrade por 1 mês, na hora",
-      como:"Envie para +5 contatos novos", env:10, curto:"850 Mega" },
+    { ic:"🏆", titulo:"GOLAÇO!",     premio:"700 → 850 Mega por 1 mês",   sub:"upgrade de velocidade só no 1º mês",
+      como:"Envie para +5 contatos novos", env:10, curto:"850 Mega·1 mês" },
   ],
   indicado: [
     { ic:"🎁", titulo:"Boas-vindas!", premio:"R$30 de desconto", sub:"na sua 1ª mensalidade",
       como:"Ao fechar pela indicação", cond:true, curto:"R$30 OFF" },
     { ic:"🔧", titulo:"Instalação!",  premio:"R$50 de desconto", sub:"na taxa de instalação",
       como:"No fechamento do contrato", cond:true, curto:"R$50 instalação" },
-    { ic:"🚀", titulo:"Turbo!",       premio:"850 Mega por 1 mês", sub:"contratando o 700 Mega",
-      como:"Indicando para +5 pessoas", env:5, curto:"850 Mega" },
+    { ic:"🚀", titulo:"Turbo!",       premio:"850 Mega por 1 mês", sub:"só no 1º mês, contratando o 700",
+      como:"Indicando para +5 pessoas", env:5, curto:"850 Mega·1 mês" },
   ],
 };
 
@@ -381,13 +381,13 @@ function mostrarProgressoEnvios(){
   if(n >= META_850){
     $("#prog-icone").textContent = "🏆";
     $("#prog-titulo").textContent = "TUDO LIBERADO! 🎉";
-    $("#prog-sub").innerHTML = `Você mandou pra <b>10+ amigos</b> — <b>R$10</b> e o <b>upgrade pra 850 Mega</b> garantidos! 🚀<br>Agora é só os amigos fecharem pros <b>R$30</b>.`;
+    $("#prog-sub").innerHTML = `Você mandou pra <b>10+ amigos</b> — <b>R$10</b> e o <b>upgrade pra 850 Mega (por 1 mês)</b> garantidos! 🚀<br>Agora é só os amigos fecharem pros <b>R$30</b>.`;
     $("#prog-btn").querySelector("span").textContent = "MANDAR PRA MAIS GENTE 💪";
     somGol();
   } else if(n >= META_R10){
     $("#prog-icone").textContent = "🎉";
     $("#prog-titulo").textContent = "R$10 GARANTIDO! 🟦";
-    $("#prog-sub").innerHTML = `Mandou pra <b>5 amigos</b> — seu <b>R$10</b> tá no bolso!<br>Falta <b>${META_850-n}</b> pro <b>upgrade 700→850 Mega</b>. Bora? 🚀`;
+    $("#prog-sub").innerHTML = `Mandou pra <b>5 amigos</b> — seu <b>R$10</b> tá no bolso!<br>Falta <b>${META_850-n}</b> pro <b>upgrade 700→850 Mega (por 1 mês)</b>. Bora? 🚀`;
     $("#prog-btn").querySelector("span").textContent = `MANDAR PRA MAIS (falta ${META_850-n} pro 850)`;
     somGol();
   } else {
@@ -475,8 +475,8 @@ function montarFim(cadastrou=false){
     let aviso = '';
     if(estado.dados){
       if(env < META_R10) aviso = `<div class="fim-aviso">⚠️ Falta <b>${META_R10-env}</b> pra garantir seu <b>R$10</b>! Você mandou pra ${env} de ${META_R10}.</div>`;
-      else if(env < META_850) aviso = `<div class="fim-aviso ok">✅ R$10 garantido! Falta <b>${META_850-env}</b> pro upgrade <b>850 Mega</b>. 🚀</div>`;
-      else aviso = `<div class="fim-aviso ok">✅ Você liberou R$10 + 850 Mega! Agora rumo aos R$30! 🎉</div>`;
+      else if(env < META_850) aviso = `<div class="fim-aviso ok">✅ R$10 garantido! Falta <b>${META_850-env}</b> pro upgrade <b>850 Mega (por 1 mês)</b>. 🚀</div>`;
+      else aviso = `<div class="fim-aviso ok">✅ Você liberou R$10 + 850 Mega (por 1 mês)! Agora rumo aos R$30! 🎉</div>`;
     }
     acoes.innerHTML = aviso + `
       <button class="btn-principal btn-zap" id="fim-enviar"><span>${env<META_R10?'ENVIAR PRA LIBERAR MEU R$10':'MANDAR PRA MAIS GENTE'}</span><i>📲</i></button>
