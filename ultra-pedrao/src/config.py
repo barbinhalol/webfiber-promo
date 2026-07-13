@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Configuração central — tudo por variável de ambiente (nada de segredo no código)."""
-import os
+import os, re
 
 def _b(v, d=False):
     return str(os.environ.get(v, str(d))).strip().lower() in ("1", "true", "yes", "on", "sim")
@@ -29,6 +29,9 @@ PILOT_ALLOWLIST = [n.strip() for n in os.environ.get("PILOT_ALLOWLIST", "").spli
 DEBUG_WEBHOOK = str(os.environ.get("DEBUG_WEBHOOK", "false")).strip().lower() in ("1", "true", "yes", "sim", "on")
 # FORCAR_ATUACAO: ignora o gate de horário pra ver a decisão completa do cérebro AGORA (continua shadow, não envia).
 FORCAR_ATUACAO = str(os.environ.get("FORCAR_ATUACAO", "false")).strip().lower() in ("1", "true", "yes", "sim", "on")
+# TESTE_SO_NUMERO: se preenchido, o Pedrão processa SÓ mensagens desse número (ignora todo o resto).
+#   Use nos testes pra não rodar o cérebro em cima do movimento de produção. Vazio = processa todos.
+TESTE_SO_NUMERO = [re.sub(r"\D", "", n) for n in os.environ.get("TESTE_SO_NUMERO", "").split(",") if n.strip()]
 
 # ---------------- FLOWSELLER (API externa) ----------------
 FS_BASE = os.environ.get("FS_BASE", "https://servapi.flowseller.com.br")
