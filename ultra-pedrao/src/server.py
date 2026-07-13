@@ -51,23 +51,26 @@ def _parse_evento(p: dict):
                 else: ok = False; break
             if ok and cur not in (None, ""): return cur
         return default
-    numero = str(g("ticket.contact.number", "contact.number", "number", "from", "contato", default=""))
-    ticket_id = g("ticket.id", "ticketId", "message.ticketId")
-    contact_id = g("ticket.contactId", "ticket.contact.id", "contact.id", "contactId")
+    # A FlowSeller embrulha o evento em "message", com o ticket aninhado (message.ticket.contact...).
+    numero = str(g("message.ticket.contact.number", "ticket.contact.number", "message.contact.number",
+                   "contact.number", "number", "from", default=""))
+    ticket_id = g("message.ticketId", "message.ticket.id", "ticket.id", "ticketId")
+    contact_id = g("message.contactId", "message.ticket.contactId", "ticket.contactId", "contactId")
     return {
-        # externalKey costuma vir null no webhook -> endereçamos pelo número (fallback), guardando ids p/ o envio
-        "external_key": g("externalKey", "message.externalKey", "ticket.externalKey") or numero,
+        # externalKey costuma vir null -> endereçamos pelo número (fallback), guardando ids p/ o envio
+        "external_key": g("message.externalKey", "message.ticket.externalKey", "externalKey", "ticket.externalKey") or numero,
         "ticket_id": ticket_id,
         "contact_id": contact_id,
         "contato": numero,
-        "nome": g("ticket.contact.name", "contact.name", "pushName", "nome", default=""),
-        "texto": g("message.body", "body", "text", "message.text", "message.caption",
-                   "interactive.button_reply.title", "ticket.lastMessage", default=""),
+        "nome": g("message.ticket.contact.name", "ticket.contact.name", "message.contact.name",
+                  "contact.name", "pushName", default=""),
+        "texto": g("message.body", "body", "message.caption", "text", "message.text",
+                   "interactive.button_reply.title", default=""),
         "from_me": bool(g("message.fromMe", "fromMe", default=False)),
-        "is_group": bool(g("ticket.isGroup", "isGroup", "group", "message.isGroup", default=False)),
-        "tipo": g("event", "type", "message.mediaType", "mediaType", "message.type", default="chat"),
+        "is_group": bool(g("message.ticket.isGroup", "message.isGroup", "ticket.isGroup", "isGroup", default=False)),
+        "tipo": g("message.mediaType", "event", "type", "mediaType", "message.type", default="chat"),
         "media_url": g("message.mediaUrl", "mediaUrl", default=None),
-        "ts": g("message.timestamp", "timestamp", "ts", default=time.time()),
+        "ts": g("message.timestamp", "message.msgCreatedAt", "timestamp", "ts", default=time.time()),
         "_raw": p,
     }
 
@@ -141,7 +144,8 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     if C.TESTE_SO_NUMERO:
         import re as _re
         num = _re.sub(r"\D", "", ev["contato"] or "")
-        if not any(num.endswith(n) or n.endswith(num) for n in C.TESTE_SO_NUMERO if n):
+        # número vazio NUNCA passa no modo teste (evita bug de ''.endswith casar com tudo)
+        if len(num) < 8 or not any(num.endswith(n) or n.endswith(num) for n in C.TESTE_SO_NUMERO if n):
             return {"status": "ignorado_fora_do_teste"}
     try:
         if float(ev["ts"]) and (time.time() - float(ev["ts"])) > 3600 and float(ev["ts"]) < _START_TS:
