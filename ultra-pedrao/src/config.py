@@ -23,6 +23,13 @@ def _segredo(v):
 BOT_MODE = os.environ.get("BOT_MODE", "shadow").strip().lower()
 PILOT_ALLOWLIST = [n.strip() for n in os.environ.get("PILOT_ALLOWLIST", "").split(",") if n.strip()]
 
+# ---------------- FLAGS DE TESTE/VALIDAÇÃO (temporárias) ----------------
+# DEBUG_WEBHOOK: registra o payload CRU que a FlowSeller manda (pra confirmar/ajustar o parser).
+#   Use só durante o teste com a SUA própria mensagem; desligue depois (evita guardar dados de cliente).
+DEBUG_WEBHOOK = str(os.environ.get("DEBUG_WEBHOOK", "false")).strip().lower() in ("1", "true", "yes", "sim", "on")
+# FORCAR_ATUACAO: ignora o gate de horário pra ver a decisão completa do cérebro AGORA (continua shadow, não envia).
+FORCAR_ATUACAO = str(os.environ.get("FORCAR_ATUACAO", "false")).strip().lower() in ("1", "true", "yes", "sim", "on")
+
 # ---------------- FLOWSELLER (API externa) ----------------
 FS_BASE = os.environ.get("FS_BASE", "https://servapi.flowseller.com.br")
 # apiId (UUID) + JWT de cada config da tela API/Webhook. NUNCA commitar valores reais.

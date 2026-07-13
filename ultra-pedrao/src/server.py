@@ -112,6 +112,16 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     p = await request.json()
     ev = _parse_evento(p)
 
+    # DEBUG: captura o payload cru + como o parser leu (pra validar/ajustar o formato do webhook)
+    if C.DEBUG_WEBHOOK:
+        M.log_evento(ev.get("contato") or "?", "webhook_raw", {
+            "raw": p,
+            "parser_leu": {"external_key": ev["external_key"], "tem_texto": bool(ev["texto"]),
+                           "texto": (ev["texto"] or "")[:120], "tipo": ev["tipo"],
+                           "from_me": ev["from_me"], "is_group": ev["is_group"],
+                           "contato_mask": _mask(ev["contato"])},
+        })
+
     # idempotência (webhook repetido)
     key = hashlib.sha256((str(ev["external_key"]) + str(ev["texto"]) + str(ev["ts"])).encode()).hexdigest()
     if _dedup(key):
@@ -128,9 +138,10 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     if not ev["texto"] and ev["tipo"] not in ("audio", "ptt", "voice"):
         return {"status": "ignorado_vazio"}
 
-    # horário: Pedrão atua fora do expediente humano
-    if not S.deve_atuar():
-        M.log_evento(ev["contato"], "fora_de_atuacao", {"mask": _mask(ev["contato"])})
+    # horário: Pedrão atua fora do expediente humano (FORCAR_ATUACAO ignora o gate p/ teste — segue shadow)
+    if not S.deve_atuar() and not C.FORCAR_ATUACAO:
+        M.log_evento(ev["contato"], "fora_de_atuacao",
+                     {"mask": _mask(ev["contato"]), "tem_texto": bool(ev["texto"]), "tipo": ev["tipo"]})
         return {"status": "dentro_horario_humano_nao_atua"}
 
     # áudio: baixa e transcreve; se falhar, o cérebro pede confirmação por escrito (nunca finge que entendeu)
