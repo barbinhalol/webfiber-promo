@@ -98,9 +98,17 @@ def health():
             "atuaria_agora": S.deve_atuar()}
 
 @app.post("/webhook")
-async def webhook(request: Request, x_webhook_secret: str = Header(default="")):
-    if C.FS_WEBHOOK_SECRET and x_webhook_secret != C.FS_WEBHOOK_SECRET:
-        raise HTTPException(status_code=401, detail="webhook secret inválido")
+async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
+                  authorization: str = Header(default="")):
+    if C.FS_WEBHOOK_SECRET:
+        # A FlowSeller manda o "Token de autenticação" no header Authorization
+        # (com prefixo opcional, ex. "Bearer xxx"); aceitamos também X-Webhook-Secret.
+        recebido = (x_webhook_secret or authorization or "").strip()
+        for pref in ("bearer ", "token "):
+            if recebido.lower().startswith(pref):
+                recebido = recebido[len(pref):].strip()
+        if recebido != C.FS_WEBHOOK_SECRET:
+            raise HTTPException(status_code=401, detail="webhook secret inválido")
     p = await request.json()
     ev = _parse_evento(p)
 

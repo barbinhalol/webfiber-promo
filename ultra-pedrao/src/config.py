@@ -9,6 +9,13 @@ def _i(v, d):
     try: return int(os.environ.get(v, d))
     except Exception: return d
 
+def _segredo(v):
+    """Env de segredo: alguns parsers de .env entregam o comentário inline ('X=   # dica')
+    como parte do valor — o que vira um 'segredo fantasma' e bloqueia tudo com 401.
+    Corta o comentário e espaços; segredo real nunca contém '#'."""
+    s = os.environ.get(v, "")
+    return s.split("#", 1)[0].strip()
+
 # ---------------- MODO DE OPERAÇÃO ----------------
 # shadow  = recebe, decide, NÃO envia (só registra o que faria) — padrão seguro
 # pilot   = envia SÓ para os números da allowlist (equipe/teste)
@@ -24,7 +31,7 @@ FS_JWT_RESPOSTA   = os.environ.get("FS_JWT_RESPOSTA", "")
 FS_APIID_TRANSFER = os.environ.get("FS_APIID_TRANSFER", "")   # config "transfere p suporte" (opcional)
 FS_JWT_TRANSFER   = os.environ.get("FS_JWT_TRANSFER", "")
 # segredo que a FlowSeller manda no webhook de entrada (validação de origem) — a confirmar no 1º payload
-FS_WEBHOOK_SECRET = os.environ.get("FS_WEBHOOK_SECRET", "")
+FS_WEBHOOK_SECRET = _segredo("FS_WEBHOOK_SECRET")
 
 # Filas (queueId) e departamentos — reaproveitados da API interna já mapeada
 FILAS = {"comercial": 23, "suporte": 24, "financeiro": 25, "atendimento": 112, "outros": 26}
@@ -59,7 +66,7 @@ MEM_RETENCAO_DIAS = _i("MEM_RETENCAO_DIAS", 90) # LGPD: expurgo
 
 # ---------------- SERVIDOR ----------------
 PORT = _i("PORT", 8080)
-ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")  # protege /admin/*
+ADMIN_TOKEN = _segredo("ADMIN_TOKEN")  # protege /admin/*
 
 def resumo_seguro() -> dict:
     """Config visível em /health SEM vazar segredo."""

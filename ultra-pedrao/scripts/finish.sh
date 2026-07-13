@@ -2,7 +2,12 @@
 # Finaliza: gera segredos que faltam, escolhe cerebro (claude se houver token), sobe e testa.
 set -uo pipefail
 cd "$(dirname "$0")/.."
-val() { grep -E "^$1=" .env | head -1 | cut -d= -f2- | awk '{print $1}'; }
+val() { grep -E "^$1=" .env | head -1 | cut -d= -f2- | sed 's/#.*//' | awk '{print $1}'; }
+# Normaliza linhas com comentario inline ('X=   # dica'): parsers de .env entregam o comentario
+# como VALOR (segredo fantasma -> 401 em tudo). Reescreve so as linhas de segredo vazias.
+for k in FS_WEBHOOK_SECRET ADMIN_TOKEN; do
+  [ -z "$(val $k)" ] && sed -i "s|^$k=.*|$k=|" .env
+done
 # ADMIN_TOKEN precisa existir (senao status.sh nao le eventos). FS_WEBHOOK_SECRET fica VAZIO de proposito
 # no teste (assim a FlowSeller nao precisa mandar header). Geramos so o ADMIN.
 [ -z "$(val ADMIN_TOKEN)" ] && sed -i "s|^ADMIN_TOKEN=.*|ADMIN_TOKEN=$(openssl rand -hex 16)|" .env && echo "[ok] ADMIN_TOKEN gerado."
