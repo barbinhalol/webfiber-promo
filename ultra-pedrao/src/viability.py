@@ -48,8 +48,10 @@ def norm_num(n: str) -> str:
     return m.group(0) if m else ""
 
 # Extrai rua + número de um texto livre do cliente ("moro na rua ubaldino do amaral, 80 ap 302")
-_TIPOS = r"(?:RUA|AVENIDA|AV|ESTRADA|TRAVESSA|PRACA|LADEIRA|ALAMEDA|R|TV)"
-_RE_ENDERECO = re.compile(_TIPOS + r"\.?\s+([A-Z0-9À-Ú][A-Z0-9À-Ú\s]{2,50}?)\s*[,\-]?\s*(?:N[º°O]?\.?\s*)?(\d{1,5})\b", re.I)
+# \b no início: o tipo de logradouro só conta no COMEÇO de palavra (evita casar o "R" final de
+# "contrataR", "trabalhaR" etc. e engolir o endereço verdadeiro). "R"/"AV" só como abreviação.
+_TIPOS = r"(?:RUA|AVENIDA|AV|ESTRADA|ESTR|TRAVESSA|PRACA|LADEIRA|ALAMEDA|RODOVIA|R)"
+_RE_ENDERECO = re.compile(r"\b" + _TIPOS + r"\.?\s+([A-Z0-9À-Ú][A-Z0-9À-Ú\s]{2,50}?)\s*[,\-]?\s*(?:N[º°O]?\.?\s*)?(\d{1,5})\b", re.I)
 
 def extrair_enderecos(texto: str):
     """Devolve lista de (rua_norm, numero) achados no texto livre."""
