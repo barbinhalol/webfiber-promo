@@ -1,0 +1,103 @@
+# -*- coding: utf-8 -*-
+"""Cliente da API EXTERNA da FlowSeller (mapa em docs/API_EXTERNA.md).
+Respeita BOT_MODE: em 'shadow' NUNCA chama a API (só devolve o que faria).
+Endpoint central: POST /v1/api/external/{apiId} com corpo SendMessageBase."""
+import json, urllib.request, urllib.error
+import config as C
+
+class FSResult(dict):
+    pass
+
+def _post(apiid, jwt, path_suffix, body):
+    url = f"{C.FS_BASE}/v1/api/external/{apiid}{path_suffix}"
+    data = json.dumps(body).encode("utf-8")
+    headers = {"content-type": "application/json"}
+    if jwt:
+        headers["Authorization"] = f"Bearer {jwt}"
+    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+    with urllib.request.urlopen(req, timeout=25) as r:
+        raw = r.read().decode("utf-8")
+        try: return json.loads(raw)
+        except Exception: return {"raw": raw}
+
+def _enviar(body, usar="resposta"):
+    """Executa (ou simula) um POST SendMessageBase. Retorna FSResult com o que fez/faria."""
+    apiid = C.FS_APIID_RESPOSTA if usar == "resposta" else (C.FS_APIID_TRANSFER or C.FS_APIID_RESPOSTA)
+    jwt = C.FS_JWT_RESPOSTA if usar == "resposta" else (C.FS_JWT_TRANSFER or C.FS_JWT_RESPOSTA)
+    plan = {"endpoint": f"POST /v1/api/external/{{{usar}}}", "body": body}
+    if C.BOT_MODE == "shadow":
+        return FSResult(enviado=False, modo="shadow", faria=plan)
+    if not apiid or not jwt:
+        return FSResult(enviado=False, modo=C.BOT_MODE, erro="credenciais FlowSeller ausentes", faria=plan)
+    try:
+        resp = _post(apiid, jwt, "", body)
+        return FSResult(enviado=True, modo=C.BOT_MODE, resposta=resp, body=body)
+    except urllib.error.HTTPError as e:
+        return FSResult(enviado=False, modo=C.BOT_MODE, erro=f"HTTP {e.code}: {e.read().decode('utf-8')[:200]}", faria=plan)
+    except Exception as e:
+        return FSResult(enviado=False, modo=C.BOT_MODE, erro=str(e), faria=plan)
+
+# ---------- ações de alto nível (a decisão do brain vira uma destas) ----------
+
+def responder_texto(external_key, texto, nota=None):
+    body = {"externalKey": external_key, "text": texto}
+    if nota: body["note"] = {"body": nota}
+    return _enviar(body, "resposta")
+
+def enviar_midia(external_key, media_url, legenda=None, nota=None):
+    """/planos e afins: imagem por mediaUrl (a API externa não dispara fastReply direto)."""
+    body = {"externalKey": external_key, "media": {"mediaUrl": media_url}}
+    if legenda: body["text"] = legenda
+    if nota: body["note"] = {"body": nota}
+    return _enviar(body, "resposta")
+
+def nota_interna(external_key, texto):
+    body = {"externalKey": external_key, "onlyNote": True, "note": {"body": texto}}
+    return _enviar(body, "resposta")
+
+def transferir(external_key, queue_id, nota=None, texto=None, user_id=None):
+    body = {"externalKey": external_key, "queueId": queue_id, "forceTicketToDepartment": queue_id}
+    if user_id: body["forceTicketToUser"] = True; body["userId"] = user_id
+    if texto: body["text"] = texto
+    if nota: body["note"] = {"body": nota}
+    return _enviar(body, "transfer")
+
+def fechar(external_key, closing_reason_id, nota=None):
+    body = {"externalKey": external_key, "forceTicketToClosed": True, "closingReasonId": closing_reason_id}
+    if nota: body["note"] = {"body": nota}
+    return _enviar(body, "resposta")
+
+# mapa fastReplyId -> mediaUrl (preencher quando as imagens estiverem hospedadas na VPS)
+FASTREPLY_MEDIA = {
+    1296: {"text_env": "PLANOS_TEXTO", "imgs_env": "PLANOS_IMAGENS"},  # texto + 3 imagens
+}
+
+def executar_decisao(external_key, d):
+    """Traduz a decisão JSON do brain em chamada(s) à API externa (respeitando shadow)."""
+    acao = d.get("acao")
+    nota = (d.get("nota_interna") or "").strip() or None
+    if acao == "responder":
+        return responder_texto(external_key, d.get("texto", ""), nota=nota)
+    if acao == "fastreply":
+        fid = d.get("fastReplyId")
+        if fid in (1296, 1437, 1438):   # /planos = texto (negrito) + as 3 imagens, tudo de uma vez
+            import respostas as R
+            envios = R.planos_payloads(external_key, legenda=d.get("texto"))
+            resultados = []
+            for e in envios:
+                if e.get("tipo") == "texto":
+                    resultados.append(responder_texto(external_key, e["text"], nota=nota)); nota = None
+                elif e.get("tipo") == "midia":
+                    resultados.append(enviar_midia(external_key, e["mediaUrl"]))
+                else:
+                    resultados.append(FSResult(enviado=False, aviso=e.get("detalhe")))
+            return FSResult(enviado=any(r.get("enviado") for r in resultados), modo=C.BOT_MODE, sequencia=resultados)
+        if fid == 1858:  # ficha de cadastro residencial
+            import respostas as R
+            return responder_texto(external_key, (d.get("texto", "") + "\n\n" + R.CADASTRO_RESIDENCIAL).strip(), nota=nota)
+        return responder_texto(external_key, d.get("texto") or "Segue a informação 👇", nota=nota)
+    if acao == "transferir":
+        return transferir(external_key, d.get("fila", 112), nota=nota, texto=d.get("texto") or None)
+    if acao == "aguardar":
+        return FSResult(enviado=False, modo=C.BOT_MODE, faria={"acao": "aguardar"})
+    return FSResult(enviado=False, modo=C.BOT_MODE, erro=f"acao desconhecida: {acao}")

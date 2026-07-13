@@ -1,0 +1,16 @@
+services:
+  ultra-pedrao:
+    build: { context: ., dockerfile: docker/Dockerfile.claude }
+    container_name: ultra-pedrao
+    restart: unless-stopped
+    env_file: .env
+    ports: ["127.0.0.1:8080:8080"]
+    volumes: ["./data:/app/data"]
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "5" } }
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes: ["./docker/Caddyfile:/etc/caddy/Caddyfile", "caddy_data:/data"]
+    depends_on: [ultra-pedrao]
+volumes: { caddy_data: {} }

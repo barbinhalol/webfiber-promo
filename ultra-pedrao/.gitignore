@@ -1,0 +1,7 @@
+.env
+data/memoria.db*
+data/enderecos.json
+data/pedrao_prompt.md
+data/planos_e_rapidas.md
+docs/
+__pycache__/

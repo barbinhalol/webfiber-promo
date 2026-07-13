@@ -1,0 +1,6 @@
+# HTTPS automático (Let's Encrypt) no hostname da VPS Hostinger.
+# Troque por seu domínio próprio quando tiver (ex.: pedrao.webfiberprovedor.com.br).
+srv1822151.hstgr.cloud {
+    reverse_proxy ultra-pedrao:8080
+    encode gzip
+}
