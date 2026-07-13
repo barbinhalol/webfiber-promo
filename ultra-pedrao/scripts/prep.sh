@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
+# Monta o .env definitivo, RECUPERANDO tokens que o dono já tenha colado antes (limpa lixo tipo ^V / ^[[200~).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-WS=$(openssl rand -hex 16); AT=$(openssl rand -hex 16)
+old() { grep -E "^$1=" .env 2>/dev/null | head -1 | cut -d= -f2-; }
+salvage_jwt() { local v="$1"; v="${v#"${v%%eyJ*}"}"; [[ "$v" == eyJ* && ${#v} -gt 40 ]] && printf '%s' "$v" || printf ''; }
+salvage_oat() { local v="$1"; v="${v#"${v%%sk-ant*}"}"; [[ "$v" == sk-ant* ]] && printf '%s' "$v" || printf ''; }
+JR=$(salvage_jwt "$(old FS_JWT_RESPOSTA)")
+JT=$(salvage_jwt "$(old FS_JWT_TRANSFER)")
+CT=$(salvage_oat "$(old CLAUDE_CODE_OAUTH_TOKEN)")
+WS=$(old FS_WEBHOOK_SECRET); [ ${#WS} -ge 16 ] || WS=$(openssl rand -hex 16)
+AT=$(old ADMIN_TOKEN);       [ ${#AT} -ge 16 ] || AT=$(openssl rand -hex 16)
 cat > .env << ENVEOF
-FS_JWT_RESPOSTA=
-FS_JWT_TRANSFER=
-CLAUDE_CODE_OAUTH_TOKEN=
+FS_JWT_RESPOSTA=$JR
+FS_JWT_TRANSFER=$JT
+CLAUDE_CODE_OAUTH_TOKEN=$CT
 BOT_MODE=shadow
 FS_BASE=https://servapi.flowseller.com.br
 FS_APIID_RESPOSTA=6eea7327-b544-44c1-b30b-88b5bf1d2df4
@@ -16,6 +24,7 @@ PUBLIC_BASE_URL=https://srv1822151.hstgr.cloud
 LLM_PROVIDER=claude_cli
 LLM_MODEL=claude-haiku-4-5-20251001
 GEMINI_API_KEY=
+TRANSCRICAO_PROVIDER=none
 LLM_TIMEOUT=40
 DEBOUNCE_SECONDS=6
 SO_FORA_DO_HORARIO=true
@@ -25,18 +34,10 @@ SQLITE_PATH=/app/data/memoria.db
 MEM_RETENCAO_DIAS=90
 PORT=8080
 ENVEOF
-echo "======================================================================"
-echo " .env pronto. So faltam 3 tokens (as 3 PRIMEIRAS linhas do arquivo)."
-echo ""
-echo " AGORA rode:   nano .env"
-echo ""
-echo " No nano, o cursor abre no TOPO. Para cada uma das 3 primeiras linhas:"
-echo "   1) va ate o final da linha (depois do = )"
-echo "   2) cole o token (Ctrl+Shift+V, ou botao direito > Colar)"
-echo "   linha 1  FS_JWT_RESPOSTA=       -> token da 'resposta ia 2'  (eyJ...)"
-echo "   linha 2  FS_JWT_TRANSFER=       -> token do 'transfere p suporte' (eyJ...)"
-echo "   linha 3  CLAUDE_CODE_OAUTH_TOKEN= -> token do claude_token.txt (sk-ant-oat...)"
-echo ""
-echo " Salvar: Ctrl+O e Enter.   Sair: Ctrl+X."
-echo " Depois rode:   bash scripts/finish.sh"
-echo "======================================================================"
+echo "==================== SITUAÇÃO DOS TOKENS ===================="
+[ -n "$JR" ] && echo " token 'resposta ia 2'      : RECUPERADO (${#JR} chars)" || echo " token 'resposta ia 2'      : FALTA (linha 1 do nano)"
+[ -n "$JT" ] && echo " token 'transfere p suporte': RECUPERADO (${#JT} chars)" || echo " token 'transfere p suporte': falta (linha 2 — opcional)"
+[ -n "$CT" ] && echo " token Claude (sk-ant-oat)  : OK (${#CT} chars)"        || echo " token Claude (sk-ant-oat)  : FALTA (linha 3 do nano)"
+echo "============================================================="
+echo "Se algo FALTA: rode  nano .env  , cole na linha indicada (depois do =), Ctrl+O Enter Ctrl+X."
+echo "Depois rode:  bash scripts/finish.sh"
