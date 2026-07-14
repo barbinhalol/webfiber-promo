@@ -104,6 +104,19 @@ def _processar(contato, texto, ctx):
         if fatos.get("sup") in ("1", "2"):
             d.setdefault("dados_coletados", {})["sup"] = "fim"
 
+    # ANTI-DUPLICATA DE PLANOS: se ja mandou o pacote de planos+imagens ha < 3 min, NAO repete
+    # (o cliente mandava o endereco em 2 msgs e recebia os planos 2x). So referencia o que ja foi enviado.
+    _eh_planos = d.get("acao") == "fastreply" and d.get("fastReplyId") in (1296, 1437, 1438)
+    _ult_planos = fatos.get("planos_ts")
+    if _eh_planos and _ult_planos and (time.time() - float(_ult_planos)) < 180:
+        d = {"acao": "responder", "fastReplyId": 0, "fila": 0, "intencao": "planos",
+             "texto": "Os planos são esses que te mandei aqui em cima 👆 Qual deles fez mais sentido pra você?",
+             "viabilidade": "naoaplicavel", "motivo": "", "nota_interna": "", "dados_coletados": {},
+             "_alertas": ["cooldown planos (nao repetiu imagens)"], "_fastpath": True,
+             "_viabilidade_sistema": d.get("_viabilidade_sistema", {}), "_render": "💬 (cooldown) planos ja enviados"}
+    elif _eh_planos:
+        d.setdefault("dados_coletados", {})["planos_ts"] = time.time()
+
     M.add_mensagem(contato, ext, "cliente", texto)
     if d.get("dados_coletados"):
         M.merge_fatos(contato, d["dados_coletados"])

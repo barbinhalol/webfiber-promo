@@ -42,10 +42,14 @@ _AGENDA_OK = re.compile(
 # afirmar cobertura/presença antes do veredito do sistema (proibido — a equipe é que confirma).
 # Ex. real que vazou: "a gente já tá na tua rua". Suaviza SÓ a frase, sem apagar o resto.
 _COBERTURA_ASSERT = re.compile(
-    r"(atende(mos)?\s+(sim|a[íi])|chega\s+a[íi]\s+(sim|forte|com)|"
+    r"(atende(mos)?\s+(sim|a[íi]|bem|essa|nessa|na\s+rua|a\s+rua|l[áa])|"
+    r"(bem\s+)?atendid[ao]|j[áa]\s+[ée]\s+(bem\s+)?atendid|"
+    r"chega\s+(a[íi]|l[áa])\s+(sim|forte|com|bem)|chega\s+bem|"
     r"j[áa]\s+(t[áa]|est(á|amos|ou)|tamos)\s+(na\s+(sua|tua)\s+rua|a[íi]\b|l[áa]\b)|"
-    r"a\s+gente\s+j[áa]\s+(t[áa]|atende|tem\s+rede)|j[áa]\s+(tem|temos)\s+(rede|cobertura|fibra)|"
-    r"cobertura\s+(confirmada|garantida)|com\s+certeza\s+(atende|chega|vai\s+pegar))", re.I)
+    r"a\s+gente\s+j[áa]\s+(t[áa]|atende|tem\s+rede)|j[áa]\s+(tem|temos)\s+(rede|cobertura|fibra)\s+(a[íi]|na|l[áa])|"
+    r"cobertura\s+(confirmada|garantida|boa)|com\s+certeza\s+(atende|chega|vai\s+pegar)|"
+    r"vai\s+ter\s+(uma\s+)?internet\s+de\s+qualidade|"
+    r"(temos|tem)\s+(rede|fibra|cobertura)\s+(a[íi]|nessa|na\s+sua))", re.I)
 
 def _remove_sentencas(texto, padrao, protege=None):
     """Tira só as FRASES que batem no padrão (mantém o resto da mensagem).
@@ -82,6 +86,10 @@ _SAUDACAO_PURA = re.compile(
     re.I)
 _PLANOS_INTENCAO = re.compile(
     r"\b(planos?|pre[çc]os?|valor(es)?|quanto\s*(custa|fica|[ée]|sai)|pacotes?|mega)\b", re.I)
+# empresa/PJ tem planos e ficha DIFERENTES -> não manda o residencial no atalho, vai pro LLM
+_EMPRESA = re.compile(r"\b(empresa(rial)?|empresas|cnpj|pessoa\s+jur[íi]dica|\bpj\b|dedicad[ao]|"
+                      r"minha\s+(empresa|loja)|meu\s+(escrit[óo]rio|com[ée]rcio|neg[óo]cio)|"
+                      r"raz[ãa]o\s+social|est[aá]belecimento)\b", re.I)
 _SINAIS_COMPLEXOS = re.compile(
     r"\b(rua|av\.|avenida|n[°º]|cep|\d{5}-?\d{3}|cancel|problema|ruim|p[ée]ssimo|n[ãa]o\s*funciona|"
     r"caiu|lent[ao]|reclama|advogado|procon|golpe|fraude)\b", re.I)
@@ -162,8 +170,9 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None):
         return None  # SESSÃO=CONTINUA: "oi" solto no meio da conversa -> LLM
 
     # 2) pedido de planos/internet -> FLUXO PRINCIPAL: já conhece os planos? + qual o local (viabilidade)
+    #    (empresa/PJ sai pro LLM: planos e ficha empresariais são diferentes)
     if (_PLANOS_INTENCAO.search(msg) and not _SINAIS_COMPLEXOS.search(msg)
-            and len(msg.split()) <= 18):
+            and not _EMPRESA.search(msg) and len(msg.split()) <= 18):
         if sessao_nova:
             texto = (f"{_ABERTURA} Você já conhece nossos planos? E me diz uma coisa: "
                      "qual é o endereço aí (rua, número e bairro) pra eu já verificar a viabilidade pra você?")
@@ -263,8 +272,9 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
         d["viabilidade"] = "provavel" if viab["status"] == V.PROVAVEL else "a_confirmar"
         if acao != "fastreply":
             acao, fila = "transferir", 23
-    # texto afirma cobertura/presença mas sistema não confirmou -> suaviza SÓ a frase (mantém o resto)
-    if viab["status"] != V.CONFIRMADA_PREDIO and texto and _COBERTURA_ASSERT.search(texto):
+    # ORDEM DO DONO: o bot NUNCA confirma nem nega cobertura (nem pra rua conhecida) — quem confirma
+    # é a equipe. Suaviza SÓ a frase de cobertura (mantém o resto: planos, próximo passo).
+    if texto and _COBERTURA_ASSERT.search(texto):
         alertas.append("GUARD: afirmacao de cobertura suavizada")
         novo = _remove_sentencas(texto, _COBERTURA_ASSERT)
         texto = novo if len(novo) >= 15 else ("A chance de atender aí é boa! Mas deixa eu confirmar a viabilidade "
