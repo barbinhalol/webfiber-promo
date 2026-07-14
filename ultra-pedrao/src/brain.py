@@ -34,7 +34,11 @@ _AGENDA = re.compile(
     r"(segunda|ter[çc]a|quarta|quinta|sexta|s[áa]bado|domingo)(-feira)?|"
     r"dia\s+\d{1,2}(/\d{1,2})?|em\s+\d+\s*(min|minutos?|horas?|h|dias?)|"
     r"[àa]s?\s*\d{1,2}\s*(h\b|hs\b|horas?|:\d{2})|per[íi]odo da (manh[ãa]|tarde|noite))\b", re.I)
-_AGENDA_OK = re.compile(r"pr[óo]ximo dia [úu]til.*?9\s*h", re.I)
+# frases PROATIVAS de contato que NÃO são agendamento de visita -> blindadas do guard de data
+_AGENDA_OK = re.compile(
+    r"(pr[óo]ximo dia [úu]til|entra(m|r)?\s+em contato|entra\s+em\s+contato|"
+    r"(nosso|o)\s+(time|setor|pessoal|comercial|suporte|financeiro)\s+(vai|entra|te)|"
+    r"vai(m)?\s+(te\s+)?(ligar|chamar|retornar|falar com voc[êe]))", re.I)
 # afirmar cobertura/presença antes do veredito do sistema (proibido — a equipe é que confirma).
 # Ex. real que vazou: "a gente já tá na tua rua". Suaviza SÓ a frase, sem apagar o resto.
 _COBERTURA_ASSERT = re.compile(
@@ -270,8 +274,9 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     if texto and _AGENDA.search(texto) and not _AGENDA_OK.search(texto):
         alertas.append("GUARD: promessa de data/hora removida (cirurgico)")
         novo = _remove_sentencas(texto, _AGENDA, protege=_AGENDA_OK)
-        texto = novo if len(novo) >= 15 else ("Não consigo cravar dia e horário exato por aqui — quem confirma isso "
-                 "certinho é o nosso time 😊 Já deixo tudo registrado e eles falam com você o quanto antes.")
+        # NUNCA "não consigo" — mensagem PROATIVA e positiva (ordem do dono)
+        texto = novo if len(novo) >= 15 else ("Perfeito, já deixei tudo registrado aqui! 😊 Nosso setor entra em "
+                 "contato com você no próximo dia útil, pela manhã. Pode ser por aqui mesmo, neste número?")
     if acao == "transferir" and fila not in FILAS:
         fila = _fila_por_intencao(d.get("intencao", ""), d.get("motivo", ""))
 
