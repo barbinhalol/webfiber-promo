@@ -2,8 +2,11 @@
 """Cliente da API EXTERNA da FlowSeller (mapa em docs/API_EXTERNA.md).
 Respeita BOT_MODE: em 'shadow' NUNCA chama a API (só devolve o que faria).
 Endpoint central: POST /v1/api/external/{apiId} com corpo SendMessageBase."""
-import json, urllib.request, urllib.error
+import json, random, time, urllib.request, urllib.error
 import config as C
+
+DELAY_MIN_S = 2
+DELAY_MAX_S = 4
 
 class FSResult(dict):
     pass
@@ -37,8 +40,10 @@ def _num_permitido_piloto(body):
             return True
     return False
 
-def _enviar(body, usar="resposta"):
-    """Executa (ou simula) um POST SendMessageBase. Retorna FSResult com o que fez/faria."""
+def _enviar(body, usar="resposta", delay=True):
+    """Executa (ou simula) um POST SendMessageBase. Retorna FSResult com o que fez/faria.
+    delay=True espera 2-4s (aleatorio) ANTES do envio real, simulando tempo de digitacao --
+    so acontece imediatamente antes do POST de verdade (nunca em shadow/erro/trava)."""
     try:
         import painel as PAINEL
         modo = PAINEL.modo_efetivo(C.BOT_MODE)
@@ -55,6 +60,8 @@ def _enviar(body, usar="resposta"):
     if not apiid or not jwt:
         return FSResult(enviado=False, modo=C.BOT_MODE, erro="credenciais FlowSeller ausentes", faria=plan)
     try:
+        if delay:
+            time.sleep(random.uniform(DELAY_MIN_S, DELAY_MAX_S))
         resp = _post(apiid, jwt, "", body)
         return FSResult(enviado=True, modo=C.BOT_MODE, resposta=resp, body=body)
     except urllib.error.HTTPError as e:
@@ -64,38 +71,38 @@ def _enviar(body, usar="resposta"):
 
 # ---------- ações de alto nível (a decisão do brain vira uma destas) ----------
 
-def responder_texto(external_key, texto, nota=None, number=None):
+def responder_texto(external_key, texto, nota=None, number=None, delay=True):
     body = {"externalKey": external_key, "body": texto}
     if number: body["number"] = number
     if nota: body["note"] = {"body": nota}
-    return _enviar(body, "resposta")
+    return _enviar(body, "resposta", delay=delay)
 
-def enviar_midia(external_key, media_url, legenda=None, nota=None, number=None):
+def enviar_midia(external_key, media_url, legenda=None, nota=None, number=None, delay=True):
     """/planos e afins: imagem por mediaUrl (a API externa não dispara fastReply direto)."""
     body = {"externalKey": external_key, "mediaUrl": media_url}
     if number: body["number"] = number
     if legenda: body["body"] = legenda
     if nota: body["note"] = {"body": nota}
-    return _enviar(body, "resposta")
+    return _enviar(body, "resposta", delay=delay)
 
-def nota_interna(external_key, texto, number=None):
+def nota_interna(external_key, texto, number=None, delay=True):
     body = {"externalKey": external_key, "onlyNote": True, "note": {"body": texto}}
     if number: body["number"] = number
-    return _enviar(body, "resposta")
+    return _enviar(body, "resposta", delay=delay)
 
-def transferir(external_key, queue_id, nota=None, texto=None, user_id=None, number=None):
+def transferir(external_key, queue_id, nota=None, texto=None, user_id=None, number=None, delay=True):
     body = {"externalKey": external_key, "queueId": queue_id, "forceTicketToDepartment": True}
     if number: body["number"] = number
     if user_id: body["forceTicketToUser"] = True; body["userId"] = user_id
     if texto: body["body"] = texto
     if nota: body["note"] = {"body": nota}
-    return _enviar(body, "transfer")
+    return _enviar(body, "transfer", delay=delay)
 
-def fechar(external_key, closing_reason_id, nota=None, number=None):
+def fechar(external_key, closing_reason_id, nota=None, number=None, delay=True):
     body = {"externalKey": external_key, "forceTicketToClosed": True, "closingReasonId": closing_reason_id}
     if number: body["number"] = number
     if nota: body["note"] = {"body": nota}
-    return _enviar(body, "resposta")
+    return _enviar(body, "resposta", delay=delay)
 
 # mapa fastReplyId -> mediaUrl (preencher quando as imagens estiverem hospedadas na VPS)
 FASTREPLY_MEDIA = {
@@ -115,10 +122,11 @@ def executar_decisao(external_key, d, number=None):
             envios = R.planos_payloads(external_key, legenda=d.get("texto"))
             resultados = []
             for e in envios:
+                # sem atraso de digitacao aqui -- fotos/texto dos planos saem imediatos
                 if e.get("tipo") == "texto":
-                    resultados.append(responder_texto(external_key, e["text"], nota=nota, number=number)); nota = None
+                    resultados.append(responder_texto(external_key, e["text"], nota=nota, number=number, delay=False)); nota = None
                 elif e.get("tipo") == "midia":
-                    resultados.append(enviar_midia(external_key, e["mediaUrl"], number=number))
+                    resultados.append(enviar_midia(external_key, e["mediaUrl"], number=number, delay=False))
                 else:
                     resultados.append(FSResult(enviado=False, aviso=e.get("detalhe")))
             return FSResult(enviado=any(r.get("enviado") for r in resultados), modo=C.BOT_MODE, sequencia=resultados)
