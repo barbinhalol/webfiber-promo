@@ -63,6 +63,12 @@ def _enviar(body, usar="resposta", delay=True):
         if delay:
             time.sleep(random.uniform(DELAY_MIN_S, DELAY_MAX_S))
         resp = _post(apiid, jwt, "", body)
+        # Blindagem: a FlowSeller pode devolver HTTP 200 com corpo {} sem criar nada de verdade
+        # (visto ao vivo faltando "body" no payload de midia). So consideramos enviado se a
+        # resposta realmente trouxer a mensagem criada (tem id, em "message" ou na raiz).
+        criado = bool((resp or {}).get("message", {}).get("id") or (resp or {}).get("id"))
+        if not criado:
+            return FSResult(enviado=False, modo=C.BOT_MODE, erro="FlowSeller respondeu 200 mas nao criou a mensagem (corpo vazio/inesperado)", resposta=resp, faria=plan)
         return FSResult(enviado=True, modo=C.BOT_MODE, resposta=resp, body=body)
     except urllib.error.HTTPError as e:
         return FSResult(enviado=False, modo=C.BOT_MODE, erro=f"HTTP {e.code}: {e.read().decode('utf-8')[:200]}", faria=plan)
@@ -78,10 +84,11 @@ def responder_texto(external_key, texto, nota=None, number=None, delay=True):
     return _enviar(body, "resposta", delay=delay)
 
 def enviar_midia(external_key, media_url, legenda=None, nota=None, number=None, delay=True):
-    """/planos e afins: imagem por mediaUrl (a API externa não dispara fastReply direto)."""
-    body = {"externalKey": external_key, "mediaUrl": media_url}
+    """/planos e afins: imagem por mediaUrl (a API externa não dispara fastReply direto).
+    IMPORTANTE (confirmado ao vivo): a chave "body" precisa EXISTIR no JSON, mesmo vazia --
+    sem ela a FlowSeller devolve 200 com corpo {} e NÃO cria a mensagem (falha silenciosa)."""
+    body = {"externalKey": external_key, "mediaUrl": media_url, "body": legenda or ""}
     if number: body["number"] = number
-    if legenda: body["body"] = legenda
     if nota: body["note"] = {"body": nota}
     return _enviar(body, "resposta", delay=delay)
 
