@@ -179,17 +179,19 @@ def _envios_da_fatura(nome, fatura, atrasada):
     pdf_url = (fatura.get("_pdf_url") or "").strip()      # PDF gerado por nós (quando houver)
     boleto_web = (fatura.get("gurl") or fatura.get("url") or "").strip()  # página do gateway (HTML)
     if pix:
-        resumo += "\n\nPra pagar na hora, é só copiar o *Pix* abaixo 👇"
+        resumo += "\n\nPra pagar na hora, é só copiar o *Pix copia e cola* abaixo 👇"
     envios.append({"tipo": "texto", "text": resumo})
     if pix:
         envios.append({"tipo": "raw", "text": pix})   # Pix copia-e-cola, mensagem limpa
-    if linha:
-        envios.append({"tipo": "texto", "text": "Ou pague pelo *boleto* — a *linha digitável* está aqui 👇"})
-        envios.append({"tipo": "raw", "text": linha})
+    # BOLETO: link/PDF primeiro e a LINHA DIGITÁVEL logo ABAIXO do boleto, bem rotulada — assim
+    # ninguém confunde a linha do boleto com o Pix copia-e-cola (ordem do dono).
     if pdf_url:
-        envios.append({"tipo": "pdf", "url": pdf_url, "text": "*Boleto em PDF* 📄"})
+        envios.append({"tipo": "pdf", "url": pdf_url, "text": "*Ou pague pelo boleto* 📄"})
     elif boleto_web:
-        envios.append({"tipo": "texto", "text": f"🧾 *Ver/abrir o boleto:* {boleto_web}"})
+        envios.append({"tipo": "texto", "text": f"🧾 *Ou pague pelo boleto — é só abrir aqui:* {boleto_web}"})
+    if linha:
+        envios.append({"tipo": "texto", "text": "*Linha digitável para pagamento via boleto* 👇"})
+        envios.append({"tipo": "raw", "text": linha})
     # prazo de compensação (texto oficial do dono) — sempre no fim da entrega da fatura
     envios.append({"tipo": "texto",
                    "text": "⏱️ *No Pix, o pagamento cai em até 30 minutos* (quase sempre na hora). "
