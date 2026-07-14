@@ -69,9 +69,9 @@ def _fila_por_intencao(intencao, motivo):
 # que, pra saudação e pro pedido direto de planos, já é FIXO no prompt (seções 2.6/3.8/5.1).
 # Pra esses dois casos claros, respondemos por código (10ms) e pulamos o LLM inteiro. Qualquer
 # mensagem fora do padrão exato cai pro decidir() normal -- nunca arrisca qualidade por velocidade.
-# APRESENTAÇÃO OBRIGATÓRIA: toda saudação se apresenta como ATENDENTE VIRTUAL da WebFiber (ordem
-# do dono -- transparência, o cliente sabe que fala com um agente virtual desde o "olá").
-_APRESENTACAO = "eu sou o Pedrão, atendente virtual da WebFiber 😊 Estou aqui para te ajudar"
+# SAUDAÇÃO FIXA (ordem do dono): sempre "Olá!" -- NUNCA bom dia/boa tarde/boa noite. Se apresenta
+# como atendente virtual (transparência) e serve pra qualquer idade (sem gíria).
+_ABERTURA = "Olá! Eu sou o Pedrão, atendente virtual da WebFiber 😊 Estou aqui para te ajudar."
 
 _SAUDACAO_PURA = re.compile(
     r"^\s*(oi+|ol[áa]|e\s*a[íi]|opa|bom\s*dia|boa\s*tarde|boa\s*noite|salve|fala(\s*a[íi])?|blz|beleza|tudo\s*bem)\s*[!.,?]*\s*$",
@@ -102,13 +102,6 @@ _SUP_NAO_RESOLVIDO = re.compile(
 _DESVIO_ASSUNTO = re.compile(
     r"\b(plano|pre[çc]o|valor|quanto\s+custa|cancel|fatura|boleto|atendente|humano|pessoa\s+de\s+verdade|falar\s+com\s+algu[ée]m)\b", re.I)
 
-def _saudacao_periodo():
-    p = S.periodo_do_dia()
-    return p if p else "Olá"
-
-def _abertura():
-    """Abertura fixa que SEMPRE se apresenta como atendente virtual (só o período do dia muda)."""
-    return f"{_saudacao_periodo()}! {_APRESENTACAO[0].upper() + _APRESENTACAO[1:]}."
 
 def _fp(texto, acao="responder", intencao="saudacao", fila=0, fid=0, nota="", sup=None, icone="⚡"):
     d = {"acao": acao, "texto": texto, "fastReplyId": fid, "fila": fila,
@@ -158,31 +151,28 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None):
     if sup in ("1", "2"):
         return _suporte_passo(msg, sup)
 
-    # 1) saudação pura -> sempre se apresenta como atendente virtual
+    # 1) saudação pura -> abertura fixa "Olá!", sem anunciar conversa anterior (mesmo se reaberta)
     if _SAUDACAO_PURA.match(msg) and not _SINAIS_COMPLEXOS.search(msg):
-        if sessao_nova and not historico:
-            return _fp(f"{_abertura()} Me conta o que você precisa que eu te ajudo.", intencao="saudacao")
-        if sessao_nova and historico:
-            texto = (f"{_saudacao_periodo()}! {_APRESENTACAO[0].upper() + _APRESENTACAO[1:]}. "
-                      "Vi que a gente já tinha trocado uma ideia — é sobre a mesma coisa ou é outro assunto agora?")
-            return _fp(texto, intencao="saudacao")
+        if sessao_nova:  # 1º contato OU reaberto: mesma saudação simples, sem relembrar o histórico
+            return _fp(f"{_ABERTURA} Me conta o que você precisa.", intencao="saudacao")
         return None  # SESSÃO=CONTINUA: "oi" solto no meio da conversa -> LLM
 
-    # 2) pedido claro de planos/preço (sem complicador)
+    # 2) pedido de planos/internet -> FLUXO PRINCIPAL: já conhece os planos? + qual o local (viabilidade)
     if (_PLANOS_INTENCAO.search(msg) and not _SINAIS_COMPLEXOS.search(msg)
             and len(msg.split()) <= 18):
         if sessao_nova:
-            texto = f"{_abertura()} Você já conhece nossos planos, ou quer que eu te mostre certinho?"
+            texto = (f"{_ABERTURA} Você já conhece nossos planos? E me diz uma coisa: "
+                     "qual é o endereço aí (rua, número e bairro) pra eu já verificar a viabilidade pra você?")
             return _fp(texto, intencao="planos")
-        texto = ("Claro! Vou te mostrar certinho os planos aqui 👇\n\n"
-                  "E me passa a rua e o número, por gentileza? Assim eu já confirmo se a fibra chega forte aí.")
+        texto = ("Perfeito! Vou te mostrar os planos aqui 👇\n\n"
+                  "E me passa o endereço — rua, número e bairro — pra eu já verificar a viabilidade pra você.")
         return _fp(texto, acao="fastreply", intencao="planos", fid=1296, icone="⚡📎")
 
     # 3) início de suporte (só o básico; financeiro tem prioridade e sai pro LLM)
     if _SUP_INTENCAO.search(msg) and not _FINANCEIRO_KW.search(msg):
-        abre = (_abertura() + " ") if (sessao_nova and not historico) else ""
+        abre = (_ABERTURA + " ") if sessao_nova else ""
         texto = (abre + "Poxa, que chato ficar sem internet! Vou te ajudar a resolver 😊 "
-                 "Me diz uma coisa: isso começou *agora* ou já vem acontecendo há um tempo?")
+                 "Me diz uma coisa: isso começou agora ou já vem acontecendo há um tempo?")
         return _fp(texto, intencao="suporte", sup="1")
 
     return None
