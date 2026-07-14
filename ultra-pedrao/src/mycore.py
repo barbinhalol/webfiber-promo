@@ -164,27 +164,32 @@ def _fmt_data(s):
 
 
 def _envios_da_fatura(nome, fatura, atrasada):
-    """Monta a sequência de mensagens de UMA fatura. 'raw' = sem assinatura (pra copiar limpo)."""
+    """Monta a sequência de mensagens de UMA fatura. 'raw' = sem assinatura (pra copiar limpo).
+    Ordem do dono: NEGRITO no que fala da fatura; manda Pix copia-e-cola E a linha do boleto (texto),
+    e o boleto pra abrir. (PDF gerado entra por 'pdf_url' quando disponível.)"""
     envios = []
     valor = _fmt_valor(fatura.get("valor"))
     venc = _fmt_data(fatura.get("dt_vencimento"))
     prim = (nome or "").strip().split(" ")[0].title() if nome else ""
-    saud = f"Achei sua fatura aqui{', ' + prim if prim else ''}! 😊\n"
-    status = " (está *vencida*)" if atrasada else ""
-    resumo = (saud + f"💰 *Valor:* R$ {valor}\n📅 *Vencimento:* {venc}{status}")
+    status = " *(está vencida)*" if atrasada else ""
+    resumo = (f"*Achei sua fatura aqui{', ' + prim if prim else ''}!* 😊\n"
+              f"💰 *Valor: R$ {valor}*\n📅 *Vencimento: {venc}*{status}")
     pix = (fatura.get("pixccola") or "").strip()
     linha = (fatura.get("linhadigitavel") or "").strip()
-    pdf = (fatura.get("gurl") or fatura.get("url") or "").strip()
+    pdf_url = (fatura.get("_pdf_url") or "").strip()      # PDF gerado por nós (quando houver)
+    boleto_web = (fatura.get("gurl") or fatura.get("url") or "").strip()  # página do gateway (HTML)
     if pix:
-        resumo += "\n\nPra pagar rapidinho, é só copiar o *Pix* abaixo 👇"
+        resumo += "\n\nPra pagar na hora, é só copiar o *Pix* abaixo 👇"
     envios.append({"tipo": "texto", "text": resumo})
     if pix:
         envios.append({"tipo": "raw", "text": pix})   # Pix copia-e-cola, mensagem limpa
     if linha:
-        envios.append({"tipo": "texto", "text": "Se preferir *boleto*, a linha digitável está aqui 👇"})
+        envios.append({"tipo": "texto", "text": "Ou pague pelo *boleto* — a *linha digitável* está aqui 👇"})
         envios.append({"tipo": "raw", "text": linha})
-    if pdf:
-        envios.append({"tipo": "texto", "text": f"📄 Boleto em PDF: {pdf}"})
+    if pdf_url:
+        envios.append({"tipo": "pdf", "url": pdf_url, "text": "*Boleto em PDF* 📄"})
+    elif boleto_web:
+        envios.append({"tipo": "texto", "text": f"🧾 *Ver/abrir o boleto:* {boleto_web}"})
     return envios
 
 

@@ -153,14 +153,19 @@ def executar_decisao(external_key, d, number=None):
             import respostas as R
             return responder_texto(external_key, (d.get("texto", "") + "\n\n" + R.CADASTRO_RESIDENCIAL).strip(), nota=nota, number=number)
         return responder_texto(external_key, d.get("texto") or "Segue a informação 👇", nota=nota, number=number)
-    if acao == "faturas":   # integração MyCore: sequência de mensagens (resumo + Pix/linha crus + PDF)
+    if acao == "faturas":   # integração MyCore: sequência (resumo + Pix/linha crus + boleto/PDF)
         envios = d.get("_envios") or []
         resultados, primeiro = [], True
         for e in envios:
-            eh_raw = e.get("tipo") == "raw"
-            resultados.append(responder_texto(external_key, e.get("text", ""),
-                                               nota=(nota if primeiro else None), number=number,
-                                               delay=primeiro, assinar=not eh_raw))
+            tp = e.get("tipo")
+            if tp == "pdf" and e.get("url"):   # boleto PDF anexado (arquivo)
+                resultados.append(enviar_midia(external_key, e["url"], legenda=e.get("text") or "",
+                                               number=number, delay=False))
+            else:
+                eh_raw = tp == "raw"           # 'raw' = Pix/linha sem assinatura (copiar limpo)
+                resultados.append(responder_texto(external_key, e.get("text", ""),
+                                                   nota=(nota if primeiro else None), number=number,
+                                                   delay=primeiro, assinar=not eh_raw))
             primeiro = False
         return FSResult(enviado=any(r.get("enviado") for r in resultados), modo=C.BOT_MODE, sequencia=resultados)
     if acao == "transferir":
