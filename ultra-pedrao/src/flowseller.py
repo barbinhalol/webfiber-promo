@@ -77,8 +77,18 @@ def _enviar(body, usar="resposta", delay=True):
 
 # ---------- ações de alto nível (a decisão do brain vira uma destas) ----------
 
+# Assinatura fixa (como os atendentes humanos assinam "*Nome*:") — deixa claro que é agente virtual
+# sem precisar repetir "sou virtual" no texto. NÃO entra na saudação (que já se apresenta).
+_ASSINATURA = "🦊 *Pedrão · Agente Virtual*\n"
+
+def _assinar(texto):
+    t = texto or ""
+    if t and "virtual" not in t.lower() and not t.lstrip().startswith("🦊") and len(t) > 8:
+        return _ASSINATURA + t
+    return t
+
 def responder_texto(external_key, texto, nota=None, number=None, delay=True):
-    body = {"externalKey": external_key, "body": texto}
+    body = {"externalKey": external_key, "body": _assinar(texto)}
     if number: body["number"] = number
     if nota: body["note"] = {"body": nota}
     return _enviar(body, "resposta", delay=delay)

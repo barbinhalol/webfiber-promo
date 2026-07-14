@@ -90,6 +90,8 @@ _PLANOS_INTENCAO = re.compile(
 _EMPRESA = re.compile(r"\b(empresa(rial)?|empresas|cnpj|pessoa\s+jur[íi]dica|\bpj\b|dedicad[ao]|"
                       r"minha\s+(empresa|loja)|meu\s+(escrit[óo]rio|com[ée]rcio|neg[óo]cio)|"
                       r"raz[ãa]o\s+social|est[aá]belecimento)\b", re.I)
+# fastReplies do pacote RESIDENCIAL (texto+imagens dos planos e ficha) — bloqueados p/ empresa/PJ
+_FIDS_RESIDENCIAL = {1296, 1437, 1438, 1858}
 _SINAIS_COMPLEXOS = re.compile(
     r"\b(rua|av\.|avenida|n[°º]|cep|\d{5}-?\d{3}|cancel|problema|ruim|p[ée]ssimo|n[ãa]o\s*funciona|"
     r"caiu|lent[ao]|reclama|advogado|procon|golpe|fraude)\b", re.I)
@@ -266,6 +268,17 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     if acao == "fastreply" and fid not in QUICK:
         alertas.append(f"GUARD: fastReplyId {fid} inválido -> transfere comercial")
         acao, fila = "transferir", 23
+    # EMPRESA/PJ: NUNCA mandar o pacote RESIDENCIAL (planos/ficha). Se o modelo tentar, troca por
+    # coleta empresarial — a WebFiber tem planos e ficha próprios de empresa (ordem do dono).
+    if acao == "fastreply" and fid in _FIDS_RESIDENCIAL and _EMPRESA.search(texto_todo):
+        alertas.append("GUARD: empresa/PJ -> nao envia residencial, coleta dados empresariais")
+        acao, fid, fila = "responder", 0, 0
+        texto = ("Perfeito! Pra empresa a gente tem planos e condições próprias, diferentes do residencial 😊 "
+                 "Me passa por gentileza o CNPJ, a razão social e o endereço do estabelecimento "
+                 "(rua, número e bairro)? Já registro aqui e nosso time Comercial te retorna com as "
+                 "condições empresariais certinhas.")
+        d["nota_interna"] = ((d.get("nota_interna") or "").strip() +
+                             " [LEAD EMPRESARIAL/PJ — passar condições empresariais, NÃO residencial]").strip()
     # viabilidade só "confirmada_predio" se o CÓDIGO confirmou
     if d.get("viabilidade") == "confirmada_predio" and viab["status"] != V.CONFIRMADA_PREDIO:
         alertas.append("GUARD: modelo afirmou cobertura sem veredito -> rebaixado")
