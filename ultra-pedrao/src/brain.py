@@ -64,8 +64,8 @@ _FINANCEIRO_KW = re.compile(
     r"\b(atras|fatura|boleto|cobran|cortaram|cortada|cortou|bloque|esqueci\s+de\s+pagar|"
     r"pagamento|vencid|d[ée]bito|negativ|2[ªa]?\s*via|segunda\s+via|desbloque)\b", re.I)
 _SUP_RESOLVIDO = re.compile(
-    r"\b(voltou|volto[uw]?|funcion(ou|a)|resolv(eu|ido)|deu\s+certo|normaliz|t[áa]\s+(bom|funcionando|de\s+boa|normal)|"
-    r"pegou|conectou|melhorou|voltei\s+a\s+navegar|ok\s+agora|consegui)\b", re.I)
+    r"\b(voltou|volto[uw]?|funcion(ou|a)|resolv(eu|ido)|deu\s+certo|normaliz|t[áa]\s+(funcionando|de\s+boa|normal)|"
+    r"pegou|conectou|voltei\s+a\s+navegar|ok\s+agora|consegui|j[áa]\s+voltou)\b", re.I)
 _SUP_NAO_RESOLVIDO = re.compile(
     r"\b(n[ãa]o\s+(voltou|volto|funcion|resolv|pegou|conectou|adiantou)|continua|mesma\s+coisa|"
     r"nada|ainda\s+(sem|n[ãa]o)|persist|vermelh|piscando|apagad|sem\s+luz|do\s+mesmo\s+jeito|nao\s+deu)\b", re.I)

@@ -20,8 +20,10 @@ def _post_json(url, headers, payload, timeout):
 
 def _anthropic(system, user):
     """system marcado com cache_control: a Anthropic guarda esse bloco (prompt gigante,
-    ~12-15k tokens) por 5min e cobra só 10% dele nas próximas chamadas da mesma conversa,
-    em vez de recobrar o valor cheio a cada mensagem (ver PAPEL_SESSAO_AUTOMACAO.md)."""
+    ~14k tokens) por 5min e cobra só 10% dele nas próximas chamadas. Como o system é IDÊNTICO
+    pra todos os contatos, o cache é compartilhado entre todas as conversas enquanto estiver
+    quente (não é só 'da mesma conversa') -- num bot movimentado fica aquecido o tempo todo.
+    O cache NÃO é memória do cliente nem deixa o bot mais esperto: a memória real é a memory.py."""
     if not C.ANTHROPIC_API_KEY:
         raise LLMError("ANTHROPIC_API_KEY ausente")
     out = _post_json(
