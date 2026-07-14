@@ -140,13 +140,15 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     # FILTROS (não responder): própria empresa / grupo / mensagem antiga / vazia
     if ev["from_me"]:   return {"status": "ignorado_from_me"}
     if ev["is_group"]:  return {"status": "ignorado_grupo"}
-    # modo teste: processa só o(s) número(s) do dono (ignora o resto do movimento de produção)
-    if C.TESTE_SO_NUMERO:
+    # modo teste OU piloto: processa só número(s) autorizado(s) — ignora o resto do movimento de produção
+    _lista = C.TESTE_SO_NUMERO or (C.PILOT_ALLOWLIST if C.BOT_MODE == "pilot" else [])
+    if _lista:
         import re as _re
         num = _re.sub(r"\D", "", ev["contato"] or "")
-        # número vazio NUNCA passa no modo teste (evita bug de ''.endswith casar com tudo)
-        if len(num) < 8 or not any(num.endswith(n) or n.endswith(num) for n in C.TESTE_SO_NUMERO if n):
-            return {"status": "ignorado_fora_do_teste"}
+        alvos = [_re.sub(r"\D", "", n) for n in _lista if n]
+        # número vazio NUNCA passa (evita bug de ''.endswith casar com tudo)
+        if len(num) < 8 or not any(num.endswith(n) or n.endswith(num) for n in alvos if n):
+            return {"status": "ignorado_fora_da_allowlist"}
     try:
         if float(ev["ts"]) and (time.time() - float(ev["ts"])) > 3600 and float(ev["ts"]) < _START_TS:
             return {"status": "ignorado_msg_antiga"}
