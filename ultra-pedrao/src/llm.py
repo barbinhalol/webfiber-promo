@@ -1,11 +1,25 @@
 # -*- coding: utf-8 -*-
 """Abstração de LLM — provedor plugável por env (anthropic | gemini | fake).
 Recebe (system, user) e devolve texto. Sem estado; o contexto é montado no brain."""
-import json, re, urllib.request, urllib.error
+import json, os, re, urllib.request, urllib.error
 import config as C
 
 class LLMError(Exception):
     pass
+
+_KEY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "anthropic_key.txt")
+
+def _anthropic_key():
+    """Chave da Anthropic: prioriza o arquivo data/anthropic_key.txt (salvo pelo painel, sem
+    terminal e sem reiniciar) e cai pro .env se o arquivo não existir. Lido a cada chamada."""
+    try:
+        with open(_KEY_FILE, encoding="utf-8") as f:
+            k = f.read().strip()
+            if k:
+                return k
+    except Exception:
+        pass
+    return C.ANTHROPIC_API_KEY
 
 def _post_json(url, headers, payload, timeout):
     data = json.dumps(payload).encode("utf-8")
@@ -24,11 +38,12 @@ def _anthropic(system, user):
     pra todos os contatos, o cache é compartilhado entre todas as conversas enquanto estiver
     quente (não é só 'da mesma conversa') -- num bot movimentado fica aquecido o tempo todo.
     O cache NÃO é memória do cliente nem deixa o bot mais esperto: a memória real é a memory.py."""
-    if not C.ANTHROPIC_API_KEY:
+    key = _anthropic_key()
+    if not key:
         raise LLMError("ANTHROPIC_API_KEY ausente")
     out = _post_json(
         "https://api.anthropic.com/v1/messages",
-        {"x-api-key": C.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01",
+        {"x-api-key": key, "anthropic-version": "2023-06-01",
          "content-type": "application/json"},
         {"model": C.LLM_MODEL, "max_tokens": 1024,
          "system": [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],

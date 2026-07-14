@@ -111,6 +111,15 @@ button.save:active{transform:translateY(1px)}
       </div>
     </div>
 
+    <div class="card" id="apikeycard">
+      <h2>🔑 Chave da API (Claude)</h2>
+      <div class="hint">Cole aqui a chave que você copiou da Anthropic (começa com <b>sk-ant-</b>) e clique em Salvar chave. <span id="apikeystatus"></span></div>
+      <input id="apikey" type="text" placeholder="cole a chave sk-ant-... aqui" autocomplete="off" spellcheck="false">
+      <div style="height:10px"></div>
+      <button class="save" style="width:100%" onclick="salvarChave()">🔑 Salvar chave</button>
+      <div class="hint" id="apikeymsg" style="margin-top:8px"></div>
+    </div>
+
     <div class="card">
       <h2>Quem ele responde</h2>
       <div class="seg" id="segmodo">
@@ -202,8 +211,33 @@ async function carregar(){
     var p = await api('GET');
     pintar(p);
     $('gate').style.display='none'; $('app').style.display='block'; $('savebar').style.display='block';
-    carregarFeed();
+    carregarFeed(); carregarChaveStatus();
   }catch(e){ $('gerr').textContent='Senha inválida. Confira o token de admin.'; localStorage.removeItem('pedrao_tok'); }
+}
+
+async function carregarChaveStatus(){
+  try{
+    var r = await fetch('/admin/apikey', {headers:{'X-Admin-Token':TOK}});
+    if(!r.ok) return;
+    var d = await r.json();
+    $('apikeystatus').innerHTML = d.tem_chave
+      ? ('<b style="color:#0a0">✔ chave configurada</b> ('+d.mascara+')')
+      : '<b style="color:#c00">nenhuma chave ainda</b>';
+  }catch(e){}
+}
+async function salvarChave(){
+  var k = ($('apikey').value||'').trim();
+  if(!k){ $('apikeymsg').textContent='Cole a chave primeiro.'; return; }
+  $('apikeymsg').textContent='Salvando…';
+  try{
+    var r = await fetch('/admin/apikey', {method:'POST',
+      headers:{'Content-Type':'application/json','X-Admin-Token':TOK},
+      body: JSON.stringify({key:k})});
+    if(r.status===401){ $('apikeymsg').textContent='Senha do painel incorreta — faça login de novo.'; return; }
+    var d = await r.json();
+    if(d.ok){ $('apikey').value=''; $('apikeymsg').innerHTML='✅ Chave salva! ('+d.len+' caracteres). O bot já pode usar a API paga.'; carregarChaveStatus(); }
+    else { $('apikeymsg').textContent='Erro: '+(d.detail||'confira a chave'); }
+  }catch(e){ $('apikeymsg').textContent='Falhou: '+e; }
 }
 function entrar(){ TOK=$('tok').value.trim(); localStorage.setItem('pedrao_tok',TOK); carregar(); }
 

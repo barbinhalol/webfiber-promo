@@ -243,6 +243,34 @@ def painel_html():
         return "<h1>Painel indisponivel</h1>"
 
 
+_APIKEY_PATH = _os.path.join(_os.path.dirname(__file__), "..", "data", "anthropic_key.txt")
+
+@app.get("/admin/apikey")
+def admin_apikey_status(x_admin_token: str = Header(default="")):
+    """Status da chave da API (mascarada) — pro painel mostrar se já está configurada."""
+    _auth_painel(x_admin_token)
+    import llm as L
+    k = L._anthropic_key()
+    return {"tem_chave": bool(k), "mascara": (k[:11] + "…" + k[-4:]) if k and len(k) > 20 else "",
+            "provider": C.LLM_PROVIDER}
+
+@app.post("/admin/apikey")
+async def admin_apikey_set(request: Request, x_admin_token: str = Header(default="")):
+    """Salva a chave da API (colada no painel) num arquivo protegido — sem terminal.
+    Nunca devolve a chave; o llm.py lê esse arquivo a cada chamada (não precisa reiniciar)."""
+    _auth_painel(x_admin_token)
+    body = await request.json()
+    key = (body.get("key") or "").strip()
+    if not key.startswith("sk-ant-") or len(key) < 20:
+        raise HTTPException(status_code=400, detail="chave inválida (deve começar com sk-ant-)")
+    _os.makedirs(_os.path.dirname(_APIKEY_PATH), exist_ok=True)
+    with open(_APIKEY_PATH, "w", encoding="utf-8") as f:
+        f.write(key)
+    try: _os.chmod(_APIKEY_PATH, 0o600)
+    except Exception: pass
+    M.log_evento("admin", "apikey_set", {"len": len(key), "provider": C.LLM_PROVIDER})
+    return {"ok": True, "len": len(key), "provider": C.LLM_PROVIDER}
+
 @app.get("/admin/eventos")
 def admin_eventos(x_admin_token: str = Header(default=""), limite: int = 50):
     _auth_painel(x_admin_token)
