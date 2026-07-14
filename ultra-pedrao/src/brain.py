@@ -19,6 +19,8 @@ FILAS = {23, 24, 25, 112, 26}
 
 _PRECO = re.compile(r"(R\$\s*\d|\bpor\s+\d+\s*reais\b|\bfica\s+em\s+\d|\b\d{2,4}[.,]\d{2}\b)", re.I)
 _PLACEHOLDER = re.compile(r"\[[^\]]*\]|\{\{[^}]*\}\}")
+# não expor quantidade de clientes/vizinhos ("mais de 80 vizinhos", "500 na rua") — soa exagero
+_CONTAGEM = re.compile(r"\b(?:mais de\s*|cerca de\s*|uns?\s*)?\d{1,4}\s*(clientes?|vizinhos?|atendidos?|casas?|apto?s?|apartamentos?|moradores?|fam[íi]lias?)\b", re.I)
 
 def _fila_por_intencao(intencao, motivo):
     s = (str(intencao) + " " + str(motivo)).lower()
@@ -70,6 +72,10 @@ def decidir(mensagem, historico=None, memoria_cliente=None):
     if texto and _PLACEHOLDER.search(texto):
         alertas.append("GUARD: placeholder removido")
         texto = _PLACEHOLDER.sub("", texto).strip()
+    if texto and _CONTAGEM.search(texto):
+        alertas.append("GUARD: quantidade de clientes/vizinhos suavizada")
+        texto = _CONTAGEM.sub(r"vários \1", texto)
+        texto = re.sub(r"\bvários (clientes?)\b", "vários clientes", texto, flags=re.I)
 
     acao = d.get("acao", "responder")
     fid = d.get("fastReplyId") or 0

@@ -103,9 +103,11 @@ def hint_para_prompt(v: dict) -> str:
     """Frase que a camada de execução injeta no contexto do LLM (o cérebro só age sobre isto)."""
     s = v["status"]
     if s == CONFIRMADA_PREDIO:
-        return ("[VIABILIDADE=CONFIRMADA_PREDIO — o sistema confirmou na base de clientes que o endereço "
-                f"'{v['evidencia']}' já é atendido com folga (3+ clientes / prédio). PODE confirmar o atendimento "
-                "com naturalidade e conduzir ao fechamento, SEMPRE avisando que a equipe confirma tudo e combina a "
+        rua = v.get("rua") or "o endereço informado"
+        return ("[VIABILIDADE=CONFIRMADA_PREDIO — o sistema confirmou que " + rua + " já é bem atendido pela WebFiber. "
+                "PODE confirmar o atendimento com naturalidade e conduzir ao fechamento. Use um toque de prova social "
+                "LEVE, tipo 'vários vizinhos seus já são nossos clientes' — NUNCA cite quantidade, número de clientes "
+                "nem 'X na rua' (soa exagero e expõe dado). SEMPRE avise que a equipe confirma tudo e combina a "
                 "instalação no próximo horário comercial. NUNCA marque data.]")
     if s == PROVAVEL:
         return ("[VIABILIDADE=PROVAVEL — a RUA consta na base, mas aquele número tem menos de 3 clientes. "
