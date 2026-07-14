@@ -207,9 +207,9 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
         # limpa o estado do financeiro. fin="feito" (não "" — o merge_fatos ignora vazios) tira do
         # modo "aguarda_cpf"; nota_ok=1 evita virar "lead" no vigia dos 20min.
         _limpa_fin = {"fin": "feito", "fin_try": 0, "nota_ok": 1}
-        if cpf and MC.token_configurado() and contato:
+        if cpf and MC.token_configurado():
             try:
-                res = MC.resolver_fatura(cpf, contato)
+                res = MC.resolver_fatura(cpf, contato)   # CPF-only: contato não gateia mais
             except Exception:
                 res = {"status": "fallback", "motivo": "excecao"}
             if res.get("status") == "entregue":
@@ -223,13 +223,13 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
                        "aberto no seu CPF — parece que está tudo em dia. Precisando de mais alguma "
                        "coisa do financeiro, é só me chamar.")
                 return _fp(_abre + txt, intencao="financeiro", dados=_limpa_fin, icone="✅")
-            # fallback: não confere / não achou / erro -> link + transfere Financeiro (não revela nada)
+            # fallback: CPF sem cadastro / MyCore fora -> link + transfere Financeiro
             return _fp(_abre + R.FINANCEIRO_FATURA, acao="transferir", intencao="financeiro", fila=25,
-                       nota="[Pedrão] Financeiro — CPF não confere com o número (ou indisponível); "
+                       nota="[Pedrão] Financeiro — não achei fatura pelo CPF (ou MyCore fora); "
                             "enviei o link e transferi.", dados=_limpa_fin, icone="⚡➡️")
-        # sem CPF ainda (ou MyCore não configurado / sem número): pede o CPF, no máx 2 tentativas
+        # sem CPF ainda (ou MyCore não configurado): pede o CPF, no máx 2 tentativas
         tries = int(fatos.get("fin_try") or 0)
-        if not MC.token_configurado() or not contato or tries >= 2:
+        if not MC.token_configurado() or tries >= 2:
             return _fp(_abre + R.FINANCEIRO_FATURA, acao="transferir", intencao="financeiro", fila=25,
                        nota="[Pedrão] Financeiro — enviei o link e transferi pro setor.",
                        dados=_limpa_fin, icone="⚡➡️")

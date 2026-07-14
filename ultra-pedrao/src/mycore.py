@@ -6,10 +6,11 @@ Fluxo (2 passos, como o BFF do app faz — evita o 403 do WAF em paralelo):
   1) GET cliente/list?cpfcnpj=<digitos>   -> cadastros do CPF (com telefones)
   2) GET financeiro/nopgto?id=<id> (atrasadas) e pgtopen?id=<id> (a vencer) -> faturas com Pix+boleto
 
-SEGURANÇA (ordem do dono 14/07/2026): a fatura só é ENTREGUE no chat se o CPF informado bater com
-um cadastro que tenha o MESMO número de WhatsApp de quem está falando. Se não bater (ou não achar),
-NÃO revela nada — cai no link da área do cliente + transfere pro Financeiro. Nunca expõe fatura de
-terceiro (LGPD / anti-golpe).
+ACESSO (ordem do dono 14/07/2026 — simplificado): a fatura é entregue com base SÓ no CPF informado,
+SEM conferir o telefone (muitos cadastros têm telefone desatualizado, o que barraria cliente real).
+Se o CPF não tiver cadastro/fatura, cai no link da área do cliente + transfere pro Financeiro.
+Nota de privacidade: sem a conferência, quem souber um CPF vê a fatura daquele CPF — decisão
+consciente do dono, por simplicidade.
 
 Token: NUNCA no código. Lido de data/mycore_token.txt (chmod 600) ou da env MYCORE_TOKEN.
 """
@@ -148,25 +149,6 @@ def faturas_abertas(client_id):
     return _faturas("financeiro/pgtopen", client_id)
 
 
-# ---------------- casamento telefone x WhatsApp ----------------
-
-def _norm_tel(t: str) -> str:
-    d = digitos(t)
-    if d.startswith("55") and len(d) > 11:
-        d = d[2:]  # tira DDI
-    return d
-
-
-def _numero_bate(cli: dict, contato: str) -> bool:
-    alvo = _norm_tel(contato)
-    for k in ("phonecel", "phoneres", "phonecom"):
-        tel = _norm_tel(cli.get(k))
-        n = min(len(alvo), len(tel))
-        if n >= 10 and alvo[-n:] == tel[-n:]:   # DDD + número (bloqueia colisão de sufixo curto)
-            return True
-    return False
-
-
 # ---------------- formatação ----------------
 
 def _fmt_valor(v):
@@ -206,24 +188,22 @@ def _envios_da_fatura(nome, fatura, atrasada):
     return envios
 
 
-def resolver_fatura(cpf: str, contato: str) -> dict:
-    """Núcleo da regra. Retorna:
-      status: 'entregue'  -> envios prontos (bate o número)
-              'sem_fatura'-> bate, mas está tudo em dia
-              'fallback'  -> não bate / não achou / erro  -> manda link + transfere Financeiro
-      (nunca revela se um CPF existe quando o número não bate — anti-enumeração/golpe)."""
+def resolver_fatura(cpf: str, contato: str = None) -> dict:
+    """Núcleo da regra (CPF-only, ordem do dono 14/07/2026 — sem conferir telefone). Retorna:
+      status: 'entregue'  -> envios prontos (achou cadastro + fatura pelo CPF)
+              'sem_fatura'-> achou o cadastro, mas está tudo em dia
+              'fallback'  -> CPF sem cadastro / erro / MyCore fora -> link + transfere Financeiro
+      (contato fica só p/ log/uso futuro; NÃO é mais usado pra liberar a fatura)."""
     try:
         clientes = clientes_por_cpf(cpf)
     except MyCoreErro as e:
         return {"status": "fallback", "motivo": f"mycore_{e.tipo}"}
-    se_batem = [c for c in clientes if _numero_bate(c, contato)]
-    if not se_batem:
-        # CPF não encontrado OU número não confere -> MESMA resposta (não vaza existência)
-        return {"status": "fallback", "motivo": "sem_conferencia"}
+    if not clientes:
+        return {"status": "fallback", "motivo": "cpf_sem_cadastro"}
 
-    nome = se_batem[0].get("name") or ""
+    nome = clientes[0].get("name") or ""
     atrasadas, abertas = [], []
-    for c in se_batem:
+    for c in clientes:
         cid = c.get("id")
         if not cid:
             continue
