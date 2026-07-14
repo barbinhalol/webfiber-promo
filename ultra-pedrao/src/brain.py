@@ -86,8 +86,11 @@ def _fila_por_intencao(intencao, motivo):
 # como atendente virtual (transparência) e serve pra qualquer idade (sem gíria).
 _ABERTURA = "Olá! Eu sou o Pedrão, agente virtual da WebFiber 😊 Estou aqui para te ajudar."
 
+# aceita saudações ENCADEADAS ("ola, boa noite!", "oi bom dia", "opa tudo bem", "voltei") — o `+`
+# no fim do grupo deixa repetir; senão "Ola, boa noite!" não casava e caía no LLM (que recapitulava).
 _SAUDACAO_PURA = re.compile(
-    r"^\s*(oi+|ol[áa]|e\s*a[íi]|opa|bom\s*dia|boa\s*tarde|boa\s*noite|salve|fala(\s*a[íi])?|blz|beleza|tudo\s*bem)\s*[!.,?]*\s*$",
+    r"^\s*((oi+|ol[áa]|e\s*a[íi]|opa|bom\s*dia|boa\s*tarde|boa\s*noite|salve|fala(\s*a[íi])?|"
+    r"blz|beleza|tudo\s*bem|tudo\s*bom|voltei|cheguei)[\s,!.?]*)+$",
     re.I)
 _PLANOS_INTENCAO = re.compile(
     r"\b(planos?|pre[çc]os?|valor(es)?|quanto\s*(custa|fica|[ée]|sai)|pacotes?|mega)\b", re.I)
@@ -273,14 +276,18 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     ctx = []
     marcador = "[SESSÃO=NOVA]" if sessao_nova else "[SESSÃO=CONTINUA]"
     if sessao_nova and historico:
-        ctx.append(marcador + " — atendimento reaberto: já existe histórico com esse cliente, sinalize a retomada em vez de cumprimentar como se fosse a primeira vez.")
+        ctx.append(marcador + " — atendimento reaberto (já há histórico). Cumprimente de forma SIMPLES "
+                   "com a saudação padrão ('Olá!') e siga a conversa. É PROIBIDO recapitular ou comentar "
+                   "em voz alta o que já foi falado antes (nada de 'que bom que você voltou', 'você queria "
+                   "o plano X na Rua Y', 'você tava pensando na empresa'...). Isso soa invasivo e bisbilhoteiro. "
+                   "Use o histórico SÓ internamente, pra não repetir perguntas que o cliente já respondeu.")
     elif sessao_nova:
         ctx.append(marcador + " — primeiro contato desse cliente: abra com a saudação fixa.")
     else:
         ctx.append(marcador + " — mesma conversa em andamento: não cumprimente de novo.")
     if resumo and resumo.strip():
-        ctx.append("RESUMO DO QUE JÁ FOI CONVERSADO ANTES (memória da conversa — use pra não esquecer o "
-                   "começo nem pedir de novo o que o cliente já disse): " + resumo.strip())
+        ctx.append("RESUMO DO QUE JÁ FOI CONVERSADO ANTES (memória INTERNA — use SÓ pra não repetir "
+                   "perguntas; NUNCA recapitule nem cite em voz alta o que já foi conversado): " + resumo.strip())
     if memoria_cliente:
         ctx.append("MEMÓRIA DO CLIENTE (fatos já sabidos — não pergunte de novo): " + json.dumps(memoria_cliente, ensure_ascii=False))
     ctx.append("CONVERSA ATÉ AGORA:\n" + "\n".join(linhas))
