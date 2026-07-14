@@ -5,6 +5,10 @@ e viabilidade afirmada sem o veredito do sistema)."""
 import json, os, re
 import viability as V
 import llm as L
+try:
+    import painel as PAINEL
+except Exception:
+    PAINEL = None
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 def _load(name):
@@ -51,6 +55,10 @@ def decidir(mensagem, historico=None, memoria_cliente=None):
         ctx.append("MEMÓRIA DO CLIENTE (fatos já sabidos — não pergunte de novo): " + json.dumps(memoria_cliente, ensure_ascii=False))
     ctx.append("CONVERSA ATÉ AGORA:\n" + "\n".join(linhas))
     ctx.append(V.hint_para_prompt(viab))
+    if PAINEL:
+        extra = PAINEL.contexto_extra()
+        if extra:
+            ctx.append(extra)
     ctx.append("\nDecida a próxima ação do Pedrão e responda SÓ o JSON no formato definido.")
     user = "\n\n".join(ctx)
     system = SYSTEM_PROMPT + "\n\n## CONTEXTO DE PLANOS (para conversar; preço só pela imagem)\n" + PLANOS_CTX

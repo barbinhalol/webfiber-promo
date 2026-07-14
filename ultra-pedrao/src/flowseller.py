@@ -24,9 +24,14 @@ def _num_permitido_piloto(body):
     """Trava de seguranca do PILOTO: so envia para numeros da PILOT_ALLOWLIST."""
     import re
     alvo = re.sub(r"\D", "", str(body.get("externalKey", "")))
-    if not C.PILOT_ALLOWLIST:
+    try:
+        import painel as PAINEL
+        lista = PAINEL.allowlist_efetiva(C.PILOT_ALLOWLIST)
+    except Exception:
+        lista = C.PILOT_ALLOWLIST
+    if not lista:
         return False  # piloto sem allowlist NUNCA envia (protege contra erro de config)
-    for n in C.PILOT_ALLOWLIST:
+    for n in lista:
         n = re.sub(r"\D", "", n)
         if n and len(alvo) >= 8 and (alvo.endswith(n) or n.endswith(alvo)):
             return True
@@ -34,13 +39,18 @@ def _num_permitido_piloto(body):
 
 def _enviar(body, usar="resposta"):
     """Executa (ou simula) um POST SendMessageBase. Retorna FSResult com o que fez/faria."""
+    try:
+        import painel as PAINEL
+        modo = PAINEL.modo_efetivo(C.BOT_MODE)
+    except Exception:
+        modo = C.BOT_MODE
     apiid = C.FS_APIID_RESPOSTA if usar == "resposta" else (C.FS_APIID_TRANSFER or C.FS_APIID_RESPOSTA)
     jwt = C.FS_JWT_RESPOSTA if usar == "resposta" else (C.FS_JWT_TRANSFER or C.FS_JWT_RESPOSTA)
     plan = {"endpoint": f"POST /v1/api/external/{{{usar}}}", "body": body}
-    if C.BOT_MODE == "shadow":
+    if modo == "shadow":
         return FSResult(enviado=False, modo="shadow", faria=plan)
     # TRAVA DUPLA: no piloto, so envia para a allowlist (mesmo que o filtro de processamento falhe)
-    if C.BOT_MODE == "pilot" and not _num_permitido_piloto(body):
+    if modo == "pilot" and not _num_permitido_piloto(body):
         return FSResult(enviado=False, modo="pilot", erro="numero fora da allowlist do piloto (trava de seguranca)", faria=plan)
     if not apiid or not jwt:
         return FSResult(enviado=False, modo=C.BOT_MODE, erro="credenciais FlowSeller ausentes", faria=plan)
