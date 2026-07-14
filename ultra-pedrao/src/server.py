@@ -89,9 +89,15 @@ def _processar(contato, texto, ctx):
 
     fatos = M.get_fatos(contato)
     hist = M.historico(contato)
-    d = B.fastpath(texto, sessao_nova, hist)
+    # sessão nova zera qualquer roteiro de suporte pendente (não arrasta estado velho pra conversa nova)
+    if sessao_nova and fatos.get("sup") in ("1", "2"):
+        M.merge_fatos(contato, {"sup": "fim"}); fatos["sup"] = "fim"
+    d = B.fastpath(texto, sessao_nova, hist, fatos)
     if d is None:
         d = B.decidir(texto, historico=hist, memoria_cliente=fatos, sessao_nova=sessao_nova)
+        # se havia roteiro de suporte em andamento e o LLM assumiu, encerra o roteiro (evita ficar preso)
+        if fatos.get("sup") in ("1", "2"):
+            d.setdefault("dados_coletados", {})["sup"] = "fim"
 
     M.add_mensagem(contato, ext, "cliente", texto)
     if d.get("dados_coletados"):

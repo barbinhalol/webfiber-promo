@@ -40,6 +40,10 @@ def _fila_por_intencao(intencao, motivo):
 # que, pra saudação e pro pedido direto de planos, já é FIXO no prompt (seções 2.6/3.8/5.1).
 # Pra esses dois casos claros, respondemos por código (10ms) e pulamos o LLM inteiro. Qualquer
 # mensagem fora do padrão exato cai pro decidir() normal -- nunca arrisca qualidade por velocidade.
+# APRESENTAÇÃO OBRIGATÓRIA: toda saudação se apresenta como ATENDENTE VIRTUAL da WebFiber (ordem
+# do dono -- transparência, o cliente sabe que fala com um agente virtual desde o "olá").
+_APRESENTACAO = "eu sou o Pedrão, atendente virtual da WebFiber 😊 Estou aqui para te ajudar"
+
 _SAUDACAO_PURA = re.compile(
     r"^\s*(oi+|ol[áa]|e\s*a[íi]|opa|bom\s*dia|boa\s*tarde|boa\s*noite|salve|fala(\s*a[íi])?|blz|beleza|tudo\s*bem)\s*[!.,?]*\s*$",
     re.I)
@@ -49,50 +53,105 @@ _SINAIS_COMPLEXOS = re.compile(
     r"\b(rua|av\.|avenida|n[°º]|cep|\d{5}-?\d{3}|cancel|problema|ruim|p[ée]ssimo|n[ãa]o\s*funciona|"
     r"caiu|lent[ao]|reclama|advogado|procon|golpe|fraude)\b", re.I)
 
+# ---- roteiro de suporte (como o Pedrão antigo fazia: começou agora? -> tira da tomada 1min +
+#      luz piscando? -> resolveu (fecha) ou não resolveu (escala Suporte 24 às 9h do próximo dia útil).
+#      Só o básico -- NUNCA diagnostica rede (seção 7 do prompt). Financeiro tem prioridade e sai daqui.
+_SUP_INTENCAO = re.compile(
+    r"\b(sem\s+(internet|sinal|conex|net)|internet\s+(caiu|parou|ruim|lenta|oscil)|wi-?fi\s+(caiu|parou|n[ãa]o)|"
+    r"caiu\s+a\s+(internet|net)|sem\s+wi-?fi|n[ãa]o\s+(navega|pega|funciona|conecta|t[áa]\s+pegando)|"
+    r"parou\s+de\s+funcionar|t[áa]\s+(lenta|lento|oscilando|caindo)|internet\s+n[ãa]o)\b", re.I)
+_FINANCEIRO_KW = re.compile(
+    r"\b(atras|fatura|boleto|cobran|cortaram|cortada|cortou|bloque|esqueci\s+de\s+pagar|"
+    r"pagamento|vencid|d[ée]bito|negativ|2[ªa]?\s*via|segunda\s+via|desbloque)\b", re.I)
+_SUP_RESOLVIDO = re.compile(
+    r"\b(voltou|volto[uw]?|funcion(ou|a)|resolv(eu|ido)|deu\s+certo|normaliz|t[áa]\s+(bom|funcionando|de\s+boa|normal)|"
+    r"pegou|conectou|melhorou|voltei\s+a\s+navegar|ok\s+agora|consegui)\b", re.I)
+_SUP_NAO_RESOLVIDO = re.compile(
+    r"\b(n[ãa]o\s+(voltou|volto|funcion|resolv|pegou|conectou|adiantou)|continua|mesma\s+coisa|"
+    r"nada|ainda\s+(sem|n[ãa]o)|persist|vermelh|piscando|apagad|sem\s+luz|do\s+mesmo\s+jeito|nao\s+deu)\b", re.I)
+# muda de assunto no meio do roteiro -> deixa o LLM assumir (server encerra o roteiro)
+_DESVIO_ASSUNTO = re.compile(
+    r"\b(plano|pre[çc]o|valor|quanto\s+custa|cancel|fatura|boleto|atendente|humano|pessoa\s+de\s+verdade|falar\s+com\s+algu[ée]m)\b", re.I)
+
 def _saudacao_periodo():
     p = S.periodo_do_dia()
-    return p if p else "Oi"
+    return p if p else "Olá"
 
-def _fp_responder(texto):
-    return {"acao": "responder", "texto": texto, "fastReplyId": 0, "fila": 0,
-            "intencao": "saudacao", "viabilidade": "naoaplicavel", "motivo": "",
-            "nota_interna": "", "dados_coletados": {}, "_alertas": [],
-            "_viabilidade_sistema": {"status": "sem_endereco"},
-            "_fastpath": True, "_render": f"⚡ (atalho, sem LLM) “{texto}”"}
+def _abertura():
+    """Abertura fixa que SEMPRE se apresenta como atendente virtual (só o período do dia muda)."""
+    return f"{_saudacao_periodo()}! {_APRESENTACAO[0].upper() + _APRESENTACAO[1:]}."
 
-def _fp_fastreply_planos(texto):
-    return {"acao": "fastreply", "texto": texto, "fastReplyId": 1296, "fila": 0,
-            "intencao": "planos", "viabilidade": "naoaplicavel", "motivo": "",
-            "nota_interna": "", "dados_coletados": {}, "_alertas": [],
-            "_viabilidade_sistema": {"status": "sem_endereco"},
-            "_fastpath": True, "_render": f"⚡📎 (atalho, sem LLM) Enviaria rápida 1296 + “{texto}”"}
+def _fp(texto, acao="responder", intencao="saudacao", fila=0, fid=0, nota="", sup=None, icone="⚡"):
+    d = {"acao": acao, "texto": texto, "fastReplyId": fid, "fila": fila,
+         "intencao": intencao, "viabilidade": "naoaplicavel", "motivo": "",
+         "nota_interna": nota, "dados_coletados": ({"sup": sup} if sup is not None else {}),
+         "_alertas": [], "_viabilidade_sistema": {"status": "naoaplicavel"},
+         "_fastpath": True, "_render": f"{icone} (atalho, sem LLM) “{texto[:80]}”"}
+    return d
 
-def fastpath(mensagem, sessao_nova, historico):
-    """Retorna uma decisão pronta (sem chamar o LLM) pros dois casos 100% previsíveis do prompt:
-    saudação pura e pedido claro de planos/preço sem complicador. None = segue pro decidir() normal."""
+def _suporte_passo(msg, sup):
+    """Cliente já está no roteiro de suporte (sup=1 respondeu 'começou agora'; sup=2 respondeu da luz)."""
+    if _DESVIO_ASSUNTO.search(msg):
+        return None  # mudou de assunto -> LLM assume (server limpa o estado do roteiro)
+    if sup == "1":
+        texto = ("Beleza! Vamos tentar o primeiro procedimento juntos 🙌\n\n"
+                 "Tira o aparelhinho de internet (a ONU/roteador) da tomada, espera 1 minutinho e liga de novo. "
+                 "Enquanto ele religa, dá uma olhada: tem alguma luz *vermelha* acesa ou piscando nele?")
+        return _fp(texto, intencao="suporte", sup="2")
+    # sup == "2": leu a luz / resultado do reinício
+    if _SUP_RESOLVIDO.search(msg) and not _SUP_NAO_RESOLVIDO.search(msg):
+        texto = ("Ótimo, que bom que voltou! 😊 Fico à disposição — qualquer coisa é só me chamar. "
+                 "Posso te ajudar em mais alguma coisa?")
+        return _fp(texto, intencao="suporte", sup="fim")
+    if _SUP_NAO_RESOLVIDO.search(msg):
+        texto = ("Entendi. Como o procedimento básico não resolveu, já vou registrar tudo certinho aqui pro nosso "
+                 "time de *Suporte técnico*. Eles entram em contato com você no próximo dia útil, às 9h, pra "
+                 "resolver de vez 😊\n\nPra adiantar, me confirma seu *nome completo*, o *endereço* e um *telefone* de contato?")
+        nota = ("[PEDRÃO fora do horário] SUPORTE | cliente sem internet; fez o reinício básico (tirar da tomada 1 min) "
+                "e NÃO resolveu | Falta: confirmar nome/endereço/telefone | Retorno agendado: próximo dia útil às 9h.")
+        return _fp(texto, acao="transferir", intencao="suporte", fila=24, nota=nota, sup="fim", icone="⚡➡️")
+    return None  # resposta ambígua sobre a luz -> LLM decide
+
+def fastpath(mensagem, sessao_nova, historico, fatos=None):
+    """Decisão pronta SEM LLM pros casos previsíveis do prompt: saudação (sempre como atendente
+    virtual), pedido claro de planos, e o roteiro de suporte básico passo a passo. Qualquer coisa
+    fora do padrão exato retorna None -> cai no decidir() normal (LLM), sem arriscar qualidade."""
+    fatos = fatos or {}
     msg = (mensagem or "").strip()
     if not msg:
         return None
-    per = _saudacao_periodo()
+    sup = "" if sessao_nova else str(fatos.get("sup") or "")
 
+    # 0) roteiro de suporte JÁ em andamento tem prioridade
+    if sup in ("1", "2"):
+        return _suporte_passo(msg, sup)
+
+    # 1) saudação pura -> sempre se apresenta como atendente virtual
     if _SAUDACAO_PURA.match(msg) and not _SINAIS_COMPLEXOS.search(msg):
         if sessao_nova and not historico:
-            texto = f"{per}! Aqui é o Pedrão, da WebFiber 😊 Me conta o que você precisa que eu te ajudo."
-            return _fp_responder(texto)
+            return _fp(f"{_abertura()} Me conta o que você precisa que eu te ajudo.", intencao="saudacao")
         if sessao_nova and historico:
-            texto = (f"{per}! Pedrão de novo aqui, da WebFiber 😊 Vi que a gente já tinha trocado "
-                      "uma ideia — é sobre a mesma coisa ou é outro assunto agora?")
-            return _fp_responder(texto)
-        return None  # SESSÃO=CONTINUA: "oi" solto no meio da conversa não tem resposta fixa segura
+            texto = (f"{_saudacao_periodo()}! {_APRESENTACAO[0].upper() + _APRESENTACAO[1:]}. "
+                      "Vi que a gente já tinha trocado uma ideia — é sobre a mesma coisa ou é outro assunto agora?")
+            return _fp(texto, intencao="saudacao")
+        return None  # SESSÃO=CONTINUA: "oi" solto no meio da conversa -> LLM
 
+    # 2) pedido claro de planos/preço (sem complicador)
     if (_PLANOS_INTENCAO.search(msg) and not _SINAIS_COMPLEXOS.search(msg)
             and len(msg.split()) <= 18):
         if sessao_nova:
-            texto = f"{per}! Aqui é o Pedrão, da WebFiber 😊 Você já conhece nossos planos, ou quer que eu te mostre certinho?"
-            return _fp_responder(texto)
+            texto = f"{_abertura()} Você já conhece nossos planos, ou quer que eu te mostre certinho?"
+            return _fp(texto, intencao="planos")
         texto = ("Claro! Vou te mostrar certinho os planos aqui 👇\n\n"
                   "E me passa a rua e o número, por gentileza? Assim eu já confirmo se a fibra chega forte aí.")
-        return _fp_fastreply_planos(texto)
+        return _fp(texto, acao="fastreply", intencao="planos", fid=1296, icone="⚡📎")
+
+    # 3) início de suporte (só o básico; financeiro tem prioridade e sai pro LLM)
+    if _SUP_INTENCAO.search(msg) and not _FINANCEIRO_KW.search(msg):
+        abre = (_abertura() + " ") if (sessao_nova and not historico) else ""
+        texto = (abre + "Poxa, que chato ficar sem internet! Vou te ajudar a resolver 😊 "
+                 "Me diz uma coisa: isso começou *agora* ou já vem acontecendo há um tempo?")
+        return _fp(texto, intencao="suporte", sup="1")
 
     return None
 
