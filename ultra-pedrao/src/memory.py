@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS fatos(contato TEXT PRIMARY KEY, dados TEXT, ts REAL);
 CREATE TABLE IF NOT EXISTS eventos(
   id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, contato TEXT, tipo TEXT, payload TEXT
 );
+CREATE TABLE IF NOT EXISTS sessao(contato TEXT PRIMARY KEY, ticket_id TEXT, ts REAL);
 """
 
 def _conn():
@@ -69,6 +70,19 @@ def merge_fatos(contato, novos: dict):
                   "ON CONFLICT(contato) DO UPDATE SET dados=excluded.dados, ts=excluded.ts",
                   (contato, json.dumps(atual, ensure_ascii=False), time.time()))
     return atual
+
+def get_ultimo_ticket(contato):
+    """Ultimo ticket_id visto pra esse contato -- usado pra detectar atendimento novo/reaberto
+    (a FlowSeller cria um ticket_id novo quando o atendimento anterior foi fechado)."""
+    with _conn() as c:
+        r = c.execute("SELECT ticket_id FROM sessao WHERE contato=?", (contato,)).fetchone()
+    return r[0] if r else None
+
+def set_ultimo_ticket(contato, ticket_id):
+    with _conn() as c:
+        c.execute("INSERT INTO sessao(contato,ticket_id,ts) VALUES(?,?,?) "
+                  "ON CONFLICT(contato) DO UPDATE SET ticket_id=excluded.ticket_id, ts=excluded.ts",
+                  (contato, str(ticket_id) if ticket_id is not None else None, time.time()))
 
 def log_evento(contato, tipo, payload):
     with _conn() as c:

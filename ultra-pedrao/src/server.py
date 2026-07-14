@@ -78,9 +78,18 @@ def _parse_evento(p: dict):
 def _processar(contato, texto, ctx):
     """Chamado pelo debouncer após agrupar as mensagens do contato."""
     ext = ctx.get("external_key")
+    # sessão nova/reaberta: a FlowSeller cria um ticket_id novo quando o atendimento anterior
+    # foi fechado. Comparamos com o último ticket_id visto pra esse contato -- se mudou (ou é o
+    # primeiro contato), sinalizamos pro cérebro cumprimentar do jeito clássico.
+    ticket_id_atual = ctx.get("ticket_id")
+    ticket_id_anterior = M.get_ultimo_ticket(contato)
+    sessao_nova = ticket_id_atual is not None and str(ticket_id_atual) != str(ticket_id_anterior)
+    if ticket_id_atual is not None:
+        M.set_ultimo_ticket(contato, ticket_id_atual)
+
     fatos = M.get_fatos(contato)
     hist = M.historico(contato)
-    d = B.decidir(texto, historico=hist, memoria_cliente=fatos)
+    d = B.decidir(texto, historico=hist, memoria_cliente=fatos, sessao_nova=sessao_nova)
 
     M.add_mensagem(contato, ext, "cliente", texto)
     if d.get("dados_coletados"):
@@ -96,7 +105,7 @@ def _processar(contato, texto, ctx):
         M.add_mensagem(contato, ext, "pedrao", d["texto"])
 
     M.log_evento(contato, "decisao", {
-        "mask": _mask(contato), "modo": C.BOT_MODE, "acao": d.get("acao"),
+        "mask": _mask(contato), "modo": C.BOT_MODE, "acao": d.get("acao"), "sessao_nova": sessao_nova,
         "viab": d.get("_viabilidade_sistema", {}).get("status"),
         "alertas": d.get("_alertas"), "render": d.get("_render"), "envio": resultado,
     })
@@ -183,7 +192,7 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
         else:
             texto = "[áudio recebido sem link de mídia — peça confirmação por escrito]"
 
-    _DEB.add(ev["contato"], texto, ctx={"external_key": ev["external_key"], "nome": ev["nome"]})
+    _DEB.add(ev["contato"], texto, ctx={"external_key": ev["external_key"], "nome": ev["nome"], "ticket_id": ev["ticket_id"]})
     return {"status": "enfileirado", "modo": C.BOT_MODE, "contato": _mask(ev["contato"])}
 
 # ---- admin protegido (inspeção do modo sombra) ----
@@ -252,7 +261,7 @@ async def admin_simular(request: Request, x_admin_token: str = Header(default=""
     _admin(x_admin_token)
     body = await request.json()
     d = B.decidir(body.get("texto", ""), historico=body.get("historico", []),
-                  memoria_cliente=body.get("memoria", {}))
+                  memoria_cliente=body.get("memoria", {}), sessao_nova=bool(body.get("sessao_nova", False)))
     return {"decisao": {k: v for k, v in d.items() if not k.startswith("_")},
             "viabilidade_sistema": d.get("_viabilidade_sistema"),
             "alertas": d.get("_alertas"), "render": d.get("_render")}

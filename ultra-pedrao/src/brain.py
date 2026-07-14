@@ -40,8 +40,10 @@ def _parse_json(txt):
     try: return json.loads(txt[i:j+1])
     except Exception: return None
 
-def decidir(mensagem, historico=None, memoria_cliente=None):
-    """historico: [{'de':'cliente'|'pedrao','texto':...}]; memoria_cliente: dict de fatos por contato."""
+def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False):
+    """historico: [{'de':'cliente'|'pedrao','texto':...}]; memoria_cliente: dict de fatos por contato.
+    sessao_nova: True quando o atendimento está começando (primeiro contato ou reabertura após fechamento) —
+    vira o marcador [SESSÃO=NOVA]/[SESSÃO=CONTINUA] que a seção 3.8 do prompt usa pra decidir se cumprimenta."""
     historico = historico or []
     texto_todo = " ".join([h.get("texto", "") for h in historico] + [mensagem])
     viab = V.checar(texto_todo)
@@ -51,6 +53,13 @@ def decidir(mensagem, historico=None, memoria_cliente=None):
     linhas.append("Cliente: " + mensagem)
 
     ctx = []
+    marcador = "[SESSÃO=NOVA]" if sessao_nova else "[SESSÃO=CONTINUA]"
+    if sessao_nova and historico:
+        ctx.append(marcador + " — atendimento reaberto: já existe histórico com esse cliente, sinalize a retomada em vez de cumprimentar como se fosse a primeira vez.")
+    elif sessao_nova:
+        ctx.append(marcador + " — primeiro contato desse cliente: abra com a saudação fixa.")
+    else:
+        ctx.append(marcador + " — mesma conversa em andamento: não cumprimente de novo.")
     if memoria_cliente:
         ctx.append("MEMÓRIA DO CLIENTE (fatos já sabidos — não pergunte de novo): " + json.dumps(memoria_cliente, ensure_ascii=False))
     ctx.append("CONVERSA ATÉ AGORA:\n" + "\n".join(linhas))
