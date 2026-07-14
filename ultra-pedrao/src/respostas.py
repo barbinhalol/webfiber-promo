@@ -41,6 +41,15 @@ CADASTRO_RESIDENCIAL = (
     "• Instalação/ativação: R$100,00 ( ) PIX  ou  ( ) R$130,00 em 3x no cartão"
 )
 
+# FINANCEIRO — texto oficial do dono (14/07/2026). O Pedrão antigo já mandava esse link, e isso
+# ajuda MUITO o setor financeiro: o cliente baixa a fatura sozinho antes mesmo do humano assumir.
+# (Acentuação corrigida do original: "ás" -> "às".)
+FINANCEIRO_FATURA = (
+    "*Para baixar a sua Fatura* é só clicar no link abaixo e, depois, colocar seu CPF:\n"
+    "https://areadocliente.webfiberprovedor.com.br/\n\n"
+    "Nosso horário de atendimento: seg a sex das 9h às 20h, e sáb das 9h às 15h."
+)
+
 def planos_payloads(external_key, legenda=None):
     """Devolve a sequência de envios do /planos: 1 texto + N imagens (como o atalho manda tudo de uma vez)."""
     imgs = _planos_imagens()

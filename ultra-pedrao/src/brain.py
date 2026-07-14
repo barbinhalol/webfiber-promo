@@ -188,6 +188,16 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None):
                   "E me passa o endereço — rua, número e bairro — pra eu já verificar a viabilidade pra você.")
         return _fp(texto, acao="fastreply", intencao="planos", fid=1296, icone="⚡📎")
 
+    # 2.5) FINANCEIRO (boleto/fatura/2ª via/atraso/bloqueio) -> manda o LINK da área do cliente e
+    #      transfere pro Financeiro (25). Ordem do dono: o Pedrão antigo fazia assim e ajuda MUITO o
+    #      setor — o cliente já baixa a fatura sozinho antes do humano assumir.
+    if _FINANCEIRO_KW.search(msg):
+        import respostas as R
+        abre = (_ABERTURA + "\n\n") if sessao_nova else ""
+        return _fp(abre + R.FINANCEIRO_FATURA, acao="transferir", intencao="financeiro", fila=25,
+                   nota="[Pedrão] Financeiro — enviei o link da área do cliente e transferi pro setor.",
+                   icone="⚡➡️")
+
     # 3) início de suporte (só o básico; financeiro tem prioridade e sai pro LLM)
     if _SUP_INTENCAO.search(msg) and not _FINANCEIRO_KW.search(msg):
         abre = (_ABERTURA + " ") if sessao_nova else ""

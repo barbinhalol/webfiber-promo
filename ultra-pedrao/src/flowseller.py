@@ -111,7 +111,7 @@ def transferir(external_key, queue_id, nota=None, texto=None, user_id=None, numb
     body = {"externalKey": external_key, "queueId": queue_id, "forceTicketToDepartment": True}
     if number: body["number"] = number
     if user_id: body["forceTicketToUser"] = True; body["userId"] = user_id
-    if texto: body["body"] = texto
+    if texto: body["body"] = _assinar(texto)   # última fala do bot antes do humano — também assinada
     if nota: body["note"] = {"body": nota}
     return _enviar(body, "transfer", delay=delay)
 
