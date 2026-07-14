@@ -79,7 +79,7 @@ def _fila_por_intencao(intencao, motivo):
 # mensagem fora do padrão exato cai pro decidir() normal -- nunca arrisca qualidade por velocidade.
 # SAUDAÇÃO FIXA (ordem do dono): sempre "Olá!" -- NUNCA bom dia/boa tarde/boa noite. Se apresenta
 # como atendente virtual (transparência) e serve pra qualquer idade (sem gíria).
-_ABERTURA = "Olá! Eu sou o Pedrão, atendente virtual da WebFiber 😊 Estou aqui para te ajudar."
+_ABERTURA = "Olá! Eu sou o Pedrão, agente virtual da WebFiber 😊 Estou aqui para te ajudar."
 
 _SAUDACAO_PURA = re.compile(
     r"^\s*(oi+|ol[áa]|e\s*a[íi]|opa|bom\s*dia|boa\s*tarde|boa\s*noite|salve|fala(\s*a[íi])?|blz|beleza|tudo\s*bem)\s*[!.,?]*\s*$",
