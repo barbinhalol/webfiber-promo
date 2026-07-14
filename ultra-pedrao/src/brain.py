@@ -35,6 +35,26 @@ _AGENDA = re.compile(
     r"dia\s+\d{1,2}(/\d{1,2})?|em\s+\d+\s*(min|minutos?|horas?|h|dias?)|"
     r"[àa]s?\s*\d{1,2}\s*(h\b|hs\b|horas?|:\d{2})|per[íi]odo da (manh[ãa]|tarde|noite))\b", re.I)
 _AGENDA_OK = re.compile(r"pr[óo]ximo dia [úu]til.*?9\s*h", re.I)
+# afirmar cobertura/presença antes do veredito do sistema (proibido — a equipe é que confirma).
+# Ex. real que vazou: "a gente já tá na tua rua". Suaviza SÓ a frase, sem apagar o resto.
+_COBERTURA_ASSERT = re.compile(
+    r"(atende(mos)?\s+(sim|a[íi])|chega\s+a[íi]\s+(sim|forte|com)|"
+    r"j[áa]\s+(t[áa]|est(á|amos|ou)|tamos)\s+(na\s+(sua|tua)\s+rua|a[íi]\b|l[áa]\b)|"
+    r"a\s+gente\s+j[áa]\s+(t[áa]|atende|tem\s+rede)|j[áa]\s+(tem|temos)\s+(rede|cobertura|fibra)|"
+    r"cobertura\s+(confirmada|garantida)|com\s+certeza\s+(atende|chega|vai\s+pegar))", re.I)
+
+def _remove_sentencas(texto, padrao, protege=None):
+    """Tira só as FRASES que batem no padrão (mantém o resto da mensagem).
+    protege: padrão que blinda uma frase de ser removida (ex.: a frase sancionada das 9h)."""
+    blocos = re.split(r'(?<=[.!?\n])\s+', texto)
+    limpos = []
+    for b in blocos:
+        if not b.strip():
+            continue
+        if padrao.search(b) and not (protege and protege.search(b)):
+            continue  # frase problemática -> fora
+        limpos.append(b.strip())
+    return " ".join(limpos).strip()
 
 def _fila_por_intencao(intencao, motivo):
     s = (str(intencao) + " " + str(motivo)).lower()
@@ -249,15 +269,19 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
         d["viabilidade"] = "provavel" if viab["status"] == V.PROVAVEL else "a_confirmar"
         if acao != "fastreply":
             acao, fila = "transferir", 23
-    # texto afirma cobertura mas sistema não confirmou
-    if viab["status"] != V.CONFIRMADA_PREDIO and re.search(r"atende(mos)?\s+(sim|a[ií])|chega\s+a[ií]\s+sim", texto.lower()):
-        alertas.append("GUARD: texto afirmou cobertura sem veredito -> neutralizado")
-        texto = "Deixa eu confirmar a viabilidade certinha do seu endereço com a equipe pra não te passar info errada."
-    # NUNCA cravar data/hora de visita ou conserto — só o compromisso padrão "próximo dia útil às 9h" passa
+    # texto afirma cobertura/presença mas sistema não confirmou -> suaviza SÓ a frase (mantém o resto)
+    if viab["status"] != V.CONFIRMADA_PREDIO and texto and _COBERTURA_ASSERT.search(texto):
+        alertas.append("GUARD: afirmacao de cobertura suavizada")
+        novo = _remove_sentencas(texto, _COBERTURA_ASSERT)
+        texto = novo if len(novo) >= 15 else ("A chance de atender aí é boa! Mas deixa eu confirmar a viabilidade "
+                 "certinha do seu endereço com a equipe pra não te passar info errada.")
+    # NUNCA cravar data/hora de visita/conserto — remove SÓ a frase da data (mantém o resto da resposta);
+    # a frase sancionada "próximo dia útil às 9h" é blindada por _AGENDA_OK.
     if texto and _AGENDA.search(texto) and not _AGENDA_OK.search(texto):
-        alertas.append("GUARD: promessa de data/hora especifica neutralizada")
-        texto = ("Não consigo cravar dia e horário exato por aqui — quem confirma isso certinho é o nosso time 😊 "
-                 "Já deixo tudo registrado e eles falam com você o quanto antes.")
+        alertas.append("GUARD: promessa de data/hora removida (cirurgico)")
+        novo = _remove_sentencas(texto, _AGENDA, protege=_AGENDA_OK)
+        texto = novo if len(novo) >= 15 else ("Não consigo cravar dia e horário exato por aqui — quem confirma isso "
+                 "certinho é o nosso time 😊 Já deixo tudo registrado e eles falam com você o quanto antes.")
     if acao == "transferir" and fila not in FILAS:
         fila = _fila_por_intencao(d.get("intencao", ""), d.get("motivo", ""))
 

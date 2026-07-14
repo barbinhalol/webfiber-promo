@@ -157,9 +157,11 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
                            "contato_mask": _mask(ev["contato"])},
         })
 
-    # idempotência (webhook repetido)
-    key = hashlib.sha256((str(ev["external_key"]) + str(ev["texto"]) + str(ev["ts"])).encode()).hexdigest()
-    if _dedup(key):
+    # idempotência (webhook repetido) — SEM o ts: a FlowSeller às vezes reenvia a MESMA mensagem
+    # com timestamp diferente, o que gerava resposta duplicada. Dedup por contato+texto na janela TTL.
+    _txt_norm = " ".join(str(ev["texto"]).lower().split())
+    key = hashlib.sha256((str(ev["external_key"]) + "|" + _txt_norm).encode()).hexdigest()
+    if _txt_norm and _dedup(key):
         return {"status": "duplicado_ignorado"}
 
     # FILTROS (não responder): própria empresa / grupo / mensagem antiga / vazia
