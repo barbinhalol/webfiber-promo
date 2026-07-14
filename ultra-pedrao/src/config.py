@@ -47,9 +47,10 @@ FS_WEBHOOK_SECRET = _segredo("FS_WEBHOOK_SECRET")
 FILAS = {"comercial": 23, "suporte": 24, "financeiro": 25, "atendimento": 112, "outros": 26}
 
 # ---------------- IA / LLM ----------------
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic").strip().lower()  # anthropic | gemini | fake
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic").strip().lower()  # anthropic | openai | gemini | claude_cli | fake
 LLM_MODEL = os.environ.get("LLM_MODEL", "claude-haiku-4-5-20251001")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 LLM_TIMEOUT = _i("LLM_TIMEOUT", 40)
 
@@ -93,6 +94,6 @@ def resumo_seguro() -> dict:
             "transfer": bool(FS_APIID_TRANSFER and FS_JWT_TRANSFER),
             "webhook_secret": bool(FS_WEBHOOK_SECRET),
         },
-        "llm_key": bool(ANTHROPIC_API_KEY or GEMINI_API_KEY),
+        "llm_key": bool(ANTHROPIC_API_KEY or OPENAI_API_KEY or GEMINI_API_KEY),
         "pilot_allowlist_n": len(PILOT_ALLOWLIST),
     }

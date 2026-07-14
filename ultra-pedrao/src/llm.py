@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Abstração de LLM — provedor plugável por env (anthropic | gemini | fake).
 Recebe (system, user) e devolve texto. Sem estado; o contexto é montado no brain."""
-import json, urllib.request, urllib.error
+import json, re, urllib.request, urllib.error
 import config as C
 
 class LLMError(Exception):
@@ -19,16 +19,39 @@ def _post_json(url, headers, payload, timeout):
         raise LLMError(str(e))
 
 def _anthropic(system, user):
+    """system marcado com cache_control: a Anthropic guarda esse bloco (prompt gigante,
+    ~12-15k tokens) por 5min e cobra só 10% dele nas próximas chamadas da mesma conversa,
+    em vez de recobrar o valor cheio a cada mensagem (ver PAPEL_SESSAO_AUTOMACAO.md)."""
     if not C.ANTHROPIC_API_KEY:
         raise LLMError("ANTHROPIC_API_KEY ausente")
     out = _post_json(
         "https://api.anthropic.com/v1/messages",
         {"x-api-key": C.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01",
          "content-type": "application/json"},
-        {"model": C.LLM_MODEL, "max_tokens": 1024, "system": system,
+        {"model": C.LLM_MODEL, "max_tokens": 1024,
+         "system": [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
          "messages": [{"role": "user", "content": user}]},
         C.LLM_TIMEOUT)
     return "".join(b.get("text", "") for b in out.get("content", []) if b.get("type") == "text")
+
+def _openai(system, user):
+    """A OpenAI cacheia automaticamente o prefixo repetido (o system prompt) quando ele tem
+    mais de ~1024 tokens e é idêntico à chamada anterior -- sem precisar marcar nada no código,
+    só manter o system estável (não concatenar nada variável nele). Desconto de 90% no trecho
+    cacheado, aplicado sozinho pela OpenAI nas próximas chamadas da mesma conversa."""
+    if not C.OPENAI_API_KEY:
+        raise LLMError("OPENAI_API_KEY ausente")
+    model = C.LLM_MODEL if re.match(r"^(gpt-|o\d)", C.LLM_MODEL) else "gpt-5.4-mini"
+    out = _post_json(
+        "https://api.openai.com/v1/chat/completions",
+        {"Authorization": f"Bearer {C.OPENAI_API_KEY}", "content-type": "application/json"},
+        {"model": model, "max_tokens": 1024,
+         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]},
+        C.LLM_TIMEOUT)
+    try:
+        return out["choices"][0]["message"]["content"] or ""
+    except Exception:
+        raise LLMError(f"resposta inesperada: {json.dumps(out)[:300]}")
 
 def _gemini(system, user):
     if not C.GEMINI_API_KEY:
@@ -93,6 +116,7 @@ def _claude_cli(system, user):
 def gerar(system: str, user: str) -> str:
     p = C.LLM_PROVIDER
     if p == "anthropic": return _anthropic(system, user)
+    if p == "openai": return _openai(system, user)
     if p == "gemini": return _gemini(system, user)
     if p == "claude_cli": return _claude_cli(system, user)
     if p == "fake": return _fake(system, user)
