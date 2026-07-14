@@ -20,6 +20,7 @@ class Debouncer:
             return self._locks[contato]
 
     def add(self, contato, texto, ctx=None):
+        flush_now = False
         with self._g:
             b = self._buf.get(contato)
             if not b:
@@ -29,11 +30,16 @@ class Debouncer:
             if ctx: b["ctx"].update(ctx)
             if b.get("timer"): b["timer"].cancel()
             if len(b["msgs"]) >= C.DEBOUNCE_MAX:
-                self._flush(contato); return
-            t = threading.Timer(self.janela, self._flush, args=[contato])
-            t.daemon = True
-            b["timer"] = t
-            t.start()
+                flush_now = True
+            else:
+                t = threading.Timer(self.janela, self._flush, args=[contato])
+                t.daemon = True
+                b["timer"] = t
+                t.start()
+        # _flush tenta readquirir self._g (pop do buffer) -- precisa ser chamado
+        # FORA do "with self._g" acima, senao trava (Lock nao e reentrante).
+        if flush_now:
+            self._flush(contato)
 
     def _flush(self, contato):
         with self._g:

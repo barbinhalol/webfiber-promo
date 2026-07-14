@@ -72,7 +72,7 @@ def responder_texto(external_key, texto, nota=None, number=None):
 
 def enviar_midia(external_key, media_url, legenda=None, nota=None, number=None):
     """/planos e afins: imagem por mediaUrl (a API externa não dispara fastReply direto)."""
-    body = {"externalKey": external_key, "media": {"mediaUrl": media_url}}
+    body = {"externalKey": external_key, "mediaUrl": media_url}
     if number: body["number"] = number
     if legenda: body["body"] = legenda
     if nota: body["note"] = {"body": nota}
@@ -84,7 +84,7 @@ def nota_interna(external_key, texto, number=None):
     return _enviar(body, "resposta")
 
 def transferir(external_key, queue_id, nota=None, texto=None, user_id=None, number=None):
-    body = {"externalKey": external_key, "queueId": queue_id, "forceTicketToDepartment": queue_id}
+    body = {"externalKey": external_key, "queueId": queue_id, "forceTicketToDepartment": True}
     if number: body["number"] = number
     if user_id: body["forceTicketToUser"] = True; body["userId"] = user_id
     if texto: body["body"] = texto
