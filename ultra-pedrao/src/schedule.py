@@ -33,3 +33,12 @@ def deve_atuar(dt=None):
 def texto_horario():
     return ("Nosso time atende de segunda a sexta, das 9h às 18h no comercial, "
             "e o técnico vai até 20h (sábado até 15h).")
+
+def periodo_do_dia(dt=None):
+    """'Bom dia'/'Boa tarde'/'Boa noite' pelo relógio; madrugada = None (saudação neutra)."""
+    dt = dt or _agora()
+    h = dt.hour
+    if 5 <= h < 12: return "Bom dia"
+    if 12 <= h < 18: return "Boa tarde"
+    if 18 <= h < 24: return "Boa noite"
+    return None

@@ -5,6 +5,7 @@ e viabilidade afirmada sem o veredito do sistema)."""
 import json, os, re
 import viability as V
 import llm as L
+import schedule as S
 try:
     import painel as PAINEL
 except Exception:
@@ -32,6 +33,68 @@ def _fila_por_intencao(intencao, motivo):
     if re.search(r"cancel|financ|boleto|cobran|fatura|jur[ií]dic|procon", s): return 25
     if re.search(r"pre[çc]o|plano|viab|cobertura|contrat|comercial|empresa|cnpj", s): return 23
     return 112
+
+# ---------------- ATALHOS SEM LLM (fastpath) ----------------
+# Medido ao vivo: o CLI grátis leva ~4,5s só pra abrir processo/rede (chão inevitável) + ~4,5s
+# a mais por causa do prompt gigante (~43k caracteres) -- ~9s no total pra reproduzir um texto
+# que, pra saudação e pro pedido direto de planos, já é FIXO no prompt (seções 2.6/3.8/5.1).
+# Pra esses dois casos claros, respondemos por código (10ms) e pulamos o LLM inteiro. Qualquer
+# mensagem fora do padrão exato cai pro decidir() normal -- nunca arrisca qualidade por velocidade.
+_SAUDACAO_PURA = re.compile(
+    r"^\s*(oi+|ol[áa]|e\s*a[íi]|opa|bom\s*dia|boa\s*tarde|boa\s*noite|salve|fala(\s*a[íi])?|blz|beleza|tudo\s*bem)\s*[!.,?]*\s*$",
+    re.I)
+_PLANOS_INTENCAO = re.compile(
+    r"\b(planos?|pre[çc]os?|valor(es)?|quanto\s*(custa|fica|[ée]|sai)|pacotes?|mega)\b", re.I)
+_SINAIS_COMPLEXOS = re.compile(
+    r"\b(rua|av\.|avenida|n[°º]|cep|\d{5}-?\d{3}|cancel|problema|ruim|p[ée]ssimo|n[ãa]o\s*funciona|"
+    r"caiu|lent[ao]|reclama|advogado|procon|golpe|fraude)\b", re.I)
+
+def _saudacao_periodo():
+    p = S.periodo_do_dia()
+    return p if p else "Oi"
+
+def _fp_responder(texto):
+    return {"acao": "responder", "texto": texto, "fastReplyId": 0, "fila": 0,
+            "intencao": "saudacao", "viabilidade": "naoaplicavel", "motivo": "",
+            "nota_interna": "", "dados_coletados": {}, "_alertas": [],
+            "_viabilidade_sistema": {"status": "sem_endereco"},
+            "_fastpath": True, "_render": f"⚡ (atalho, sem LLM) “{texto}”"}
+
+def _fp_fastreply_planos(texto):
+    return {"acao": "fastreply", "texto": texto, "fastReplyId": 1296, "fila": 0,
+            "intencao": "planos", "viabilidade": "naoaplicavel", "motivo": "",
+            "nota_interna": "", "dados_coletados": {}, "_alertas": [],
+            "_viabilidade_sistema": {"status": "sem_endereco"},
+            "_fastpath": True, "_render": f"⚡📎 (atalho, sem LLM) Enviaria rápida 1296 + “{texto}”"}
+
+def fastpath(mensagem, sessao_nova, historico):
+    """Retorna uma decisão pronta (sem chamar o LLM) pros dois casos 100% previsíveis do prompt:
+    saudação pura e pedido claro de planos/preço sem complicador. None = segue pro decidir() normal."""
+    msg = (mensagem or "").strip()
+    if not msg:
+        return None
+    per = _saudacao_periodo()
+
+    if _SAUDACAO_PURA.match(msg) and not _SINAIS_COMPLEXOS.search(msg):
+        if sessao_nova and not historico:
+            texto = f"{per}! Aqui é o Pedrão, da WebFiber 😊 Me conta o que você precisa que eu te ajudo."
+            return _fp_responder(texto)
+        if sessao_nova and historico:
+            texto = (f"{per}! Pedrão de novo aqui, da WebFiber 😊 Vi que a gente já tinha trocado "
+                      "uma ideia — é sobre a mesma coisa ou é outro assunto agora?")
+            return _fp_responder(texto)
+        return None  # SESSÃO=CONTINUA: "oi" solto no meio da conversa não tem resposta fixa segura
+
+    if (_PLANOS_INTENCAO.search(msg) and not _SINAIS_COMPLEXOS.search(msg)
+            and len(msg.split()) <= 18):
+        if sessao_nova:
+            texto = f"{per}! Aqui é o Pedrão, da WebFiber 😊 Você já conhece nossos planos, ou quer que eu te mostre certinho?"
+            return _fp_responder(texto)
+        texto = ("Claro! Vou te mostrar certinho os planos aqui 👇\n\n"
+                  "E me passa a rua e o número, por gentileza? Assim eu já confirmo se a fibra chega forte aí.")
+        return _fp_fastreply_planos(texto)
+
+    return None
 
 def _parse_json(txt):
     if not txt: return None

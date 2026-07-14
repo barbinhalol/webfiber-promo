@@ -89,7 +89,9 @@ def _processar(contato, texto, ctx):
 
     fatos = M.get_fatos(contato)
     hist = M.historico(contato)
-    d = B.decidir(texto, historico=hist, memoria_cliente=fatos, sessao_nova=sessao_nova)
+    d = B.fastpath(texto, sessao_nova, hist)
+    if d is None:
+        d = B.decidir(texto, historico=hist, memoria_cliente=fatos, sessao_nova=sessao_nova)
 
     M.add_mensagem(contato, ext, "cliente", texto)
     if d.get("dados_coletados"):
@@ -106,6 +108,7 @@ def _processar(contato, texto, ctx):
 
     M.log_evento(contato, "decisao", {
         "mask": _mask(contato), "modo": C.BOT_MODE, "acao": d.get("acao"), "sessao_nova": sessao_nova,
+        "fastpath": bool(d.get("_fastpath")),
         "viab": d.get("_viabilidade_sistema", {}).get("status"),
         "alertas": d.get("_alertas"), "render": d.get("_render"), "envio": resultado,
     })
