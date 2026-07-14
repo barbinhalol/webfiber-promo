@@ -91,7 +91,7 @@ def _processar(contato, texto, ctx):
         try: M.set_resumo(contato, B.resumir(hist_full, M.get_resumo(contato)))
         except Exception: pass
 
-    resultado = FS.executar_decisao(ext, d) if ext else {"erro": "sem external_key"}
+    resultado = FS.executar_decisao(ext, d, contato) if ext else {"erro": "sem external_key"}
     if d.get("acao") in ("responder", "fastreply") and d.get("texto"):
         M.add_mensagem(contato, ext, "pedrao", d["texto"])
 

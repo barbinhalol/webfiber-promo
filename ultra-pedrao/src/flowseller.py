@@ -23,7 +23,7 @@ def _post(apiid, jwt, path_suffix, body):
 def _num_permitido_piloto(body):
     """Trava de seguranca do PILOTO: so envia para numeros da PILOT_ALLOWLIST."""
     import re
-    alvo = re.sub(r"\D", "", str(body.get("externalKey", "")))
+    alvo = re.sub(r"\D", "", str(body.get("number") or body.get("externalKey") or ""))
     try:
         import painel as PAINEL
         lista = PAINEL.allowlist_efetiva(C.PILOT_ALLOWLIST)
@@ -64,31 +64,36 @@ def _enviar(body, usar="resposta"):
 
 # ---------- ações de alto nível (a decisão do brain vira uma destas) ----------
 
-def responder_texto(external_key, texto, nota=None):
-    body = {"externalKey": external_key, "text": texto}
+def responder_texto(external_key, texto, nota=None, number=None):
+    body = {"externalKey": external_key, "body": texto}
+    if number: body["number"] = number
     if nota: body["note"] = {"body": nota}
     return _enviar(body, "resposta")
 
-def enviar_midia(external_key, media_url, legenda=None, nota=None):
+def enviar_midia(external_key, media_url, legenda=None, nota=None, number=None):
     """/planos e afins: imagem por mediaUrl (a API externa não dispara fastReply direto)."""
     body = {"externalKey": external_key, "media": {"mediaUrl": media_url}}
-    if legenda: body["text"] = legenda
+    if number: body["number"] = number
+    if legenda: body["body"] = legenda
     if nota: body["note"] = {"body": nota}
     return _enviar(body, "resposta")
 
-def nota_interna(external_key, texto):
+def nota_interna(external_key, texto, number=None):
     body = {"externalKey": external_key, "onlyNote": True, "note": {"body": texto}}
+    if number: body["number"] = number
     return _enviar(body, "resposta")
 
-def transferir(external_key, queue_id, nota=None, texto=None, user_id=None):
+def transferir(external_key, queue_id, nota=None, texto=None, user_id=None, number=None):
     body = {"externalKey": external_key, "queueId": queue_id, "forceTicketToDepartment": queue_id}
+    if number: body["number"] = number
     if user_id: body["forceTicketToUser"] = True; body["userId"] = user_id
-    if texto: body["text"] = texto
+    if texto: body["body"] = texto
     if nota: body["note"] = {"body": nota}
     return _enviar(body, "transfer")
 
-def fechar(external_key, closing_reason_id, nota=None):
+def fechar(external_key, closing_reason_id, nota=None, number=None):
     body = {"externalKey": external_key, "forceTicketToClosed": True, "closingReasonId": closing_reason_id}
+    if number: body["number"] = number
     if nota: body["note"] = {"body": nota}
     return _enviar(body, "resposta")
 
@@ -97,12 +102,12 @@ FASTREPLY_MEDIA = {
     1296: {"text_env": "PLANOS_TEXTO", "imgs_env": "PLANOS_IMAGENS"},  # texto + 3 imagens
 }
 
-def executar_decisao(external_key, d):
+def executar_decisao(external_key, d, number=None):
     """Traduz a decisão JSON do brain em chamada(s) à API externa (respeitando shadow)."""
     acao = d.get("acao")
     nota = (d.get("nota_interna") or "").strip() or None
     if acao == "responder":
-        return responder_texto(external_key, d.get("texto", ""), nota=nota)
+        return responder_texto(external_key, d.get("texto", ""), nota=nota, number=number)
     if acao == "fastreply":
         fid = d.get("fastReplyId")
         if fid in (1296, 1437, 1438):   # /planos = texto (negrito) + as 3 imagens, tudo de uma vez
@@ -111,18 +116,18 @@ def executar_decisao(external_key, d):
             resultados = []
             for e in envios:
                 if e.get("tipo") == "texto":
-                    resultados.append(responder_texto(external_key, e["text"], nota=nota)); nota = None
+                    resultados.append(responder_texto(external_key, e["text"], nota=nota, number=number)); nota = None
                 elif e.get("tipo") == "midia":
-                    resultados.append(enviar_midia(external_key, e["mediaUrl"]))
+                    resultados.append(enviar_midia(external_key, e["mediaUrl"], number=number))
                 else:
                     resultados.append(FSResult(enviado=False, aviso=e.get("detalhe")))
             return FSResult(enviado=any(r.get("enviado") for r in resultados), modo=C.BOT_MODE, sequencia=resultados)
         if fid == 1858:  # ficha de cadastro residencial
             import respostas as R
-            return responder_texto(external_key, (d.get("texto", "") + "\n\n" + R.CADASTRO_RESIDENCIAL).strip(), nota=nota)
-        return responder_texto(external_key, d.get("texto") or "Segue a informação 👇", nota=nota)
+            return responder_texto(external_key, (d.get("texto", "") + "\n\n" + R.CADASTRO_RESIDENCIAL).strip(), nota=nota, number=number)
+        return responder_texto(external_key, d.get("texto") or "Segue a informação 👇", nota=nota, number=number)
     if acao == "transferir":
-        return transferir(external_key, d.get("fila", 112), nota=nota, texto=d.get("texto") or None)
+        return transferir(external_key, d.get("fila", 112), nota=nota, texto=d.get("texto") or None, number=number)
     if acao == "aguardar":
         return FSResult(enviado=False, modo=C.BOT_MODE, faria={"acao": "aguardar"})
     return FSResult(enviado=False, modo=C.BOT_MODE, erro=f"acao desconhecida: {acao}")
