@@ -71,7 +71,7 @@ SO_FORA_DO_HORARIO = _b("SO_FORA_DO_HORARIO", True)
 # ---------------- MEMÓRIA / BANCO ----------------
 DB_URL = os.environ.get("DB_URL", "")  # postgres://...  (vazio = usa SQLite local)
 SQLITE_PATH = os.environ.get("SQLITE_PATH", os.path.join(os.path.dirname(__file__), "..", "data", "memoria.db"))
-MEM_MSGS_JANELA = _i("MEM_MSGS_JANELA", 12)     # nº de msgs recentes no contexto imediato
+MEM_MSGS_JANELA = _i("MEM_MSGS_JANELA", 24)     # nº de msgs recentes no contexto (subiu 12->24: cache barateia o input)
 MEM_RESUMO_APOS = _i("MEM_RESUMO_APOS", 16)     # resume a conversa depois de N msgs
 MEM_RETENCAO_DIAS = _i("MEM_RETENCAO_DIAS", 90) # LGPD: expurgo
 

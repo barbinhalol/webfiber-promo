@@ -26,6 +26,14 @@ _PRECO = re.compile(r"(R\$\s*\d|\bpor\s+\d+\s*reais\b|\bfica\s+em\s+\d|\b\d{2,4}
 _PLACEHOLDER = re.compile(r"\[[^\]]*\]|\{\{[^}]*\}\}")
 # não expor quantidade de clientes/vizinhos ("mais de 80 vizinhos", "500 na rua") — soa exagero
 _CONTAGEM = re.compile(r"\b(?:mais de\s*|cerca de\s*|uns?\s*)?\d{1,4}\s*(clientes?|vizinhos?|atendidos?|casas?|apto?s?|apartamentos?|moradores?|fam[íi]lias?)\b", re.I)
+# NUNCA cravar dia/horário de visita ou conserto (ordem do dono). O único compromisso permitido é o
+# padrão "próximo dia útil, às 9h" (contato, não visita) — protegido por _AGENDA_OK.
+_AGENDA = re.compile(
+    r"\b(amanh[ãa]|depois de amanh[ãa]|hoje (mesmo|[àa] (tarde|noite))|"
+    r"(segunda|ter[çc]a|quarta|quinta|sexta|s[áa]bado|domingo)(-feira)?|"
+    r"dia\s+\d{1,2}(/\d{1,2})?|em\s+\d+\s*(min|minutos?|horas?|h|dias?)|"
+    r"[àa]s?\s*\d{1,2}\s*(h\b|hs\b|horas?|:\d{2})|per[íi]odo da (manh[ãa]|tarde|noite))\b", re.I)
+_AGENDA_OK = re.compile(r"pr[óo]ximo dia [úu]til.*?9\s*h", re.I)
 
 def _fila_por_intencao(intencao, motivo):
     s = (str(intencao) + " " + str(motivo)).lower()
@@ -162,8 +170,10 @@ def _parse_json(txt):
     try: return json.loads(txt[i:j+1])
     except Exception: return None
 
-def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False):
+def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, resumo=""):
     """historico: [{'de':'cliente'|'pedrao','texto':...}]; memoria_cliente: dict de fatos por contato.
+    resumo: resumo textual da conversa (memória nível 2) — injetado no contexto pra o bot lembrar do
+    começo de conversas longas, mesmo depois que as msgs antigas saem da janela imediata.
     sessao_nova: True quando o atendimento está começando (primeiro contato ou reabertura após fechamento) —
     vira o marcador [SESSÃO=NOVA]/[SESSÃO=CONTINUA] que a seção 3.8 do prompt usa pra decidir se cumprimenta."""
     historico = historico or []
@@ -182,6 +192,9 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False):
         ctx.append(marcador + " — primeiro contato desse cliente: abra com a saudação fixa.")
     else:
         ctx.append(marcador + " — mesma conversa em andamento: não cumprimente de novo.")
+    if resumo and resumo.strip():
+        ctx.append("RESUMO DO QUE JÁ FOI CONVERSADO ANTES (memória da conversa — use pra não esquecer o "
+                   "começo nem pedir de novo o que o cliente já disse): " + resumo.strip())
     if memoria_cliente:
         ctx.append("MEMÓRIA DO CLIENTE (fatos já sabidos — não pergunte de novo): " + json.dumps(memoria_cliente, ensure_ascii=False))
     ctx.append("CONVERSA ATÉ AGORA:\n" + "\n".join(linhas))
@@ -233,6 +246,11 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False):
     if viab["status"] != V.CONFIRMADA_PREDIO and re.search(r"atende(mos)?\s+(sim|a[ií])|chega\s+a[ií]\s+sim", texto.lower()):
         alertas.append("GUARD: texto afirmou cobertura sem veredito -> neutralizado")
         texto = "Deixa eu confirmar a viabilidade certinha do seu endereço com a equipe pra não te passar info errada."
+    # NUNCA cravar data/hora de visita ou conserto — só o compromisso padrão "próximo dia útil às 9h" passa
+    if texto and _AGENDA.search(texto) and not _AGENDA_OK.search(texto):
+        alertas.append("GUARD: promessa de data/hora especifica neutralizada")
+        texto = ("Não consigo cravar dia e horário exato por aqui — quem confirma isso certinho é o nosso time 😊 "
+                 "Já deixo tudo registrado e eles falam com você o quanto antes.")
     if acao == "transferir" and fila not in FILAS:
         fila = _fila_por_intencao(d.get("intencao", ""), d.get("motivo", ""))
 
