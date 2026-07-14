@@ -190,6 +190,10 @@ def _envios_da_fatura(nome, fatura, atrasada):
         envios.append({"tipo": "pdf", "url": pdf_url, "text": "*Boleto em PDF* 📄"})
     elif boleto_web:
         envios.append({"tipo": "texto", "text": f"🧾 *Ver/abrir o boleto:* {boleto_web}"})
+    # prazo de compensação (texto oficial do dono) — sempre no fim da entrega da fatura
+    envios.append({"tipo": "texto",
+                   "text": "⏱️ *No Pix, o pagamento cai em até 30 minutos* (quase sempre na hora). "
+                           "*No boleto, a baixa leva de 1 a 2 dias úteis.*"})
     return envios
 
 
