@@ -84,6 +84,36 @@ def set_ultimo_ticket(contato, ticket_id):
                   "ON CONFLICT(contato) DO UPDATE SET ticket_id=excluded.ticket_id, ts=excluded.ts",
                   (contato, str(ticket_id) if ticket_id is not None else None, time.time()))
 
+def ultimo_external_key(contato):
+    """external_key mais recente do contato — usado pra postar a nota interna sem uma msg nova."""
+    with _conn() as c:
+        r = c.execute("SELECT external_key FROM mensagens WHERE contato=? AND external_key IS NOT NULL "
+                      "ORDER BY id DESC LIMIT 1", (contato,)).fetchone()
+    return r[0] if r else None
+
+def contatos_nota_pendente(min_seg):
+    """ORDEM DO DONO (14/07/2026): a nota interna do lead NÃO sai na hora — sai ~20 min depois,
+    mesmo que o cliente tenha sumido. Devolve [(contato, fatos)] cuja conversa começou há
+    >= min_seg e que ainda não receberam a nota (fatos['nota_ok'])."""
+    agora = time.time()
+    pend = []
+    with _conn() as c:
+        rows = c.execute("SELECT contato, dados FROM fatos").fetchall()
+    for contato, dados in rows:
+        try:
+            d = json.loads(dados) if dados else {}
+        except Exception:
+            continue
+        ini = d.get("lead_ts")
+        if not ini or d.get("nota_ok"):
+            continue
+        try:
+            if agora - float(ini) >= min_seg:
+                pend.append((contato, d))
+        except Exception:
+            continue
+    return pend
+
 def log_evento(contato, tipo, payload):
     with _conn() as c:
         c.execute("INSERT INTO eventos(ts,contato,tipo,payload) VALUES(?,?,?,?)",

@@ -2,7 +2,7 @@
 """Servidor webhook do Ultra Pedrão (FastAPI).
 Fluxo: FlowSeller -> POST /webhook -> filtros -> dedup -> debounce -> brain -> flowseller(shadow/live).
 Modo sombra (BOT_MODE=shadow): decide e REGISTRA o que faria, sem enviar."""
-import time, hashlib, json
+import time, hashlib, json, asyncio
 from fastapi import FastAPI, Request, Header, HTTPException
 from fastapi.responses import JSONResponse
 
@@ -28,6 +28,49 @@ app.mount("/planos", StaticFiles(directory=_PLANOS_DIR), name="planos")
 _SEEN = {}  # idempotência: hash do evento -> ts (dedup de webhook repetido)
 _SEEN_TTL = 600
 _START_TS = time.time()
+
+# ---- NOTA INTERNA DO LEAD (ordem do dono 14/07/2026) ----
+# A nota NÃO sai na hora: sai ~20 min depois do início da conversa, e sai MESMO se o cliente sumiu
+# (a equipe não pode perder o resumo do lead). Exceção: transferência mantém a nota na hora, senão
+# o humano recebe o ticket sem contexto nenhum.
+NOTA_APOS_S = 20 * 60
+_VIGIA_INTERVALO_S = 120
+
+def _texto_nota_lead(contato, fatos):
+    resumo = (M.get_resumo(contato) or "").strip()
+    campos = [(k, fatos.get(k)) for k in
+              ("nome", "endereco", "rua", "numero", "bairro", "plano_interesse", "plano", "cpf", "cnpj")
+              if fatos.get(k)]
+    partes = []
+    if resumo:
+        partes.append(resumo)
+    if campos:
+        partes.append(" | ".join(f"{k}: {v}" for k, v in campos))
+    corpo = "\n".join(partes) if partes else "Cliente conversou com o Pedrão; sem dados estruturados coletados ainda."
+    return "[Pedrão · resumo do lead (20 min)]\n" + corpo
+
+async def _vigia_notas():
+    """Posta a nota interna do lead 20 min após o início da conversa, mesmo sem mensagem nova."""
+    while True:
+        try:
+            for contato, fatos in M.contatos_nota_pendente(NOTA_APOS_S):
+                ext = M.ultimo_external_key(contato)
+                if not ext:
+                    continue
+                r = FS.nota_interna(ext, _texto_nota_lead(contato, fatos), number=contato, delay=False)
+                # marca como feita se enviou, se é shadow (nunca envia) ou se o piloto barrou o número
+                # -- assim não fica retentando pra sempre. Erro transitório (rede) continua retentando.
+                if r.get("enviado") or r.get("modo") == "shadow" or "allowlist" in str(r.get("erro") or ""):
+                    M.merge_fatos(contato, {"nota_ok": 1})
+                    M.log_evento(contato, "nota_20min", {"mask": _mask(contato),
+                                                         "enviado": bool(r.get("enviado"))})
+        except Exception as e:
+            print("[vigia_notas] erro:", e, flush=True)
+        await asyncio.sleep(_VIGIA_INTERVALO_S)
+
+@app.on_event("startup")
+async def _ligar_vigia():
+    asyncio.create_task(_vigia_notas())
 
 def _dedup(key: str) -> bool:
     now = time.time()
@@ -89,6 +132,11 @@ def _processar(contato, texto, ctx):
         M.set_ultimo_ticket(contato, ticket_id_atual)
 
     fatos = M.get_fatos(contato)
+    # marca o INÍCIO da conversa (o vigia usa isso pra postar a nota do lead 20 min depois)
+    if sessao_nova or not fatos.get("lead_ts"):
+        _ini = time.time()
+        M.merge_fatos(contato, {"lead_ts": _ini, "nota_ok": 0})
+        fatos["lead_ts"] = _ini; fatos["nota_ok"] = 0
     hist = M.historico(contato)
     resumo = M.get_resumo(contato)  # memória nível 2 (agora É usada na decisão)
     # humor do cliente (código, sem LLM): adapta o tom, tira o irritado do atalho, e pinta o painel
@@ -116,6 +164,11 @@ def _processar(contato, texto, ctx):
              "_viabilidade_sistema": d.get("_viabilidade_sistema", {}), "_render": "💬 (cooldown) planos ja enviados"}
     elif _eh_planos:
         d.setdefault("dados_coletados", {})["planos_ts"] = time.time()
+
+    # ORDEM DO DONO: nada de nota interna na hora — a nota do lead sai no vigia dos 20 min.
+    # EXCEÇÃO: na TRANSFERÊNCIA a nota vai junto (o humano precisa do contexto ao pegar o ticket).
+    if d.get("acao") != "transferir" and d.get("nota_interna"):
+        d["nota_interna"] = ""
 
     M.add_mensagem(contato, ext, "cliente", texto)
     if d.get("dados_coletados"):

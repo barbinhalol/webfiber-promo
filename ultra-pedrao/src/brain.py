@@ -65,9 +65,14 @@ def _remove_sentencas(texto, padrao, protege=None):
     return " ".join(limpos).strip()
 
 def _fila_por_intencao(intencao, motivo):
+    """Roteamento de setor (ordem do dono 14/07/2026):
+    suporte -> Suporte(24) | planos/comercial -> Comercial(23) | financeiro -> Financeiro(25)
+    | CANCELAMENTO -> Outros assuntos(26) — cancelamento NÃO vai pro Financeiro."""
     s = (str(intencao) + " " + str(motivo)).lower()
     if re.search(r"suporte|t[eé]cnic|sem (internet|sinal|conex)|caiu|lent|oscil|reparo", s): return 24
-    if re.search(r"cancel|financ|boleto|cobran|fatura|jur[ií]dic|procon", s): return 25
+    # cancelamento ANTES do financeiro (senão "cancelar boleto" cairia no Financeiro)
+    if re.search(r"cancel|rescis|desist|encerrar\s+(o\s+)?(contrato|plano|servi[çc]o)", s): return 26
+    if re.search(r"financ|boleto|cobran|fatura|pagamento|2[ªa]?\s*via|jur[ií]dic|procon", s): return 25
     if re.search(r"pre[çc]o|plano|viab|cobertura|contrat|comercial|empresa|cnpj", s): return 23
     return 112
 
@@ -285,9 +290,10 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
         d["viabilidade"] = "provavel" if viab["status"] == V.PROVAVEL else "a_confirmar"
         if acao != "fastreply":
             acao, fila = "transferir", 23
-    # ORDEM DO DONO: o bot NUNCA confirma nem nega cobertura (nem pra rua conhecida) — quem confirma
-    # é a equipe. Suaviza SÓ a frase de cobertura (mantém o resto: planos, próximo passo).
-    if texto and _COBERTURA_ASSERT.search(texto):
+    # ORDEM DO DONO (14/07/2026 — revisada): o bot PODE confirmar cobertura QUANDO o código confirmou
+    # o prédio (3+ clientes no mesmo rua+número = CONFIRMADA_PREDIO). Fora disso, NUNCA confirma nem
+    # nega — quem confirma é a equipe. Suaviza SÓ a frase de cobertura (mantém planos e próximo passo).
+    if texto and viab["status"] != V.CONFIRMADA_PREDIO and _COBERTURA_ASSERT.search(texto):
         alertas.append("GUARD: afirmacao de cobertura suavizada")
         novo = _remove_sentencas(texto, _COBERTURA_ASSERT)
         texto = novo if len(novo) >= 15 else ("A chance de atender aí é boa! Mas deixa eu confirmar a viabilidade "

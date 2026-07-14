@@ -104,11 +104,13 @@ def hint_para_prompt(v: dict) -> str:
     s = v["status"]
     if s == CONFIRMADA_PREDIO:
         rua = v.get("rua") or "o endereço informado"
-        return ("[VIABILIDADE=CONFIRMADA_PREDIO — o sistema confirmou que " + rua + " já é bem atendido pela WebFiber. "
-                "PODE confirmar o atendimento com naturalidade e conduzir ao fechamento. Use um toque de prova social "
-                "LEVE, tipo 'vários vizinhos seus já são nossos clientes' — NUNCA cite quantidade, número de clientes "
-                "nem 'X na rua' (soa exagero e expõe dado). SEMPRE avise que a equipe confirma tudo e combina a "
-                "instalação no próximo horário comercial. NUNCA marque data.]")
+        return ("[VIABILIDADE=CONFIRMADA_PREDIO — o sistema confirmou que " + rua + " já é bem atendido pela WebFiber "
+                "(prédio). PODE dizer que TEMOS COBERTURA SIM, com naturalidade, e conduzir pro PRÉ-CADASTRO. "
+                "Roteiro do dono, nessa linha: 'Temos cobertura sim! Inclusive verifiquei aqui que boa parte dos seus "
+                "vizinhos já são nossos clientes 😊 Posso já adiantar um pré-cadastro pra você, e logo pela manhã "
+                "alguém do nosso time confirma tudo e já te orienta pra instalação sair o mais rápido possível.' "
+                "Prova social LEVE ('boa parte dos seus vizinhos') — NUNCA cite quantidade nem número de clientes. "
+                "NUNCA marque data/hora. NUNCA encerre a conversa.]")
     if s == PROVAVEL:
         return ("[VIABILIDADE=PROVAVEL — a RUA consta na base, mas aquele número tem menos de 3 clientes. "
                 "NUNCA afirme 'atendemos sim'. Fale em PROBABILIDADE boa, colete dados e transfira o Comercial (23) "
