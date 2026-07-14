@@ -122,10 +122,13 @@ _DESVIO_ASSUNTO = re.compile(
     r"\b(plano|pre[çc]o|valor|quanto\s+custa|cancel|fatura|boleto|atendente|humano|pessoa\s+de\s+verdade|falar\s+com\s+algu[ée]m)\b", re.I)
 
 
-def _fp(texto, acao="responder", intencao="saudacao", fila=0, fid=0, nota="", sup=None, icone="⚡"):
+def _fp(texto, acao="responder", intencao="saudacao", fila=0, fid=0, nota="", sup=None, icone="⚡", dados=None):
+    dc = dict(dados or {})
+    if sup is not None:
+        dc["sup"] = sup
     d = {"acao": acao, "texto": texto, "fastReplyId": fid, "fila": fila,
          "intencao": intencao, "viabilidade": "naoaplicavel", "motivo": "",
-         "nota_interna": nota, "dados_coletados": ({"sup": sup} if sup is not None else {}),
+         "nota_interna": nota, "dados_coletados": dc,
          "_alertas": [], "_viabilidade_sistema": {"status": "naoaplicavel"},
          "_fastpath": True, "_render": f"{icone} (atalho, sem LLM) “{texto[:80]}”"}
     return d
@@ -153,7 +156,7 @@ def _suporte_passo(msg, sup):
         return _fp(texto, acao="transferir", intencao="suporte", fila=24, nota=nota, sup="fim", icone="⚡➡️")
     return None  # resposta ambígua sobre a luz -> LLM decide
 
-def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None):
+def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, contato=None):
     """Decisão pronta SEM LLM pros casos previsíveis do prompt: saudação (sempre como atendente
     virtual), pedido claro de planos, e o roteiro de suporte básico passo a passo. Qualquer coisa
     fora do padrão exato retorna None -> cai no decidir() normal (LLM), sem arriscar qualidade."""
@@ -188,15 +191,54 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None):
                   "E me passa o endereço — rua, número e bairro — pra eu já verificar a viabilidade pra você.")
         return _fp(texto, acao="fastreply", intencao="planos", fid=1296, icone="⚡📎")
 
-    # 2.5) FINANCEIRO (boleto/fatura/2ª via/atraso/bloqueio) -> manda o LINK da área do cliente e
-    #      transfere pro Financeiro (25). Ordem do dono: o Pedrão antigo fazia assim e ajuda MUITO o
-    #      setor — o cliente já baixa a fatura sozinho antes do humano assumir.
-    if _FINANCEIRO_KW.search(msg):
-        import respostas as R
-        abre = (_ABERTURA + "\n\n") if sessao_nova else ""
-        return _fp(abre + R.FINANCEIRO_FATURA, acao="transferir", intencao="financeiro", fila=25,
-                   nota="[Pedrão] Financeiro — enviei o link da área do cliente e transferi pro setor.",
-                   icone="⚡➡️")
+    # 2.5) FINANCEIRO (boleto/fatura/2ª via/atraso/bloqueio) — INTEGRAÇÃO MyCore (ordem do dono
+    #      14/07/2026): o cliente pede a fatura, o Pedrão pede o CPF e ENTREGA no chat (Pix + boleto),
+    #      SEM link. Só entrega se o CPF bater com o número de WhatsApp (anti-golpe/LGPD). Se não
+    #      bater/achar/erro -> cai no link da área do cliente + transfere Financeiro (25).
+    import respostas as R
+    fin_state = "" if sessao_nova else str(fatos.get("fin") or "")
+    # entra no fluxo se pediu financeiro AGORA, ou se está aguardando o CPF E a msg tem dígitos
+    # (uma tentativa de CPF) — assim, se o cliente mudar de assunto no meio, não fica preso.
+    _tem_digitos = len(re.sub(r"\D", "", msg)) >= 8
+    if _FINANCEIRO_KW.search(msg) or (fin_state == "aguarda_cpf" and _tem_digitos):
+        import mycore as MC
+        cpf = MC.extrair_cpf_cnpj(msg)
+        _abre = (_ABERTURA + "\n\n") if sessao_nova else ""
+        # limpa o estado do financeiro. fin="feito" (não "" — o merge_fatos ignora vazios) tira do
+        # modo "aguarda_cpf"; nota_ok=1 evita virar "lead" no vigia dos 20min.
+        _limpa_fin = {"fin": "feito", "fin_try": 0, "nota_ok": 1}
+        if cpf and MC.token_configurado() and contato:
+            try:
+                res = MC.resolver_fatura(cpf, contato)
+            except Exception:
+                res = {"status": "fallback", "motivo": "excecao"}
+            if res.get("status") == "entregue":
+                d = _fp("", acao="faturas", intencao="financeiro", dados=_limpa_fin, icone="💳")
+                d["_envios"] = res["envios"]
+                d["_render"] = f"💳 (fatura) {res.get('qtd')} em aberto — entregaria Pix+boleto no chat"
+                return d
+            if res.get("status") == "sem_fatura":
+                nome = (res.get("nome") or "").split(" ")[0].title()
+                txt = (f"Boa notícia{', ' + nome if nome else ''}! 😊 Não encontrei nenhuma fatura em "
+                       "aberto no seu CPF — parece que está tudo em dia. Precisando de mais alguma "
+                       "coisa do financeiro, é só me chamar.")
+                return _fp(_abre + txt, intencao="financeiro", dados=_limpa_fin, icone="✅")
+            # fallback: não confere / não achou / erro -> link + transfere Financeiro (não revela nada)
+            return _fp(_abre + R.FINANCEIRO_FATURA, acao="transferir", intencao="financeiro", fila=25,
+                       nota="[Pedrão] Financeiro — CPF não confere com o número (ou indisponível); "
+                            "enviei o link e transferi.", dados=_limpa_fin, icone="⚡➡️")
+        # sem CPF ainda (ou MyCore não configurado / sem número): pede o CPF, no máx 2 tentativas
+        tries = int(fatos.get("fin_try") or 0)
+        if not MC.token_configurado() or not contato or tries >= 2:
+            return _fp(_abre + R.FINANCEIRO_FATURA, acao="transferir", intencao="financeiro", fila=25,
+                       nota="[Pedrão] Financeiro — enviei o link e transferi pro setor.",
+                       dados=_limpa_fin, icone="⚡➡️")
+        # tem dígitos mas não validou como CPF? avisa; senão, pede pela 1ª vez
+        txt = ("Esse CPF não parece certo — confere e me manda de novo, só os números? 😊"
+               if _tem_digitos else
+               "Claro! Pra já puxar a sua fatura aqui, me manda só o seu *CPF* (pode ser só os números) 😊")
+        return _fp(_abre + txt, intencao="financeiro", dados={"fin": "aguarda_cpf", "fin_try": tries + 1},
+                   icone="⚡")
 
     # 3) início de suporte (só o básico; financeiro tem prioridade e sai pro LLM)
     if _SUP_INTENCAO.search(msg) and not _FINANCEIRO_KW.search(msg):

@@ -145,7 +145,7 @@ def _processar(contato, texto, ctx):
     # sessão nova zera qualquer roteiro de suporte pendente (não arrasta estado velho pra conversa nova)
     if sessao_nova and fatos.get("sup") in ("1", "2"):
         M.merge_fatos(contato, {"sup": "fim"}); fatos["sup"] = "fim"
-    d = B.fastpath(texto, sessao_nova, hist, fatos, sentimento=sent)
+    d = B.fastpath(texto, sessao_nova, hist, fatos, sentimento=sent, contato=contato)
     if d is None:
         d = B.decidir(texto, historico=hist, memoria_cliente=fatos, sessao_nova=sessao_nova, resumo=resumo, sentimento=sent)
         # se havia roteiro de suporte em andamento e o LLM assumiu, encerra o roteiro (evita ficar preso)
@@ -344,6 +344,43 @@ async def admin_apikey_set(request: Request, x_admin_token: str = Header(default
     except Exception: pass
     M.log_evento("admin", "apikey_set", {"len": len(key), "provider": C.LLM_PROVIDER})
     return {"ok": True, "len": len(key), "provider": C.LLM_PROVIDER}
+
+@app.get("/admin/mycore")
+def admin_mycore_status(x_admin_token: str = Header(default="")):
+    """Status do token do MyCore (área do cliente) — pro painel mostrar se já está configurado."""
+    _auth_painel(x_admin_token)
+    import mycore as MC
+    return {"tem_token": MC.token_configurado(), "base": MC.BASE_URL}
+
+@app.post("/admin/mycore")
+async def admin_mycore_set(request: Request, x_admin_token: str = Header(default="")):
+    """Salva o token do MyCore (colado no painel) em arquivo protegido — sem terminal, nunca devolvido."""
+    _auth_painel(x_admin_token)
+    import mycore as MC
+    body = await request.json()
+    tok = (body.get("token") or "").strip()
+    if len(tok) < 16:
+        raise HTTPException(status_code=400, detail="token muito curto (confira)")
+    MC.salvar_token(tok)
+    M.log_evento("admin", "mycore_token_set", {"len": len(tok)})
+    return {"ok": True, "len": len(tok)}
+
+@app.post("/admin/mycore/testar")
+async def admin_mycore_testar(request: Request, x_admin_token: str = Header(default="")):
+    """Testa o token: busca um CPF e diz se autenticou (sem devolver dado pessoal)."""
+    _auth_painel(x_admin_token)
+    import mycore as MC
+    if not MC.token_configurado():
+        return {"ok": False, "erro": "token não configurado"}
+    body = await request.json()
+    cpf = MC.extrair_cpf_cnpj(body.get("cpf") or "")
+    if not cpf:
+        return {"ok": False, "erro": "informe um CPF/CNPJ válido pra testar"}
+    try:
+        clientes = MC.clientes_por_cpf(cpf)
+        return {"ok": True, "autenticou": True, "achou_cadastro": len(clientes) > 0, "qtd": len(clientes)}
+    except MC.MyCoreErro as e:
+        return {"ok": False, "autenticou": e.tipo != "auth", "erro": f"{e.tipo}: {e}"}
 
 @app.get("/admin/eventos")
 def admin_eventos(x_admin_token: str = Header(default=""), limite: int = 50):

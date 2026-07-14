@@ -87,8 +87,10 @@ def _assinar(texto):
         return _ASSINATURA + t
     return t
 
-def responder_texto(external_key, texto, nota=None, number=None, delay=True):
-    body = {"externalKey": external_key, "body": _assinar(texto)}
+def responder_texto(external_key, texto, nota=None, number=None, delay=True, assinar=True):
+    # assinar=False p/ conteúdo que o cliente vai COPIAR (Pix copia-e-cola, linha digitável):
+    # a assinatura no topo sujaria o copiar/colar no app do banco.
+    body = {"externalKey": external_key, "body": (_assinar(texto) if assinar else (texto or ""))}
     if number: body["number"] = number
     if nota: body["note"] = {"body": nota}
     return _enviar(body, "resposta", delay=delay)
@@ -151,6 +153,16 @@ def executar_decisao(external_key, d, number=None):
             import respostas as R
             return responder_texto(external_key, (d.get("texto", "") + "\n\n" + R.CADASTRO_RESIDENCIAL).strip(), nota=nota, number=number)
         return responder_texto(external_key, d.get("texto") or "Segue a informação 👇", nota=nota, number=number)
+    if acao == "faturas":   # integração MyCore: sequência de mensagens (resumo + Pix/linha crus + PDF)
+        envios = d.get("_envios") or []
+        resultados, primeiro = [], True
+        for e in envios:
+            eh_raw = e.get("tipo") == "raw"
+            resultados.append(responder_texto(external_key, e.get("text", ""),
+                                               nota=(nota if primeiro else None), number=number,
+                                               delay=primeiro, assinar=not eh_raw))
+            primeiro = False
+        return FSResult(enviado=any(r.get("enviado") for r in resultados), modo=C.BOT_MODE, sequencia=resultados)
     if acao == "transferir":
         return transferir(external_key, d.get("fila", 112), nota=nota, texto=d.get("texto") or None, number=number)
     if acao == "aguardar":

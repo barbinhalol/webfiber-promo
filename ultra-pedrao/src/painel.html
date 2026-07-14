@@ -120,6 +120,19 @@ button.save:active{transform:translateY(1px)}
       <div class="hint" id="apikeymsg" style="margin-top:8px"></div>
     </div>
 
+    <div class="card" id="mycorecard">
+      <h2>💳 Token do MyCore (fatura por CPF)</h2>
+      <div class="hint">Cole o token da API do MyCore (área do cliente). Com ele, o Pedrão puxa a fatura pelo CPF e entrega Pix + boleto no chat. <span id="mycorestatus"></span></div>
+      <input id="mycoretoken" type="text" placeholder="cole o token do MyCore aqui" autocomplete="off" spellcheck="false">
+      <div style="height:10px"></div>
+      <button class="save" style="width:100%" onclick="salvarMycore()">💳 Salvar token</button>
+      <div style="height:10px"></div>
+      <input id="mycoretestcpf" type="text" placeholder="opcional: um CPF pra testar" autocomplete="off" spellcheck="false">
+      <div style="height:6px"></div>
+      <button class="save" style="width:100%;background:#334155" onclick="testarMycore()">✅ Testar token</button>
+      <div class="hint" id="mycoremsg" style="margin-top:8px"></div>
+    </div>
+
     <div class="card">
       <h2>Quem ele responde</h2>
       <div class="seg" id="segmodo">
@@ -211,7 +224,7 @@ async function carregar(){
     var p = await api('GET');
     pintar(p);
     $('gate').style.display='none'; $('app').style.display='block'; $('savebar').style.display='block';
-    carregarFeed(); carregarChaveStatus();
+    carregarFeed(); carregarChaveStatus(); carregarMycoreStatus();
   }catch(e){ $('gerr').textContent='Senha inválida. Confira o token de admin.'; localStorage.removeItem('pedrao_tok'); }
 }
 
@@ -238,6 +251,42 @@ async function salvarChave(){
     if(d.ok){ $('apikey').value=''; $('apikeymsg').innerHTML='✅ Chave salva! ('+d.len+' caracteres). O bot já pode usar a API paga.'; carregarChaveStatus(); }
     else { $('apikeymsg').textContent='Erro: '+(d.detail||'confira a chave'); }
   }catch(e){ $('apikeymsg').textContent='Falhou: '+e; }
+}
+async function carregarMycoreStatus(){
+  try{
+    var r = await fetch('/admin/mycore', {headers:{'X-Admin-Token':TOK}});
+    if(!r.ok) return;
+    var d = await r.json();
+    $('mycorestatus').innerHTML = d.tem_token
+      ? '<b style="color:#0a0">✔ token configurado</b>'
+      : '<b style="color:#c00">nenhum token ainda</b>';
+  }catch(e){}
+}
+async function salvarMycore(){
+  var t = ($('mycoretoken').value||'').trim();
+  if(!t){ $('mycoremsg').textContent='Cole o token primeiro.'; return; }
+  $('mycoremsg').textContent='Salvando…';
+  try{
+    var r = await fetch('/admin/mycore', {method:'POST',
+      headers:{'Content-Type':'application/json','X-Admin-Token':TOK},
+      body: JSON.stringify({token:t})});
+    if(r.status===401){ $('mycoremsg').textContent='Senha do painel incorreta — faça login de novo.'; return; }
+    var d = await r.json();
+    if(d.ok){ $('mycoretoken').value=''; $('mycoremsg').innerHTML='✅ Token salvo! ('+d.len+' caracteres). Clique em Testar pra confirmar.'; carregarMycoreStatus(); }
+    else { $('mycoremsg').textContent='Erro: '+(d.detail||'confira o token'); }
+  }catch(e){ $('mycoremsg').textContent='Falhou: '+e; }
+}
+async function testarMycore(){
+  $('mycoremsg').textContent='Testando…';
+  try{
+    var r = await fetch('/admin/mycore/testar', {method:'POST',
+      headers:{'Content-Type':'application/json','X-Admin-Token':TOK},
+      body: JSON.stringify({cpf: ($('mycoretestcpf').value||'').trim()})});
+    var d = await r.json();
+    if(d.ok && d.autenticou){ $('mycoremsg').innerHTML='✅ Token válido e autenticou! '+(d.achou_cadastro?('Achou '+d.qtd+' cadastro(s).'):'Sem cadastro pra esse CPF (mas o token funciona).'); }
+    else if(d.autenticou===false){ $('mycoremsg').innerHTML='❌ Token rejeitado (unauthorized). Confira se é o token da API EXTERNA (areadocliente).'; }
+    else { $('mycoremsg').textContent='⚠️ '+(d.erro||'não foi possível testar'); }
+  }catch(e){ $('mycoremsg').textContent='Falhou: '+e; }
 }
 function entrar(){ TOK=$('tok').value.trim(); localStorage.setItem('pedrao_tok',TOK); carregar(); }
 
