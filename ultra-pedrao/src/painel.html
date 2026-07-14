@@ -281,13 +281,15 @@ async function carregarFeed(){
   try{
     var r = await fetch('/admin/eventos?limite=8', {headers:{'X-Admin-Token':TOK}});
     var ev = await r.json();
-    var dec = (ev||[]).filter(function(x){return x.tipo==='decisao'}).slice(0,6);
+    var dec = (ev||[]).filter(function(x){return x.tipo==='decisao'}).slice(0,8);
     if(!dec.length){ $('feed').innerHTML='<div class="hint">Nenhuma decisão ainda. Quando um cliente escrever, aparece aqui.</div>'; return; }
-    $('feed').innerHTML = dec.map(function(d){
+    // cliente irritado (🔴) sobe pro topo, pra você ver quem precisa de atenção primeiro
+    dec.sort(function(a,b){ return ((b.payload||{}).humor==='irritado'?1:0) - ((a.payload||{}).humor==='irritado'?1:0); });
+    $('feed').innerHTML = '<div class="hint" style="margin-bottom:8px">Humor do cliente: 🟢 tranquilo · 🟡 neutro · 🔴 irritado (vem pro topo)</div>' + dec.slice(0,6).map(function(d){
       var p=d.payload||{}; var a=p.acao||'-';
       var cls = a==='transferir'?'t-transf':(a==='fastreply'?'t-fast':'t-resp');
       var r=(p.render||'').replace(/^[^A-Za-zÀ-ú0-9]+/,'').slice(0,150);
-      return '<div class="it"><span class="tag '+cls+'">'+a+'</span><span style="color:var(--mut)">'+(p.mask||'')+' · '+(p.viab||'')+'</span><div class="txt">'+r+'</div></div>';
+      return '<div class="it"><span class="tag '+cls+'">'+a+'</span><span style="color:var(--mut)">'+(p.cor||'')+' '+(p.mask||'')+' · '+(p.viab||'')+'</span><div class="txt">'+r+'</div></div>';
     }).join('');
   }catch(e){ $('feed').innerHTML='<div class="hint">Não consegui carregar (senha?).</div>'; }
 }

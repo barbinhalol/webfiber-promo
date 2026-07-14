@@ -12,6 +12,7 @@ import schedule as S
 import brain as B
 import flowseller as FS
 import painel as PAINEL
+import sentimento as SENT
 from debounce import Debouncer
 
 app = FastAPI(title="Ultra Pedrão", version="0.1.0")
@@ -90,12 +91,15 @@ def _processar(contato, texto, ctx):
     fatos = M.get_fatos(contato)
     hist = M.historico(contato)
     resumo = M.get_resumo(contato)  # memória nível 2 (agora É usada na decisão)
+    # humor do cliente (código, sem LLM): adapta o tom, tira o irritado do atalho, e pinta o painel
+    _ctx_txt = " ".join(h.get("texto", "") for h in hist[-4:])
+    sent = SENT.classificar(texto, _ctx_txt)
     # sessão nova zera qualquer roteiro de suporte pendente (não arrasta estado velho pra conversa nova)
     if sessao_nova and fatos.get("sup") in ("1", "2"):
         M.merge_fatos(contato, {"sup": "fim"}); fatos["sup"] = "fim"
-    d = B.fastpath(texto, sessao_nova, hist, fatos)
+    d = B.fastpath(texto, sessao_nova, hist, fatos, sentimento=sent)
     if d is None:
-        d = B.decidir(texto, historico=hist, memoria_cliente=fatos, sessao_nova=sessao_nova, resumo=resumo)
+        d = B.decidir(texto, historico=hist, memoria_cliente=fatos, sessao_nova=sessao_nova, resumo=resumo, sentimento=sent)
         # se havia roteiro de suporte em andamento e o LLM assumiu, encerra o roteiro (evita ficar preso)
         if fatos.get("sup") in ("1", "2"):
             d.setdefault("dados_coletados", {})["sup"] = "fim"
@@ -116,6 +120,7 @@ def _processar(contato, texto, ctx):
     M.log_evento(contato, "decisao", {
         "mask": _mask(contato), "modo": C.BOT_MODE, "acao": d.get("acao"), "sessao_nova": sessao_nova,
         "fastpath": bool(d.get("_fastpath")),
+        "humor": sent.get("humor"), "cor": sent.get("cor"),
         "viab": d.get("_viabilidade_sistema", {}).get("status"),
         "alertas": d.get("_alertas"), "render": d.get("_render"), "envio": resultado,
     })

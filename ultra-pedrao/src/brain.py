@@ -6,6 +6,7 @@ import json, os, re
 import viability as V
 import llm as L
 import schedule as S
+import sentimento as SENT
 try:
     import painel as PAINEL
 except Exception:
@@ -120,13 +121,16 @@ def _suporte_passo(msg, sup):
         return _fp(texto, acao="transferir", intencao="suporte", fila=24, nota=nota, sup="fim", icone="⚡➡️")
     return None  # resposta ambígua sobre a luz -> LLM decide
 
-def fastpath(mensagem, sessao_nova, historico, fatos=None):
+def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None):
     """Decisão pronta SEM LLM pros casos previsíveis do prompt: saudação (sempre como atendente
     virtual), pedido claro de planos, e o roteiro de suporte básico passo a passo. Qualquer coisa
     fora do padrão exato retorna None -> cai no decidir() normal (LLM), sem arriscar qualidade."""
     fatos = fatos or {}
     msg = (mensagem or "").strip()
     if not msg:
+        return None
+    # cliente IRRITADO nunca cai no atalho automático -> vai pro LLM tratar com cuidado e acolhimento
+    if sentimento and sentimento.get("humor") == "irritado":
         return None
     sup = "" if sessao_nova else str(fatos.get("sup") or "")
 
@@ -170,7 +174,7 @@ def _parse_json(txt):
     try: return json.loads(txt[i:j+1])
     except Exception: return None
 
-def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, resumo=""):
+def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, resumo="", sentimento=None):
     """historico: [{'de':'cliente'|'pedrao','texto':...}]; memoria_cliente: dict de fatos por contato.
     resumo: resumo textual da conversa (memória nível 2) — injetado no contexto pra o bot lembrar do
     começo de conversas longas, mesmo depois que as msgs antigas saem da janela imediata.
@@ -199,6 +203,9 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
         ctx.append("MEMÓRIA DO CLIENTE (fatos já sabidos — não pergunte de novo): " + json.dumps(memoria_cliente, ensure_ascii=False))
     ctx.append("CONVERSA ATÉ AGORA:\n" + "\n".join(linhas))
     ctx.append(V.hint_para_prompt(viab))
+    _tom = SENT.hint_tom(sentimento)
+    if _tom:
+        ctx.append(_tom)
     if PAINEL:
         extra = PAINEL.contexto_extra()
         if extra:
