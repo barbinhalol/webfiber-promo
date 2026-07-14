@@ -2,7 +2,7 @@
 """Painel de controle em runtime (sem terminal): o dono edita um JSON via web e o cérebro
 lê a cada decisão. Assim, ligar/desligar, avisos de rede e ajustes de atendimento têm
 efeito IMEDIATO, sem rebuild nem git."""
-import json, os, threading
+import json, os, threading, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PATH = os.path.join(HERE, "..", "data", "painel.json")
@@ -15,6 +15,7 @@ PADRAO = {
     "aviso": "",             # AVISO URGENTE (ex.: rompimento) — injetado no contexto do cerebro
     "aviso_ativo": False,     # o aviso so entra no contexto se estiver ativo
     "ajustes": "",           # instrucoes livres do dono em portugues (anexadas ao cerebro)
+    "atualizado_em": 0.0,     # epoch da ultima alteracao (pro painel mostrar a vigencia)
 }
 
 def ler() -> dict:
@@ -30,6 +31,7 @@ def salvar(novo: dict) -> dict:
     for k in PADRAO:
         if k in novo:
             atual[k] = novo[k]
+    atual["atualizado_em"] = time.time()
     with _LOCK:
         os.makedirs(os.path.dirname(PATH), exist_ok=True)
         with open(PATH, "w", encoding="utf-8") as f:

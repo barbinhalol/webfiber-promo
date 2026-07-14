@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Painel do Ultra Pedrão</title>
+<style>
+:root{
+  --bg1:#eaf3ff;--bg2:#d6e8ff;--card:#ffffff;--ink:#0f2745;
+  --mut:#5b78a3;--line:#d7e6fb;--ac:#2b6fff;--ac2:#5b9bff;--ok:#1aa860;--okbg:#e6f8ef;
+  --warn:#e8880c;--warnbg:#fff4e2;--off:#e23b52;--offbg:#ffe9ec;--shadow:0 8px 24px rgba(31,86,168,.12);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Arial;color:var(--ink);
+  background:linear-gradient(160deg,var(--bg1),var(--bg2));min-height:100vh;
+  padding:18px 16px calc(96px + env(safe-area-inset-bottom));}
+.wrap{max-width:620px;margin:0 auto}
+header{display:flex;align-items:center;gap:12px;margin:4px 2px 18px}
+.logo{width:44px;height:44px;border-radius:13px;background:linear-gradient(145deg,var(--ac),var(--ac2));
+  display:grid;place-items:center;font-size:24px;box-shadow:var(--shadow)}
+h1{font-size:19px;margin:0;font-weight:800;letter-spacing:-.2px}
+header .sub{font-size:12.5px;color:var(--mut);margin-top:1px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card h2{font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);margin:0 0 12px;font-weight:800}
+label{display:block;font-weight:700;margin:0 0 4px;font-size:15px}
+.hint{color:var(--mut);font-size:13px;margin:0 0 10px}
+textarea,input{width:100%;background:#f7fbff;color:var(--ink);border:1.5px solid var(--line);border-radius:12px;
+  padding:12px 13px;font:15px system-ui;transition:border .15s,box-shadow .15s}
+textarea{min-height:92px;resize:vertical;line-height:1.5}
+textarea:focus,input:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 4px rgba(43,111,255,.13)}
+.count{text-align:right;font-size:12px;color:var(--mut);margin-top:5px}
+/* status hero */
+.hero{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.hero .st{display:flex;align-items:center;gap:12px}
+.dot{width:14px;height:14px;border-radius:50%;box-shadow:0 0 0 5px rgba(26,168,96,.15)}
+.dot.on{background:var(--ok)}.dot.off{background:var(--off);box-shadow:0 0 0 5px rgba(226,59,82,.15)}
+.hero .lab{font-weight:800;font-size:20px;letter-spacing:-.3px}
+.hero .lab small{display:block;font-weight:600;font-size:12.5px;color:var(--mut);letter-spacing:0}
+/* toggle */
+.sw{position:relative;width:66px;height:38px;flex:0 0 auto;cursor:pointer}
+.sw input{display:none}
+.sw i{position:absolute;inset:0;background:#cdddf2;border-radius:30px;transition:.22s}
+.sw i:before{content:"";position:absolute;width:30px;height:30px;border-radius:50%;background:#fff;top:4px;left:4px;transition:.22s;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.sw input:checked + i{background:linear-gradient(145deg,var(--ac),var(--ac2))}
+.sw input:checked + i:before{transform:translateX(28px)}
+/* segmented */
+.seg{display:flex;gap:6px;background:#eef5ff;border:1.5px solid var(--line);border-radius:13px;padding:5px}
+.seg button{flex:1;border:0;background:transparent;color:var(--mut);font:700 14px system-ui;padding:10px 6px;border-radius:9px;cursor:pointer;transition:.15s}
+.seg button.sel{background:#fff;color:var(--ac);box-shadow:0 2px 8px rgba(31,86,168,.14)}
+/* aviso */
+.avhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px}
+.card.avon{border-color:var(--warn);background:linear-gradient(180deg,var(--warnbg),#fff)}
+.mini-sw{position:relative;width:50px;height:29px;cursor:pointer}
+.mini-sw input{display:none}.mini-sw i{position:absolute;inset:0;background:#cdddf2;border-radius:30px;transition:.2s}
+.mini-sw i:before{content:"";position:absolute;width:23px;height:23px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.mini-sw input:checked + i{background:var(--warn)}.mini-sw input:checked + i:before{transform:translateX(21px)}
+/* vigencia banner */
+.vig{display:none;align-items:center;gap:10px;background:var(--okbg);border:1.5px solid #b7ead0;color:#0c6b3f;
+  border-radius:14px;padding:12px 14px;margin-bottom:14px;font-size:14px}
+.vig b{font-weight:800}.vig.show{display:flex;animation:pop .3s ease}
+@keyframes pop{from{transform:scale(.97);opacity:0}to{transform:scale(1);opacity:1}}
+.livewrap{font-size:13px;color:var(--mut);margin-top:2px}
+/* save bar */
+.savebar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,rgba(230,241,255,0),#dbeaff 40%);}
+.savebar .inner{max-width:620px;margin:0 auto}
+button.save{width:100%;background:linear-gradient(145deg,var(--ac),var(--ac2));color:#fff;border:0;border-radius:14px;
+  padding:16px;font-size:16.5px;font-weight:800;cursor:pointer;box-shadow:0 8px 20px rgba(43,111,255,.35);transition:.15s}
+button.save:active{transform:translateY(1px)}
+.ghost{background:#eef5ff;color:var(--ac);border:1.5px solid var(--line);border-radius:12px;padding:13px;font:800 15px system-ui;width:100%;cursor:pointer}
+/* feed */
+.feed .it{border-top:1px solid var(--line);padding:10px 0;font-size:13.5px}
+.feed .it:first-child{border-top:0}
+.feed .tag{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px;margin-right:6px}
+.t-resp{background:#e7f0ff;color:#245ed6}.t-transf{background:#f0e9ff;color:#6b3fb0}.t-fast{background:#e6f8ef;color:#0c6b3f}
+.feed .txt{color:var(--ink);margin-top:3px}
+/* gate */
+#gate{max-width:420px;margin:8vh auto 0}
+.err{color:var(--off);font-size:14px;margin-top:8px;font-weight:600}
+.foot{text-align:center;color:var(--mut);font-size:12px;margin:6px 0 2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">🐺</div>
+    <div><h1>Painel do Ultra Pedrão</h1><div class="sub">Controle sem terminal · muda na hora</div></div>
+  </header>
+
+  <!-- LOGIN -->
+  <div id="gate" class="card">
+    <label>Senha do painel</label>
+    <div class="hint">É o token de admin da VPS. Fica salvo só neste aparelho.</div>
+    <input id="tok" type="password" placeholder="cole a senha aqui" autocomplete="off" onkeydown="if(event.key==='Enter')entrar()">
+    <div style="height:12px"></div>
+    <button class="save" onclick="entrar()">Entrar</button>
+    <div class="err" id="gerr"></div>
+  </div>
+
+  <!-- APP -->
+  <div id="app" style="display:none">
+    <div class="vig" id="vig"></div>
+
+    <div class="card">
+      <div class="hero">
+        <div class="st">
+          <span class="dot" id="dot"></span>
+          <div class="lab"><span id="stlab">—</span><small id="stsub">carregando…</small></div>
+        </div>
+        <label class="sw"><input type="checkbox" id="ativo" onchange="toggle()"><i></i></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Quem ele responde</h2>
+      <div class="seg" id="segmodo">
+        <button data-v="pilot">Só o teste</button>
+        <button data-v="live">Todos</button>
+        <button data-v="shadow">Ninguém (observa)</button>
+      </div>
+      <div style="height:14px"></div>
+      <label>Números do teste</label>
+      <div class="hint">Só usados no modo "Só o teste". Separe por vírgula.</div>
+      <input id="allow" placeholder="21964450618" inputmode="numeric">
+    </div>
+
+    <div class="card" id="avcard">
+      <div class="avhead">
+        <h2 style="margin:0">⚠️ Aviso urgente da rede</h2>
+        <label class="mini-sw"><input type="checkbox" id="avon" onchange="pintaAviso()"><i></i></label>
+      </div>
+      <div class="hint">Ligue e escreva o aviso. Ex.: “Caiu fibra em São Conrado, previsão de voltar após as 18h.” O Pedrão avisa na hora quem tocar no assunto.</div>
+      <textarea id="aviso" maxlength="600" oninput="cc('aviso')" placeholder="deixe desligado quando não houver aviso"></textarea>
+      <div class="count"><span id="c_aviso">0</span>/600</div>
+    </div>
+
+    <div class="card">
+      <h2>Ajustes de atendimento</h2>
+      <div class="hint">Escreva em português o que ele deve ou não fazer. Ex.: “Não fale em quantidade de clientes. Saudação mais curta.”</div>
+      <textarea id="ajustes" maxlength="1500" oninput="cc('ajustes')" placeholder="instruções livres pro Pedrão"></textarea>
+      <div class="count"><span id="c_ajustes">0</span>/1500</div>
+    </div>
+
+    <div class="card feed">
+      <h2>Últimas decisões do Pedrão</h2>
+      <div id="feed"><div class="hint" id="feedmsg">carregando…</div></div>
+      <div style="height:10px"></div>
+      <button class="ghost" onclick="carregarFeed()">↻ Atualizar</button>
+    </div>
+
+    <div class="foot" id="foot"></div>
+  </div>
+</div>
+
+<div class="savebar" id="savebar" style="display:none">
+  <div class="inner"><button class="save" onclick="salvar()">💾 Salvar tudo</button></div>
+</div>
+
+<script>
+var TOK = localStorage.getItem('pedrao_tok') || '';
+var ATUAL = {}, ULT_SAVE = 0;
+function $(id){return document.getElementById(id)}
+function cc(k){$('c_'+k).textContent=($(k).value||'').length}
+
+async function api(method, body){
+  var r = await fetch('/admin/painel', {method:method,
+    headers:{'X-Admin-Token':TOK,'content-type':'application/json'},
+    body: body ? JSON.stringify(body) : undefined});
+  if(r.status===401) throw 'senha';
+  return r.json();
+}
+
+function pintar(p){
+  ATUAL = p;
+  $('ativo').checked = !!p.ativo;
+  $('dot').className = 'dot ' + (p.ativo?'on':'off');
+  $('stlab').textContent = p.ativo ? 'LIGADO' : 'DESLIGADO';
+  $('stsub').textContent = p.ativo ? 'atendendo os clientes' : 'não responde ninguém';
+  var modo = p.modo || 'pilot';
+  document.querySelectorAll('#segmodo button').forEach(function(b){ b.className = (b.dataset.v===modo)?'sel':''; });
+  $('allow').value = p.allowlist || '';
+  $('aviso').value = p.aviso || ''; cc('aviso');
+  $('avon').checked = !!p.aviso_ativo; pintaAviso();
+  $('ajustes').value = p.ajustes || ''; cc('ajustes');
+  if(p.atualizado_em){ ULT_SAVE = p.atualizado_em*1000; }
+  tickFoot();
+}
+function pintaAviso(){ $('avcard').className = 'card' + ($('avon').checked?' avon':''); }
+
+document.querySelectorAll('#segmodo button').forEach(function(b){
+  b.onclick=function(){ document.querySelectorAll('#segmodo button').forEach(function(x){x.className=''}); b.className='sel'; };
+});
+
+async function carregar(){
+  try{
+    var p = await api('GET');
+    pintar(p);
+    $('gate').style.display='none'; $('app').style.display='block'; $('savebar').style.display='block';
+    carregarFeed();
+  }catch(e){ $('gerr').textContent='Senha inválida. Confira o token de admin.'; localStorage.removeItem('pedrao_tok'); }
+}
+function entrar(){ TOK=$('tok').value.trim(); localStorage.setItem('pedrao_tok',TOK); carregar(); }
+
+async function toggle(){
+  try{ var p = await api('POST', {ativo: $('ativo').checked}); pintar(p); vigencia('Status alterado'); }
+  catch(e){ alert('Erro ao salvar. Confira a conexão.'); }
+}
+
+function modoSel(){ var b=document.querySelector('#segmodo button.sel'); return b?b.dataset.v:''; }
+
+async function salvar(){
+  try{
+    var p = await api('POST', {
+      modo: modoSel(), allowlist: $('allow').value,
+      aviso: $('aviso').value, aviso_ativo: $('avon').checked, ajustes: $('ajustes').value
+    });
+    pintar(p); vigencia('Tudo salvo');
+  }catch(e){ alert('Erro ao salvar. Confira a conexão.'); }
+}
+
+function hhmmss(ms){ var d=new Date(ms); function z(n){return (n<10?'0':'')+n} return z(d.getHours())+':'+z(d.getMinutes())+':'+z(d.getSeconds()); }
+function vigencia(titulo){
+  var v=$('vig'); ULT_SAVE = Date.now();
+  v.innerHTML = '✅ <b>'+titulo+'.</b> Em vigência desde <b>'+hhmmss(ULT_SAVE)+'</b> · vale já na próxima mensagem do cliente.';
+  v.className='vig show'; tickFoot();
+}
+function tickFoot(){
+  if(!ULT_SAVE){ $('foot').textContent=''; return; }
+  var s = Math.max(0, Math.round((Date.now()-ULT_SAVE)/1000));
+  var q = s<60 ? ('há '+s+'s') : ('há '+Math.round(s/60)+'min');
+  $('foot').textContent = 'Última alteração '+q+' · o Pedrão lê as mudanças na hora, sem espera.';
+}
+setInterval(tickFoot, 1000);
+
+async function carregarFeed(){
+  $('feedmsg') && ($('feedmsg').textContent='carregando…');
+  try{
+    var r = await fetch('/admin/eventos?limite=8', {headers:{'X-Admin-Token':TOK}});
+    var ev = await r.json();
+    var dec = (ev||[]).filter(function(x){return x.tipo==='decisao'}).slice(0,6);
+    if(!dec.length){ $('feed').innerHTML='<div class="hint">Nenhuma decisão ainda. Quando um cliente escrever, aparece aqui.</div>'; return; }
+    $('feed').innerHTML = dec.map(function(d){
+      var p=d.payload||{}; var a=p.acao||'-';
+      var cls = a==='transferir'?'t-transf':(a==='fastreply'?'t-fast':'t-resp');
+      var r=(p.render||'').replace(/^[^A-Za-zÀ-ú0-9]+/,'').slice(0,150);
+      return '<div class="it"><span class="tag '+cls+'">'+a+'</span><span style="color:var(--mut)">'+(p.mask||'')+' · '+(p.viab||'')+'</span><div class="txt">'+r+'</div></div>';
+    }).join('');
+  }catch(e){ $('feed').innerHTML='<div class="hint">Não consegui carregar (senha?).</div>'; }
+}
+
+if(TOK) carregar();
+</script>
+</body>
+</html>
