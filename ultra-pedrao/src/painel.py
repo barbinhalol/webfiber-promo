@@ -16,7 +16,12 @@ PADRAO = {
     "aviso_ativo": False,     # o aviso so entra no contexto se estiver ativo
     "ajustes": "",           # instrucoes livres do dono em portugues (anexadas ao cerebro)
     "atualizado_em": 0.0,     # epoch da ultima alteracao (pro painel mostrar a vigencia)
+    "senha": "",             # senha amigavel do painel (definida pelo dono; vazio = usa token/env)
 }
+
+def senha_ok(tok: str) -> bool:
+    s = (ler().get("senha") or "").strip()
+    return bool(s) and tok == s
 
 def ler() -> dict:
     try:

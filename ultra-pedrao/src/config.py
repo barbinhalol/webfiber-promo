@@ -76,7 +76,8 @@ MEM_RETENCAO_DIAS = _i("MEM_RETENCAO_DIAS", 90) # LGPD: expurgo
 
 # ---------------- SERVIDOR ----------------
 PORT = _i("PORT", 8080)
-ADMIN_TOKEN = _segredo("ADMIN_TOKEN")  # protege /admin/*
+ADMIN_TOKEN = _segredo("ADMIN_TOKEN")   # protege /admin/* (scripts)
+PAINEL_SENHA = _segredo("PAINEL_SENHA")  # senha amigável do painel web (opcional)
 
 def resumo_seguro() -> dict:
     """Config visível em /health SEM vazar segredo."""

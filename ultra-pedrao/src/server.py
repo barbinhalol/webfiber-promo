@@ -194,16 +194,26 @@ def _admin(tok):
 # ---- PAINEL DE CONTROLE (web, sem terminal) ----
 from fastapi.responses import HTMLResponse, PlainTextResponse
 
+def _auth_painel(tok):
+    """Painel aceita: ADMIN_TOKEN (scripts) OU PAINEL_SENHA (env) OU a senha definida no painel."""
+    if C.ADMIN_TOKEN and tok == C.ADMIN_TOKEN: return
+    if C.PAINEL_SENHA and tok == C.PAINEL_SENHA: return
+    if PAINEL.senha_ok(tok): return
+    raise HTTPException(status_code=401, detail="senha inválida")
+
+def _sem_senha(d):
+    d = dict(d); d.pop("senha", None); return d  # nunca devolve a senha ao navegador
+
 @app.get("/admin/painel")
 def painel_get(x_admin_token: str = Header(default="")):
-    _admin(x_admin_token)
-    return PAINEL.ler()
+    _auth_painel(x_admin_token)
+    return _sem_senha(PAINEL.ler())
 
 @app.post("/admin/painel")
 async def painel_post(request: Request, x_admin_token: str = Header(default="")):
-    _admin(x_admin_token)
+    _auth_painel(x_admin_token)
     body = await request.json()
-    return PAINEL.salvar(body)
+    return _sem_senha(PAINEL.salvar(body))
 
 _PAINEL_PATH = _os.path.join(_os.path.dirname(__file__), "painel.html")
 @app.get("/painel", response_class=HTMLResponse)
@@ -217,7 +227,7 @@ def painel_html():
 
 @app.get("/admin/eventos")
 def admin_eventos(x_admin_token: str = Header(default=""), limite: int = 50):
-    _admin(x_admin_token)
+    _auth_painel(x_admin_token)
     import sqlite3
     con = sqlite3.connect(C.SQLITE_PATH)
     rows = con.execute("SELECT ts,contato,tipo,payload FROM eventos ORDER BY id DESC LIMIT ?", (limite,)).fetchall()

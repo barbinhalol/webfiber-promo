@@ -141,6 +141,12 @@ button.save:active{transform:translateY(1px)}
       <div class="count"><span id="c_ajustes">0</span>/1500</div>
     </div>
 
+    <div class="card">
+      <h2>🔒 Senha do painel</h2>
+      <div class="hint">Troque por uma senha sua. Deixe em branco pra não mudar.</div>
+      <input id="senha" type="text" placeholder="nova senha (opcional)" autocomplete="off">
+    </div>
+
     <div class="card feed">
       <h2>Últimas decisões do Pedrão</h2>
       <div id="feed"><div class="hint" id="feedmsg">carregando…</div></div>
@@ -210,11 +216,15 @@ function modoSel(){ var b=document.querySelector('#segmodo button.sel'); return 
 
 async function salvar(){
   try{
-    var p = await api('POST', {
+    var payload = {
       modo: modoSel(), allowlist: $('allow').value,
       aviso: $('aviso').value, aviso_ativo: $('avon').checked, ajustes: $('ajustes').value
-    });
-    pintar(p); vigencia('Tudo salvo');
+    };
+    var novaSenha = ($('senha').value||'').trim();
+    if(novaSenha){ payload.senha = novaSenha; }
+    var p = await api('POST', payload);
+    if(novaSenha){ TOK = novaSenha; localStorage.setItem('pedrao_tok', TOK); $('senha').value=''; }
+    pintar(p); vigencia(novaSenha ? 'Senha trocada e tudo salvo' : 'Tudo salvo');
   }catch(e){ alert('Erro ao salvar. Confira a conexão.'); }
 }
 
