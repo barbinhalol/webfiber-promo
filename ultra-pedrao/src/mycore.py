@@ -263,11 +263,11 @@ def resolver_fatura(cpf: str, contato: str = None) -> dict:
     if not todas:
         return {"status": "sem_fatura", "nome": nome}
 
+    # entrega SÓ a fatura mais relevante (vencida, senão a próxima a vencer). NUNCA mencionar as
+    # outras "faturas em aberto" — as a vencer são futuras (até fim do ano) e o cliente não pode se
+    # sentir coagido a pagar tudo de uma vez (ordem do dono 14/07/2026).
     fatura, atrasada = todas[0]
     envios = _envios_da_fatura(nome, fatura, atrasada)
-    if len(todas) > 1:
-        envios.append({"tipo": "texto",
-                       "text": f"Você tem mais {len(todas) - 1} fatura(s) em aberto. Quer que eu envie também? 😊"})
     return {"status": "entregue", "nome": nome, "envios": envios, "qtd": len(todas)}
 
 

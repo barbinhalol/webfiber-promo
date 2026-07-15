@@ -2,7 +2,7 @@
 """Servidor webhook do Ultra Pedrão (FastAPI).
 Fluxo: FlowSeller -> POST /webhook -> filtros -> dedup -> debounce -> brain -> flowseller(shadow/live).
 Modo sombra (BOT_MODE=shadow): decide e REGISTRA o que faria, sem enviar."""
-import time, hashlib, json, asyncio
+import time, hashlib, json, asyncio, re
 from fastapi import FastAPI, Request, Header, HTTPException
 from fastapi.responses import JSONResponse
 
@@ -36,34 +36,49 @@ _START_TS = time.time()
 NOTA_APOS_S = 15 * 60   # dono: nota interna do lead ~10-15 min depois
 _VIGIA_INTERVALO_S = 120
 
+def _fmt_tel(contato):
+    d = re.sub(r"\D", "", str(contato or ""))
+    if d.startswith("55") and len(d) > 11:
+        d = d[2:]
+    if len(d) == 11:
+        return f"({d[:2]}) {d[2:7]}-{d[7:]}"
+    if len(d) == 10:
+        return f"({d[:2]}) {d[2:6]}-{d[6:]}"
+    return d or str(contato or "")
+
 def _texto_nota_lead(contato, fatos):
+    """Resumo do lead pro time — DESCREVE TUDO (telefone, nome, o que quer, dados coletados)."""
+    linhas = ["[Pedrão · resumo do lead]"]
+    linhas.append("📱 Telefone: " + _fmt_tel(contato))
+    nome = (fatos.get("nome") or fatos.get("sup_nome") or "").strip()
+    if nome:
+        linhas.append("👤 Nome: " + nome)
     resumo = (M.get_resumo(contato) or "").strip()
-    campos = [(k, fatos.get(k)) for k in
-              ("nome", "endereco", "rua", "numero", "bairro", "plano_interesse", "plano", "cpf", "cnpj")
-              if fatos.get(k)]
-    partes = []
     if resumo:
-        partes.append(resumo)
-    if campos:
-        partes.append(" | ".join(f"{k}: {v}" for k, v in campos))
-    corpo = "\n".join(partes) if partes else "Cliente conversou com o Pedrão; sem dados estruturados coletados ainda."
-    return "[Pedrão · resumo do lead (20 min)]\n" + corpo
+        linhas.append("📝 Conversa: " + resumo)
+    rotulos = {"endereco": "Endereço", "sup_end": "Endereço (cadastro)", "rua": "Rua", "numero": "Número",
+               "bairro": "Bairro", "plano_interesse": "Plano de interesse", "plano": "Plano",
+               "cpf": "CPF", "cnpj": "CNPJ"}
+    dados = [f"• {rot}: {fatos.get(k)}" for k, rot in rotulos.items() if str(fatos.get(k) or "").strip()]
+    if dados:
+        linhas.append("📋 Dados coletados:"); linhas += dados
+    if len(linhas) <= 2:   # só header + telefone
+        linhas.append("Cliente conversou com o Pedrão; ainda sem dados estruturados coletados.")
+    return "\n".join(linhas)
 
 async def _vigia_notas():
-    """Posta a nota interna do lead 20 min após o início da conversa, mesmo sem mensagem nova."""
+    """Posta a nota interna do lead ~15 min após o início da conversa, mesmo sem mensagem nova.
+    Posta UMA VEZ só: marca nota_ok logo após a tentativa (a FlowSeller cria a nota mas às vezes
+    não devolve id, então NÃO dá pra confiar no 'enviado' — sem isso, ficava repetindo a cada 2 min)."""
     while True:
         try:
             for contato, fatos in M.contatos_nota_pendente(NOTA_APOS_S):
                 ext = M.ultimo_external_key(contato)
                 if not ext:
                     continue
+                M.merge_fatos(contato, {"nota_ok": 1})   # ANTES de postar: garante 1x só (nunca spam)
                 r = FS.nota_interna(ext, _texto_nota_lead(contato, fatos), number=contato, delay=False)
-                # marca como feita se enviou, se é shadow (nunca envia) ou se o piloto barrou o número
-                # -- assim não fica retentando pra sempre. Erro transitório (rede) continua retentando.
-                if r.get("enviado") or r.get("modo") == "shadow" or "allowlist" in str(r.get("erro") or ""):
-                    M.merge_fatos(contato, {"nota_ok": 1})
-                    M.log_evento(contato, "nota_20min", {"mask": _mask(contato),
-                                                         "enviado": bool(r.get("enviado"))})
+                M.log_evento(contato, "nota_lead", {"mask": _mask(contato), "enviado": bool(r.get("enviado"))})
         except Exception as e:
             print("[vigia_notas] erro:", e, flush=True)
         await asyncio.sleep(_VIGIA_INTERVALO_S)

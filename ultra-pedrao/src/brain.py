@@ -277,7 +277,8 @@ def _suporte_passo(msg, sup, fatos):
                  "fim. Pode contar com a *WebFiber Provedor* 💙")
         nota = (f"[PEDRÃO fora do horário] SUPORTE PRIORITÁRIO | {dados_linha} | Problema: sem conexão | "
                 "Testes: reiniciou o roteador, não voltou | Encaminhar equipe técnica no 1º horário do próximo dia útil.")
-        return _fp(texto, acao="transferir", intencao="suporte", fila=24, nota=nota, sup="fim", icone="⚡➡️")
+        return _fp(texto, acao="transferir", intencao="suporte", fila=24, nota=nota, sup="fim",
+                   dados={"nota_ok": 1}, icone="⚡➡️")  # já tem nota rica na transferência -> não repetir no vigia
     return None  # resposta ambígua sobre a luz -> LLM decide
 
 def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, contato=None):
