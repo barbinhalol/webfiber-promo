@@ -33,7 +33,7 @@ _START_TS = time.time()
 # A nota NÃO sai na hora: sai ~20 min depois do início da conversa, e sai MESMO se o cliente sumiu
 # (a equipe não pode perder o resumo do lead). Exceção: transferência mantém a nota na hora, senão
 # o humano recebe o ticket sem contexto nenhum.
-NOTA_APOS_S = 20 * 60
+NOTA_APOS_S = 15 * 60   # dono: nota interna do lead ~10-15 min depois
 _VIGIA_INTERVALO_S = 120
 
 def _texto_nota_lead(contato, fatos):
@@ -145,9 +145,17 @@ def _processar(contato, texto, ctx):
     # sessão nova zera qualquer roteiro de suporte pendente (não arrasta estado velho pra conversa nova)
     if sessao_nova and fatos.get("sup") in ("1", "2"):
         M.merge_fatos(contato, {"sup": "fim"}); fatos["sup"] = "fim"
-    d = B.fastpath(texto, sessao_nova, hist, fatos, sentimento=sent, contato=contato)
+    # ORDEM DO DONO: conversa FECHADA pelo atendente -> a FlowSeller abre um TICKET NOVO
+    # (sessao_nova=True) -> o Pedrão começa DO ZERO, SEM a memória da conversa anterior (não
+    # recapitula). Se NÃO foi fechada (mesmo ticket), continua com todo o contexto. EXCEÇÃO: se o
+    # cliente citar algo dito antes ("você não viu aqui em cima", "já te falei"), aí lê o histórico.
+    _fresh = sessao_nova and not B.refere_anterior(texto)
+    hist_b = [] if _fresh else hist
+    resumo_b = "" if _fresh else resumo
+    fatos_b = {} if _fresh else fatos
+    d = B.fastpath(texto, sessao_nova, hist_b, fatos_b, sentimento=sent, contato=contato)
     if d is None:
-        d = B.decidir(texto, historico=hist, memoria_cliente=fatos, sessao_nova=sessao_nova, resumo=resumo, sentimento=sent)
+        d = B.decidir(texto, historico=hist_b, memoria_cliente=fatos_b, sessao_nova=sessao_nova, resumo=resumo_b, sentimento=sent)
         # se havia roteiro de suporte em andamento e o LLM assumiu, encerra o roteiro (evita ficar preso)
         if fatos.get("sup") in ("1", "2"):
             d.setdefault("dados_coletados", {})["sup"] = "fim"
@@ -155,7 +163,7 @@ def _processar(contato, texto, ctx):
     # ANTI-DUPLICATA DE PLANOS: se ja mandou o pacote de planos+imagens ha < 3 min, NAO repete
     # (o cliente mandava o endereco em 2 msgs e recebia os planos 2x). So referencia o que ja foi enviado.
     _eh_planos = d.get("acao") == "fastreply" and d.get("fastReplyId") in (1296, 1437, 1438)
-    _ult_planos = fatos.get("planos_ts")
+    _ult_planos = fatos_b.get("planos_ts")   # fresco na sessão nova (não arrasta do fechado)
     if _eh_planos and _ult_planos and (time.time() - float(_ult_planos)) < 180:
         d = {"acao": "responder", "fastReplyId": 0, "fila": 0, "intencao": "planos",
              "texto": "Os planos são esses que te mandei aqui em cima 👆 Qual deles fez mais sentido pra você?",

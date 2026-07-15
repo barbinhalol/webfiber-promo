@@ -124,6 +124,18 @@ _SUP_NAO_RESOLVIDO = re.compile(
 _DESVIO_ASSUNTO = re.compile(
     r"\b(plano|pre[çc]o|valor|quanto\s+custa|cancel|fatura|boleto|atendente|humano|pessoa\s+de\s+verdade|falar\s+com\s+algu[ée]m)\b", re.I)
 
+# cliente se REFERE a algo dito antes ("você não viu aqui em cima", "já te falei"): mesmo numa
+# conversa FECHADA e reaberta (que começa do zero), aí o Pedrão PODE ler o histórico pra responder.
+_REF_ANTERIOR = re.compile(
+    r"\b(a[íi]\s*em\s*cima|l[áa]\s*em\s*cima|(logo\s*|mais\s*)?acima|n[ãa]o\s*(viu|leu)|"
+    r"j[áa]\s*(te\s*)?(falei|disse|mandei|expliquei|avisei|passei|informei|perguntei)|"
+    r"te\s*(falei|mandei|passei|disse)|como\s*(eu\s*)?(falei|disse)|conforme\s*(falei|disse)|"
+    r"lembra\s*que|acabei\s*de\s*(falar|dizer|mandar))\b", re.I)
+
+def refere_anterior(texto):
+    """True se o cliente cita algo já dito antes — libera ler o histórico mesmo em sessão nova."""
+    return bool(_REF_ANTERIOR.search(texto or ""))
+
 
 def _fp(texto, acao="responder", intencao="saudacao", fila=0, fid=0, nota="", sup=None, icone="⚡", dados=None):
     dc = dict(dados or {})
