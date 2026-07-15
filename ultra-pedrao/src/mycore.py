@@ -158,6 +158,20 @@ def clientes_por_cpf(cpf: str):
     return _get("cliente/list", cpfcnpj=digitos(cpf))
 
 
+def dados_cliente_por_cpf(cpf: str):
+    """Nome + endereço REAIS do cadastro (pro resumo do suporte — NUNCA inventar). None se não achar."""
+    try:
+        cs = clientes_por_cpf(cpf)
+    except MyCoreErro:
+        return None
+    if not cs:
+        return None
+    c = cs[0]
+    partes = [c.get("street"), c.get("street_number"), c.get("street_comp"), c.get("neighbor")]
+    endereco = ", ".join(str(p).strip() for p in partes if p and str(p).strip())
+    return {"nome": (c.get("name") or "").strip(), "endereco": endereco}
+
+
 def _faturas(path, client_id):
     try:
         return _get(path, id=str(client_id))

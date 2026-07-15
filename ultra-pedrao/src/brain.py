@@ -225,27 +225,58 @@ def _fp(texto, acao="responder", intencao="saudacao", fila=0, fid=0, nota="", su
          "_fastpath": True, "_render": f"{icone} (atalho, sem LLM) “{texto[:80]}”"}
     return d
 
-def _suporte_passo(msg, sup):
-    """Cliente já está no roteiro de suporte (sup=1 respondeu 'começou agora'; sup=2 respondeu da luz)."""
+def _suporte_passo(msg, sup, fatos):
+    """Roteiro de suporte (padrão dos exemplos do dono):
+    sup=1 -> cliente mandou nome+CPF: busca o cadastro REAL no MyCore (endereço certo, nunca inventado)
+             e conduz o reset do roteador. sup=2 -> lê a cor da luz: resolveu (fecha) ou não resolveu
+             (resumo com os dados confirmados + encaminha com prioridade pra equipe técnica)."""
     if _DESVIO_ASSUNTO.search(msg):
         return None  # mudou de assunto -> LLM assume (server limpa o estado do roteiro)
+
+    # (1) recebeu nome + CPF -> puxa nome/endereço REAIS do cadastro e manda o reset
     if sup == "1":
-        texto = ("Beleza! Vamos tentar o primeiro procedimento juntos 🙌\n\n"
-                 "Tira o seu roteador da tomada, espera 1 minutinho e liga de novo. "
-                 "Enquanto ele religa, dá uma olhada: tem alguma luz *vermelha* acesa ou piscando nele?")
-        return _fp(texto, intencao="suporte", sup="2")
-    # sup == "2": leu a luz / resultado do reinício
+        import mycore as MC
+        nome_real, end_real = "", ""
+        cpf = MC.extrair_cpf_cnpj(msg)
+        if cpf:
+            try:
+                d = MC.dados_cliente_por_cpf(cpf)
+            except Exception:
+                d = None
+            if d:
+                nome_real = d.get("nome") or ""
+                end_real = d.get("endereco") or ""
+        dados = {"sup_nome": nome_real or msg.strip()[:60], "sup_end": end_real}
+        prim = nome_real.split(" ")[0].title() if nome_real else ""
+        texto = (f"Obrigado{', ' + prim if prim else ''}! Vamos tentar restabelecer a conexão 🙌\n\n"
+                 "Por favor: retire o *roteador* da tomada, aguarde *1 minuto completo*, reconecte na tomada e "
+                 "espere as luzes se estabilizarem.\n\n"
+                 "Me avisa qual a *cor da luz* que acendeu (verde, vermelha…) e se a internet voltou?")
+        return _fp(texto, intencao="suporte", sup="2", dados=dados)
+
+    # (2) leu a luz / resultado do reinício
+    nome = (fatos.get("sup_nome") or "").strip()
+    prim = nome.split(" ")[0].title() if nome else ""
     if _SUP_RESOLVIDO.search(msg) and not _SUP_NAO_RESOLVIDO.search(msg):
-        texto = ("Ótimo, que bom que voltou! 😊 Fico à disposição — qualquer coisa é só me chamar. "
-                 "Posso te ajudar em mais alguma coisa?")
+        texto = (f"Que ótimo que voltou{', ' + prim if prim else ''}! 😊 Fico à disposição — qualquer coisa é só me "
+                 "chamar. Posso te ajudar em mais alguma coisa?")
         return _fp(texto, intencao="suporte", sup="fim")
     if _SUP_NAO_RESOLVIDO.search(msg):
-        texto = ("Entendi. Como o procedimento básico não resolveu, e o nosso atendimento humano é a partir das 9h, "
-                 "já vou te redirecionar pro nosso *Suporte técnico*, que vai resolver isso o mais rápido possível 😊\n\n"
-                 "Pra adiantar, me confirma só o seu *nome completo* e o *CPF* do assinante?")
-        nota = ("[PEDRÃO fora do horário] SUPORTE | cliente sem internet; fez o reinício básico (tirar o roteador da "
-                "tomada 1 min) e NÃO resolveu | Falta: confirmar nome + CPF do assinante | Redirecionado ao Suporte "
-                "(atende a partir das 9h).")
+        end = (fatos.get("sup_end") or "").strip()
+        dados_linha = (nome if nome else "(nome a confirmar)") + (f", {end}" if end else " — endereço a confirmar")
+        texto = (f"Obrigado por realizar os testes{', ' + prim if prim else ''}. 🙏\n\n"
+                 "Como a conexão não voltou, pode ser algo mais específico. Já documentei tudo que conversamos e "
+                 "encaminhei com *prioridade* pra nossa equipe técnica — eles analisam seu caso logo no primeiro "
+                 "horário da manhã do próximo dia útil. Se normalizar durante a noite, ótimo; se não, a equipe entra "
+                 "em contato com você pela manhã pra resolver de vez.\n\n"
+                 "Só pra confirmar, o resumo do nosso atendimento:\n"
+                 f"✔️ *Dados:* {dados_linha}\n"
+                 "✔️ *Problema:* sem conexão de internet\n"
+                 "✔️ *Testes:* reiniciou o roteador e a conexão não voltou\n\n"
+                 "Lamento pelo transtorno — sabemos o quanto a internet é importante e vamos cuidar do seu caso até o "
+                 "fim. Pode contar com a *WebFiber Provedor* 💙")
+        nota = (f"[PEDRÃO fora do horário] SUPORTE PRIORITÁRIO | {dados_linha} | Problema: sem conexão | "
+                "Testes: reiniciou o roteador, não voltou | Encaminhar equipe técnica no 1º horário do próximo dia útil.")
         return _fp(texto, acao="transferir", intencao="suporte", fila=24, nota=nota, sup="fim", icone="⚡➡️")
     return None  # resposta ambígua sobre a luz -> LLM decide
 
@@ -264,7 +295,7 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
 
     # 0) roteiro de suporte JÁ em andamento tem prioridade
     if sup in ("1", "2"):
-        return _suporte_passo(msg, sup)
+        return _suporte_passo(msg, sup, fatos)
 
     # 1) saudação pura -> abertura fixa "Olá!", sem anunciar conversa anterior (mesmo se reaberta)
     if _SAUDACAO_PURA.match(msg) and not _SINAIS_COMPLEXOS.search(msg):
@@ -347,7 +378,8 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     if _SUP_INTENCAO.search(msg) and not _FINANCEIRO_KW.search(msg):
         abre = (_ABERTURA + " ") if sessao_nova else ""
         texto = (abre + "Sinto muito que esteja sem internet 😕 Vou te ajudar a resolver o quanto antes. "
-                 "Me diz uma coisa: isso começou agora ou já vem acontecendo há um tempo?")
+                 "Pra registrar seu caso e começar o diagnóstico, me passa por favor o seu *nome completo* "
+                 "e o *CPF (ou CNPJ)* cadastrado na conta?")
         return _fp(texto, intencao="suporte", sup="1")
 
     return None
