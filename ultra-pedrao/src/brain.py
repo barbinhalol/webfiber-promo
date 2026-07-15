@@ -108,9 +108,12 @@ _SINAIS_COMPLEXOS = re.compile(
 #      luz piscando? -> resolveu (fecha) ou não resolveu (escala Suporte 24 às 9h do próximo dia útil).
 #      Só o básico -- NUNCA diagnostica rede (seção 7 do prompt). Financeiro tem prioridade e sai daqui.
 _SUP_INTENCAO = re.compile(
-    r"\b(sem\s+(internet|sinal|conex|net)|internet\s+(caiu|parou|ruim|lenta|oscil)|wi-?fi\s+(caiu|parou|n[ãa]o)|"
-    r"caiu\s+a\s+(internet|net)|sem\s+wi-?fi|n[ãa]o\s+(navega|pega|funciona|conecta|t[áa]\s+pegando)|"
-    r"parou\s+de\s+funcionar|t[áa]\s+(lenta|lento|oscilando|caindo)|internet\s+n[ãa]o)\b", re.I)
+    r"\b(sem\s+(internet|sinal|conex|net|rede|wi-?fi)|"
+    r"(internet|net|wi-?fi|conex[ãa]o|sinal|rede)\s+(caiu|parou|ruim|lenta|oscil|caindo|p[ée]ssim)|"
+    r"problema\s+(no|na|com)\b.{0,20}?(internet|net|sinal|conex|wi-?fi|rede)|"
+    r"caiu\s+a\s+(internet|net)|"
+    r"n[ãa]o\s+(navega|pega|funciona|conecta|t[áa]\s+(pegando|funcionando|dando|conectando))|"
+    r"parou\s+de\s+funcionar|t[áa]\s+(lenta|lento|oscilando|caindo|ruim)|internet\s+n[ãa]o)\b", re.I)
 _FINANCEIRO_KW = re.compile(
     r"\b(atras|fatura|boleto|cobran|cortaram|cortada|cortou|bloque|esqueci\s+de\s+pagar|"
     r"pagamento|vencid|d[ée]bito|negativ|2[ªa]?\s*via|segunda\s+via|desbloque)\b", re.I)
@@ -343,7 +346,7 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     # 3) início de suporte (só o básico; financeiro tem prioridade e sai pro LLM)
     if _SUP_INTENCAO.search(msg) and not _FINANCEIRO_KW.search(msg):
         abre = (_ABERTURA + " ") if sessao_nova else ""
-        texto = (abre + "Poxa, que chato ficar sem internet! Vou te ajudar a resolver 😊 "
+        texto = (abre + "Sinto muito que esteja sem internet 😕 Vou te ajudar a resolver o quanto antes. "
                  "Me diz uma coisa: isso começou agora ou já vem acontecendo há um tempo?")
         return _fp(texto, intencao="suporte", sup="1")
 
