@@ -228,7 +228,7 @@ def _suporte_passo(msg, sup):
         return None  # mudou de assunto -> LLM assume (server limpa o estado do roteiro)
     if sup == "1":
         texto = ("Beleza! Vamos tentar o primeiro procedimento juntos 🙌\n\n"
-                 "Tira o aparelhinho de internet (a ONU/roteador) da tomada, espera 1 minutinho e liga de novo. "
+                 "Tira o seu roteador da tomada, espera 1 minutinho e liga de novo. "
                  "Enquanto ele religa, dá uma olhada: tem alguma luz *vermelha* acesa ou piscando nele?")
         return _fp(texto, intencao="suporte", sup="2")
     # sup == "2": leu a luz / resultado do reinício
@@ -237,11 +237,12 @@ def _suporte_passo(msg, sup):
                  "Posso te ajudar em mais alguma coisa?")
         return _fp(texto, intencao="suporte", sup="fim")
     if _SUP_NAO_RESOLVIDO.search(msg):
-        texto = ("Entendi. Como o procedimento básico não resolveu, já vou registrar tudo certinho aqui pro nosso "
-                 "time de *Suporte técnico*. Eles entram em contato com você no próximo dia útil, às 9h, pra "
-                 "resolver de vez 😊\n\nPra adiantar, me confirma seu *nome completo*, o *endereço* e um *telefone* de contato?")
-        nota = ("[PEDRÃO fora do horário] SUPORTE | cliente sem internet; fez o reinício básico (tirar da tomada 1 min) "
-                "e NÃO resolveu | Falta: confirmar nome/endereço/telefone | Retorno agendado: próximo dia útil às 9h.")
+        texto = ("Entendi. Como o procedimento básico não resolveu, e o nosso atendimento humano é a partir das 9h, "
+                 "já vou te redirecionar pro nosso *Suporte técnico*, que vai resolver isso o mais rápido possível 😊\n\n"
+                 "Pra adiantar, me confirma só o seu *nome completo* e o *CPF* do assinante?")
+        nota = ("[PEDRÃO fora do horário] SUPORTE | cliente sem internet; fez o reinício básico (tirar o roteador da "
+                "tomada 1 min) e NÃO resolveu | Falta: confirmar nome + CPF do assinante | Redirecionado ao Suporte "
+                "(atende a partir das 9h).")
         return _fp(texto, acao="transferir", intencao="suporte", fila=24, nota=nota, sup="fim", icone="⚡➡️")
     return None  # resposta ambígua sobre a luz -> LLM decide
 
