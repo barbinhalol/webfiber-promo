@@ -16,6 +16,7 @@ PADRAO = {
     "aviso_ativo": False,     # o aviso so entra no contexto se estiver ativo
     "ajustes": "",           # instrucoes livres do dono em portugues (anexadas ao cerebro)
     "desbloqueio_confianca": False,  # DESLIGADO por padrao: so o dono liga quando for testar
+    "saudacao": "",           # ""=usa a saudacao padrao do codigo | texto custom (ex.: evento/feriado)
     "atualizado_em": 0.0,     # epoch da ultima alteracao (pro painel mostrar a vigencia)
     "senha": "",             # senha amigavel do painel (definida pelo dono; vazio = usa token/env)
 }
@@ -51,6 +52,11 @@ def desbloqueio_ativo() -> bool:
     """Desbloqueio em confiança só age quando o dono liga isto no painel."""
     return bool(ler().get("desbloqueio_confianca", False))
 
+def saudacao_custom() -> str:
+    """Saudação customizada (ex.: evento/feriado). Vazio = usa a padrão do código (brain._ABERTURA).
+    Lida a cada mensagem -> troca (e o botão "restaurar padrão" no painel) valem na hora, sem deploy."""
+    return (ler().get("saudacao") or "").strip()
+
 def modo_efetivo(env_modo: str) -> str:
     """Modo do painel tem prioridade sobre o .env (shadow/pilot/live)."""
     m = (ler().get("modo") or "").strip().lower()
@@ -75,4 +81,9 @@ def contexto_extra() -> str:
             "retorno além do que o dono disse; registre e reporte ao time.]")
     if (p.get("ajustes") or "").strip():
         partes.append("[AJUSTES DE ATENDIMENTO definidos pelo dono (siga à risca): " + p["ajustes"].strip() + "]")
+    sc = (p.get("saudacao") or "").strip()
+    if sc:
+        partes.append(
+            "[SAUDAÇÃO OFICIAL VIGENTE — se esta for a PRIMEIRA mensagem de um atendimento novo (sessão nova), "
+            "abra EXATAMENTE com este texto, sem alterar nada: \"" + sc + "\"]")
     return "\n".join(partes)

@@ -165,6 +165,15 @@ button.save:active{transform:translateY(1px)}
     </div>
 
     <div class="card">
+      <h2>💬 Mensagem de saudação</h2>
+      <div class="hint">O que o Pedrão diz na <b>primeira mensagem</b> de cada atendimento novo. Já vem com a saudação padrão — troque só se for usar algo temporário (evento, feriado, aviso de horário). Vale na hora, direto no atalho mais rápido do sistema (sem passar pela IA).</div>
+      <textarea id="saudacao" maxlength="500" oninput="cc('saudacao')"></textarea>
+      <div class="count"><span id="c_saudacao">0</span>/500</div>
+      <div style="height:10px"></div>
+      <button class="ghost" onclick="restaurarSaudacao()">↺ Restaurar saudação padrão</button>
+    </div>
+
+    <div class="card">
       <h2>Ajustes de atendimento</h2>
       <div class="hint">Escreva em português o que ele deve ou não fazer. Ex.: “Não fale em quantidade de clientes. Saudação mais curta.”</div>
       <textarea id="ajustes" maxlength="4000" oninput="cc('ajustes')" placeholder="instruções livres pro Pedrão"></textarea>
@@ -195,6 +204,8 @@ button.save:active{transform:translateY(1px)}
 <script>
 var TOK = localStorage.getItem('pedrao_tok') || '';
 var ATUAL = {}, ULT_SAVE = 0;
+// tem que ser IDÊNTICA à _ABERTURA em src/brain.py (é o texto que volta ao clicar "restaurar padrão")
+var SAUDACAO_PADRAO = 'Olá! Eu sou o Pedrão, agente virtual da WebFiber 😊 Estou aqui para te ajudar.';
 function $(id){return document.getElementById(id)}
 function cc(k){$('c_'+k).textContent=($(k).value||'').length}
 
@@ -218,11 +229,13 @@ function pintar(p){
   $('aviso').value = p.aviso || ''; cc('aviso');
   $('avon').checked = !!p.aviso_ativo; pintaAviso();
   $('desbon').checked = !!p.desbloqueio_confianca;
+  $('saudacao').value = (p.saudacao || '').trim() || SAUDACAO_PADRAO; cc('saudacao');
   $('ajustes').value = p.ajustes || ''; cc('ajustes');
   if(p.atualizado_em){ ULT_SAVE = p.atualizado_em*1000; }
   tickFoot();
 }
 function pintaAviso(){ $('avcard').className = 'card' + ($('avon').checked?' avon':''); }
+function restaurarSaudacao(){ $('saudacao').value = SAUDACAO_PADRAO; cc('saudacao'); }
 
 document.querySelectorAll('#segmodo button').forEach(function(b){
   b.onclick=function(){ document.querySelectorAll('#segmodo button').forEach(function(x){x.className=''}); b.className='sel'; };
@@ -308,10 +321,13 @@ function modoSel(){ var b=document.querySelector('#segmodo button.sel'); return 
 
 async function salvar(){
   try{
+    var saud = ($('saudacao').value||'').trim();
+    // igual à padrão (ou vazio) -> grava "" (marca "usar a padrão do código", segue valendo se ela mudar)
+    if(!saud || saud === SAUDACAO_PADRAO.trim()) saud = '';
     var payload = {
       modo: modoSel(), allowlist: $('allow').value,
       aviso: $('aviso').value, aviso_ativo: $('avon').checked, ajustes: $('ajustes').value,
-      desbloqueio_confianca: $('desbon').checked
+      desbloqueio_confianca: $('desbon').checked, saudacao: saud
     };
     var novaSenha = ($('senha').value||'').trim();
     if(novaSenha){ payload.senha = novaSenha; }

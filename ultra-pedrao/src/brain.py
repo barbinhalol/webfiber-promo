@@ -86,6 +86,19 @@ def _fila_por_intencao(intencao, motivo):
 # como atendente virtual (transparência) e serve pra qualquer idade (sem gíria).
 _ABERTURA = "Olá! Eu sou o Pedrão, agente virtual da WebFiber 😊 Estou aqui para te ajudar."
 
+def _abertura():
+    """Saudação efetiva: usa a customizada do painel (ex.: evento/feriado) se o dono deixou uma;
+    senão cai na padrão fixa acima. Lida do disco a cada chamada -> o dono troca no painel e vale
+    JÁ na próxima mensagem, sem deploy (mesmo mecanismo do PAINEL.ajustes)."""
+    if PAINEL:
+        try:
+            custom = PAINEL.saudacao_custom()
+            if custom:
+                return custom
+        except Exception:
+            pass
+    return _ABERTURA
+
 # aceita saudações ENCADEADAS ("ola, boa noite!", "oi bom dia", "opa tudo bem", "voltei") — o `+`
 # no fim do grupo deixa repetir; senão "Ola, boa noite!" não casava e caía no LLM (que recapitulava).
 _SAUDACAO_PURA = re.compile(
@@ -330,7 +343,7 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     # 1) saudação pura -> abertura fixa "Olá!", sem anunciar conversa anterior (mesmo se reaberta)
     if _SAUDACAO_PURA.match(msg) and not _SINAIS_COMPLEXOS.search(msg):
         if sessao_nova:  # 1º contato OU reaberto: mesma saudação simples, sem relembrar o histórico
-            return _fp(f"{_ABERTURA} Me conta o que você precisa.", intencao="saudacao")
+            return _fp(f"{_abertura()} Me conta o que você precisa.", intencao="saudacao")
         return None  # SESSÃO=CONTINUA: "oi" solto no meio da conversa -> LLM
 
     # 2) pedido de planos/internet -> FLUXO PRINCIPAL: já conhece os planos? + qual o local (viabilidade)
@@ -338,7 +351,7 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     if (_PLANOS_INTENCAO.search(msg) and not _SINAIS_COMPLEXOS.search(msg)
             and not _EMPRESA.search(msg) and len(msg.split()) <= 18):
         if sessao_nova:
-            texto = (f"{_ABERTURA} Você já conhece nossos planos? E me diz uma coisa: "
+            texto = (f"{_abertura()} Você já conhece nossos planos? E me diz uma coisa: "
                      "qual é o endereço aí (rua, número e bairro) pra eu já verificar a viabilidade pra você?")
             return _fp(texto, intencao="planos")
         texto = ("Perfeito! Vou te mostrar os planos aqui 👇\n\n"
@@ -367,7 +380,7 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     if _FINANCEIRO_KW.search(msg) or (fin_state == "aguarda_cpf" and _tem_digitos):
         import mycore as MC
         cpf = MC.extrair_cpf_cnpj(msg)
-        _abre = (_ABERTURA + "\n\n") if sessao_nova else ""
+        _abre = (_abertura() + "\n\n") if sessao_nova else ""
         # limpa o estado do financeiro. fin="feito" (não "" — o merge_fatos ignora vazios) tira do
         # modo "aguarda_cpf"; nota_ok=1 evita virar "lead" no vigia dos 20min.
         _limpa_fin = {"fin": "feito", "fin_try": 0, "nota_ok": 1}
@@ -406,7 +419,7 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
 
     # 3) início de suporte (só o básico; financeiro tem prioridade e sai pro LLM)
     if _SUP_INTENCAO.search(msg) and not _FINANCEIRO_KW.search(msg):
-        abre = (_ABERTURA + " ") if sessao_nova else ""
+        abre = (_abertura() + " ") if sessao_nova else ""
         texto = (abre + "Sinto muito que esteja sem internet 😕 Vou te ajudar a resolver o quanto antes. "
                  "Pra registrar seu caso e começar o diagnóstico, me passa por favor o seu *nome completo* "
                  "e o *CPF (ou CNPJ)* cadastrado na conta?")
