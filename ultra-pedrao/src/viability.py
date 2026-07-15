@@ -53,6 +53,21 @@ def norm_num(n: str) -> str:
 _TIPOS = r"(?:RUA|AVENIDA|AV|ESTRADA|ESTR|TRAVESSA|PRACA|LADEIRA|ALAMEDA|RODOVIA|R)"
 _RE_ENDERECO = re.compile(r"\b" + _TIPOS + r"\.?\s+([A-Z0-9À-Ú][A-Z0-9À-Ú\s]{2,50}?)\s*[,\-]?\s*(?:N[º°O]?\.?\s*)?(\d{1,5})\b", re.I)
 
+# rua SEM número (só o logradouro): pra reconhecer que a RUA é atendida mesmo antes do nº
+_RE_RUA = re.compile(r"\b" + _TIPOS + r"\.?\s+([A-Z0-9À-Ú][A-Z0-9À-Ú\s]{3,40})", re.I)
+
+def extrair_ruas(texto: str):
+    """Devolve nomes de rua normalizados citados no texto (sem exigir número)."""
+    up = unicodedata.normalize("NFKD", texto or "").encode("ascii", "ignore").decode().upper()
+    ruas = []
+    for m in _RE_RUA.finditer(up):
+        rua = norm_rua(m.group(0))
+        rua = re.sub(r"\s+\d+.*$", "", rua).strip()
+        rua = re.sub(r"\s+(NUMERO|NUM|NO|N|CASA|AP|APTO|APARTAMENTO|BLOCO|BL|LOTE|QUADRA|BAIRRO|FUNDOS)\s*$", "", rua).strip()
+        if len(rua) >= 5:
+            ruas.append(rua)
+    return ruas
+
 def extrair_enderecos(texto: str):
     """Devolve lista de (rua_norm, numero) achados no texto livre."""
     achados = []
@@ -76,6 +91,14 @@ def checar(texto_cliente: str) -> dict:
     """
     achados = extrair_enderecos(texto_cliente)
     if not achados:
+        # rua SEM número (ex.: "rua teodoro da silva"): se a RUA consta na base, já é PROVAVEL
+        # (região atendida), só falta o número — assim o Pedrão já diz que TEM viabilidade.
+        for rua in extrair_ruas(texto_cliente):
+            na_rua = _STREET.get(rua, 0)
+            if na_rua > 0:
+                return {"status": PROVAVEL, "rua": rua, "numero": None,
+                        "clientes_no_numero": 0, "clientes_na_rua": na_rua,
+                        "evidencia": f"{rua} — rua atendida (sem número ainda)"}
         return {"status": SEM_ENDERECO, "rua": None, "numero": None,
                 "clientes_no_numero": 0, "clientes_na_rua": 0,
                 "evidencia": "nenhum endereço identificado no texto"}
@@ -112,11 +135,21 @@ def hint_para_prompt(v: dict) -> str:
                 "Prova social LEVE ('boa parte dos seus vizinhos') — NUNCA cite quantidade nem número de clientes. "
                 "NUNCA marque data/hora. NUNCA encerre a conversa.]")
     if s == PROVAVEL:
-        return ("[VIABILIDADE=PROVAVEL — a RUA consta na base, mas aquele número tem menos de 3 clientes. "
-                "NUNCA afirme 'atendemos sim'. Fale em PROBABILIDADE boa, colete dados e transfira o Comercial (23) "
-                "para confirmar a viabilidade.]")
+        rua = v.get("rua") or "esse endereço"
+        return ("[VIABILIDADE=PROVAVEL — a RUA consta na nossa base (região ATENDIDA). Ordem do dono: PODE dizer "
+                "'nesse endereço temos disponibilidade SIM' com naturalidade. NÃO fique só pedindo endereço — "
+                "CONDUZA pro fechamento: (1) se ainda não enviou, ENVIE OS PLANOS residenciais AGORA (acao=fastreply, "
+                "fastReplyId 1296 — texto+imagens); (2) confirme NÚMERO e BAIRRO pra validar certinho; (3) pergunte se "
+                "é RESIDENCIAL ou EMPRESARIAL (empresarial → conduza aos consultores / Comercial 23, ficha diferente); "
+                "(4) puxe pro PRÉ-CADASTRO: 'já posso adiantar seu pré-cadastro pra equipe finalizar logo cedo e tentar "
+                "encaixar a instalação o quanto antes — quem sabe no mesmo dia ou em até 24h'. Quem MARCA a instalação "
+                "é o time Comercial. NUNCA marque data/hora exata. NUNCA encerre a conversa.]")
     if s == FORA_BASE:
-        return ("[VIABILIDADE=FORA_BASE — a rua não consta na base. NUNCA diga 'não atendemos' seco. "
-                "Acolha, registre o endereço como demanda e transfira o Comercial (23) para confirmar.]")
-    return ("[VIABILIDADE=SEM_ENDERECO — o cliente ainda não deu um endereço completo. Peça rua, número e bairro "
-            "com o motivo embutido antes de falar de cobertura.]")
+        return ("[VIABILIDADE=FORA_BASE — a rua não consta na base ainda. NUNCA diga 'não atendemos' seco. Diga que a "
+                "região é atendida, mas esse ponto específico pode precisar de uma VISTORIA técnica rápida antes da "
+                "instalação, e ofereça deixar os dados: 'A região é atendida, mas esse endereço pode precisar de uma "
+                "validação/vistoria técnica rápida. Já posso deixar seus dados pra equipe alinhar isso?'. Envie os "
+                "planos e conduza ao pré-cadastro do mesmo jeito. Transfira o Comercial (23) pra confirmar.]")
+    return ("[VIABILIDADE=SEM_ENDERECO — o cliente ainda não deu um endereço. Se ele demonstrou interesse em contratar, "
+            "JÁ ENVIE OS PLANOS (fastReplyId 1296) e peça a RUA, NÚMERO e BAIRRO pra validar — não fique só pedindo "
+            "endereço. Pergunte também se é residencial ou empresarial e vá conduzindo pro pré-cadastro.]")
