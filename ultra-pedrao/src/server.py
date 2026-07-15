@@ -135,6 +135,10 @@ def _parse_evento(p: dict):
         "tipo": g("message.mediaType", "event", "type", "mediaType", "message.type", default="chat"),
         "media_url": g("message.mediaUrl", "mediaUrl", default=None),
         "ts": g("message.timestamp", "message.msgCreatedAt", "timestamp", "ts", default=time.time()),
+        # sinais de que um HUMANO/departamento já assumiu (pra o bot NÃO atropelar o atendimento):
+        "status": str(g("message.ticket.status", "ticket.status", "status", default="")).lower(),
+        "user_id": g("message.ticket.userId", "ticket.userId", "message.userId", "userId", default=None),
+        "queue_id": g("message.ticket.queueId", "ticket.queueId", "message.queueId", "queueId", default=None),
         "_raw": p,
     }
 
@@ -260,6 +264,15 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     # FILTROS (não responder): própria empresa / grupo / mensagem antiga / vazia
     if ev["from_me"]:   return {"status": "ignorado_from_me"}
     if ev["is_group"]:  return {"status": "ignorado_grupo"}
+    # HUMANO/DEPARTAMENTO JÁ ASSUMIU: se o ticket foi aceito por um atendente (status open),
+    # atribuído a um humano (userId) ou transferido pra uma fila (queueId), o Pedrão NÃO responde
+    # — senão ele atropela o atendimento humano (falha grave: cliente transferido pro Suporte
+    # recebia mensagem comercial do bot).
+    if ev.get("status") == "open" or ev.get("user_id") or ev.get("queue_id"):
+        M.log_evento(ev["contato"], "ignorado_humano_assumiu",
+                     {"mask": _mask(ev["contato"]), "status": ev.get("status"),
+                      "user": bool(ev.get("user_id")), "queue": ev.get("queue_id")})
+        return {"status": "ignorado_humano_assumiu"}
     # liga/desliga pelo painel (o "botão" do dono, sem terminal)
     if not PAINEL.ativo():
         return {"status": "desligado_no_painel"}
