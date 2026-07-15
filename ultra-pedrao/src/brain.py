@@ -169,9 +169,9 @@ def _fastpath_desbloqueio(msg, fatos, contato, sessao_nova):
     mes_atual = datetime.now().strftime("%Y-%m")
     desb = "" if sessao_nova else str(fatos.get("desb") or "")
 
-    # (2) confirmação pendente -> executa no "sim"
+    # (2) confirmação pendente -> executa SÓ com "sim" E sem "não" (senão "não quero" liberava!)
     if desb == "confirma":
-        if _NAO.search(msg) and not _SIM.search(msg):
+        if _NAO.search(msg):
             return _fp("Sem problema! 😊 Qualquer coisa é só me chamar. Quer que eu te mande o boleto pra pagar?",
                        intencao="financeiro", dados={"desb": "feito"})
         if _SIM.search(msg):
@@ -249,6 +249,12 @@ def _suporte_passo(msg, sup, fatos):
         import mycore as MC
         nome_real, end_real = "", ""
         cpf = MC.extrair_cpf_cnpj(msg)
+        if not cpf:   # sem CPF ainda: pede de novo (até 2x) antes de seguir — não pula a coleta
+            tries = int(fatos.get("sup_try") or 0)
+            if tries < 2:
+                return _fp("Pra eu já achar seu cadastro e agilizar (sem te fazer repetir tudo depois), me confirma "
+                           "só o seu *nome* e o *CPF* (pode ser só os números)? 🙏",
+                           intencao="suporte", sup="1", dados={"sup_try": tries + 1})
         if cpf:
             try:
                 d = MC.dados_cliente_por_cpf(cpf)
@@ -277,15 +283,16 @@ def _suporte_passo(msg, sup, fatos):
         end = (fatos.get("sup_end") or "").strip()
         dados_linha = (nome if nome else "(nome a confirmar)") + (f", {end}" if end else " — endereço a confirmar")
         texto = (f"Obrigado por realizar os testes{', ' + prim if prim else ''}. 🙏\n\n"
-                 "Essa luz vermelha pode indicar uma falha no sinal da *fibra óptica*, então provavelmente vamos "
-                 "precisar enviar uma *equipe técnica*. Vou registrar tudo agora e, assim que nosso suporte receber "
-                 "esse comunicado, eles dão continuidade e agendam o reparo o quanto antes. *Nada do que você "
-                 "informou vai ficar só por aqui.*\n\n"
-                 "Só pra confirmar, o resumo do atendimento:\n"
+                 "Essa luz vermelha normalmente é um ajuste no sinal da *fibra óptica* — é comum e *tem solução*. "
+                 "Quem resolve isso é a nossa *equipe técnica* em campo.\n\n"
+                 "Já deixei seu caso *registrado e priorizado* aqui — não se perde. Nossa equipe atende *a partir das "
+                 "9h*; assim que o expediente começar, eles te chamam por aqui mesmo com o próximo passo. Você *não* "
+                 "precisa fazer mais nada 😊\n\n"
+                 "Resumo do seu atendimento:\n"
                  f"✔️ *Dados:* {dados_linha}\n"
-                 "✔️ *Problema:* sem sinal / possível LOSS na fibra (luz vermelha)\n"
+                 "✔️ *Problema:* sem sinal de internet (luz vermelha no aparelho)\n"
                  "✔️ *Testes:* reiniciou o roteador e a luz continuou vermelha\n\n"
-                 "Pode contar com a *WebFiber Provedor* 💙")
+                 "Pode ficar tranquilo(a) que vamos cuidar do seu caso até o fim. Pode contar com a *WebFiber Provedor* 💙")
         nota = (f"[PEDRÃO fora do horário] SUPORTE PRIORITÁRIO | {dados_linha} | Problema: sem sinal / LOSS "
                 "(luz vermelha, possível falha na fibra) | Testes: reiniciou o roteador, luz continuou vermelha | "
                 "Encaminhar equipe técnica pra agendar o reparo.")

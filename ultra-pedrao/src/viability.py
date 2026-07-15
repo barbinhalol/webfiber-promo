@@ -142,14 +142,20 @@ def hint_para_prompt(v: dict) -> str:
                 "fastReplyId 1296 — texto+imagens); (2) confirme NÚMERO e BAIRRO pra validar certinho; (3) pergunte se "
                 "é RESIDENCIAL ou EMPRESARIAL (empresarial → conduza aos consultores / Comercial 23, ficha diferente); "
                 "(4) puxe pro PRÉ-CADASTRO: 'já posso adiantar seu pré-cadastro pra equipe finalizar logo cedo e tentar "
-                "encaixar a instalação o quanto antes — quem sabe no mesmo dia ou em até 24h'. Quem MARCA a instalação "
-                "é o time Comercial. NUNCA marque data/hora exata. NUNCA encerre a conversa.]")
+                "encaixar a instalação o quanto antes — quem sabe no mesmo dia ou em até 24h'. Prova social LEVE, tipo "
+                "'boa parte dos seus vizinhos já é WebFiber' (NUNCA cite quantidade). Quem MARCA a instalação é o time "
+                "Comercial. NUNCA marque data/hora exata. NUNCA encerre.]")
     if s == FORA_BASE:
-        return ("[VIABILIDADE=FORA_BASE — a rua não consta na base ainda. NUNCA diga 'não atendemos' seco. Diga que a "
-                "região é atendida, mas esse ponto específico pode precisar de uma VISTORIA técnica rápida antes da "
-                "instalação, e ofereça deixar os dados: 'A região é atendida, mas esse endereço pode precisar de uma "
-                "validação/vistoria técnica rápida. Já posso deixar seus dados pra equipe alinhar isso?'. Envie os "
-                "planos e conduza ao pré-cadastro do mesmo jeito. Transfira o Comercial (23) pra confirmar.]")
-    return ("[VIABILIDADE=SEM_ENDERECO — o cliente ainda não deu um endereço. Se ele demonstrou interesse em contratar, "
-            "JÁ ENVIE OS PLANOS (fastReplyId 1296) e peça a RUA, NÚMERO e BAIRRO pra validar — não fique só pedindo "
-            "endereço. Pergunte também se é residencial ou empresarial e vá conduzindo pro pré-cadastro.]")
+        return ("[VIABILIDADE=FORA_BASE — a rua não consta na base. DECISÃO IMPORTANTE pela CIDADE: a WebFiber atende "
+                "SÓ o Rio de Janeiro. (a) Se o endereço for em OUTRA CIDADE/MUNICÍPIO fora do Rio de Janeiro (ex.: "
+                "outra cidade, outro estado), responda UMA vez, com pena: 'puxa... infelizmente não temos soluções "
+                "para atender ao endereço informado 😔', NUNCA feche a conversa, e TRANSFIRA pro setor de PLANOS "
+                "(fila 23) com nota interna. NÃO ofereça vistoria nem pré-cadastro nesse caso. (b) Se for NO Rio de "
+                "Janeiro mas a rua não consta, NÃO diga 'não atendemos' — diga que a região é atendida mas o ponto "
+                "pode precisar de uma VISTORIA técnica rápida, ofereça deixar os dados, envie os planos e conduza ao "
+                "pré-cadastro; transfira o Comercial (23). Na dúvida da cidade, pergunte a cidade antes de decidir.]")
+    return ("[VIABILIDADE=SEM_ENDERECO — o cliente ainda não deu um endereço COMPLETO. Se ele só citou uma CIDADE fora "
+            "do Rio de Janeiro, aplique a regra (a) do FORA_BASE (com pena + transfere Planos, sem fechar). Se "
+            "demonstrou interesse e é no Rio, JÁ ENVIE OS PLANOS (fastReplyId 1296) e peça RUA, NÚMERO e BAIRRO — não "
+            "fique só pedindo endereço. Pergunte se é residencial ou empresarial e conduza ao pré-cadastro. "
+            "IMPORTANTE: NUNCA mande duas mensagens repetidas dizendo a mesma coisa — seja objetivo, uma resposta só.]")

@@ -77,7 +77,11 @@ async def _vigia_notas():
                 if not ext:
                     continue
                 M.merge_fatos(contato, {"nota_ok": 1})   # ANTES de postar: garante 1x só (nunca spam)
-                r = FS.nota_interna(ext, _texto_nota_lead(contato, fatos), number=contato, delay=False)
+                texto = _texto_nota_lead(contato, fatos)
+                if "ainda sem dados" in texto:   # conversa vazia (só "oi") -> não incomoda o time
+                    continue
+                # to_thread: a chamada de rede NÃO pode bloquear o event loop (senão trava o webhook)
+                r = await asyncio.to_thread(FS.nota_interna, ext, texto, number=contato, delay=False)
                 M.log_evento(contato, "nota_lead", {"mask": _mask(contato), "enviado": bool(r.get("enviado"))})
         except Exception as e:
             print("[vigia_notas] erro:", e, flush=True)

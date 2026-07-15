@@ -173,10 +173,9 @@ def dados_cliente_por_cpf(cpf: str):
 
 
 def _faturas(path, client_id):
-    try:
-        return _get(path, id=str(client_id))
-    except MyCoreErro:
-        return []  # tolerante: pgtopen às vezes dá timeout; não derruba o resto
+    # PROPAGA o erro (antes engolia e virava [] -> o bot dizia "tudo em dia" pra devedor quando o
+    # MyCore caía). Quem chama trata: se der erro, cai no fallback em vez de afirmar que não deve.
+    return _get(path, id=str(client_id))
 
 
 def faturas_atrasadas(client_id):
@@ -233,7 +232,7 @@ def _envios_da_fatura(nome, fatura, atrasada):
     # prazo de compensação (texto oficial do dono) — sempre no fim da entrega da fatura
     envios.append({"tipo": "texto",
                    "text": "⏱️ *No Pix, o pagamento cai em até 30 minutos* (quase sempre na hora). "
-                           "*No boleto, a baixa leva de 1 a 2 dias úteis.*"})
+                           "*No boleto, a confirmação leva de 1 a 2 dias úteis.*"})
     return envios
 
 
@@ -251,16 +250,21 @@ def resolver_fatura(cpf: str, contato: str = None) -> dict:
         return {"status": "fallback", "motivo": "cpf_sem_cadastro"}
 
     nome = clientes[0].get("name") or ""
-    atrasadas, abertas = [], []
+    atrasadas, abertas, erro_fatura = [], [], False
     for c in clientes:
         cid = c.get("id")
         if not cid:
             continue
-        atrasadas += [(f, True) for f in faturas_atrasadas(cid)]
-        abertas += [(f, False) for f in faturas_abertas(cid)]
+        try:
+            atrasadas += [(f, True) for f in faturas_atrasadas(cid)]
+            abertas += [(f, False) for f in faturas_abertas(cid)]
+        except MyCoreErro:
+            erro_fatura = True   # endpoint de fatura caiu -> não afirmar "tudo em dia"
     todas = atrasadas + abertas  # prioriza vencidas
     todas = [t for t in todas if (t[0].get("pixccola") or t[0].get("linhadigitavel") or t[0].get("gurl") or t[0].get("url"))]
     if not todas:
+        if erro_fatura:
+            return {"status": "fallback", "motivo": "mycore_fatura_off"}  # link + Financeiro (NÃO diz "tudo em dia")
         return {"status": "sem_fatura", "nome": nome}
 
     # entrega SÓ a fatura mais relevante (vencida, senão a próxima a vencer). NUNCA mencionar as
@@ -300,12 +304,15 @@ def resolver_desbloqueio(cpf: str) -> dict:
         return {"status": "erro", "motivo": e.tipo}
     if not clientes:
         return {"status": "sem_cadastro"}
-    atrasadas = []
+    atrasadas, erro = [], False
     for c in clientes:
-        for f in faturas_atrasadas(c.get("id")):
-            g = dict(f); g["_nome"] = c.get("name") or ""; atrasadas.append(g)
+        try:
+            for f in faturas_atrasadas(c.get("id")):
+                g = dict(f); g["_nome"] = c.get("name") or ""; atrasadas.append(g)
+        except MyCoreErro:
+            erro = True
     if not atrasadas:
-        return {"status": "sem_atraso"}
+        return {"status": "erro"} if erro else {"status": "sem_atraso"}
     atrasadas.sort(key=lambda f: str(f.get("dt_vencimento") or ""))  # a mais antiga = a que bloqueou
     fat = atrasadas[0]
     return {"status": "elegivel", "cpf": digitos(cpf), "boleto_id": fat.get("id"),

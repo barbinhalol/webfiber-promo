@@ -162,10 +162,10 @@ def executar_decisao(external_key, d, number=None):
                 resultados.append(enviar_midia(external_key, e["url"], legenda=e.get("text") or "",
                                                number=number, delay=False))
             else:
-                eh_raw = tp == "raw"           # 'raw' = Pix/linha sem assinatura (copiar limpo)
+                # assina SÓ a 1ª mensagem (senão a assinatura se repetia em ~4 balões da fatura)
                 resultados.append(responder_texto(external_key, e.get("text", ""),
                                                    nota=(nota if primeiro else None), number=number,
-                                                   delay=primeiro, assinar=not eh_raw))
+                                                   delay=primeiro, assinar=primeiro))
             primeiro = False
         return FSResult(enviado=any(r.get("enviado") for r in resultados), modo=C.BOT_MODE, sequencia=resultados)
     if acao == "transferir":
