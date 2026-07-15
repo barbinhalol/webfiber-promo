@@ -490,10 +490,10 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     if acao == "fastreply" and fid in _FIDS_RESIDENCIAL and _EMPRESA.search(texto_todo):
         alertas.append("GUARD: empresa/PJ -> nao envia residencial, coleta dados empresariais")
         acao, fid, fila = "responder", 0, 0
-        texto = ("Perfeito! Pra empresa a gente tem planos e condições próprias, diferentes do residencial 😊 "
-                 "Me passa por gentileza o CNPJ, a razão social e o endereço do estabelecimento "
-                 "(rua, número e bairro)? Já registro aqui e nosso time Comercial te retorna com as "
-                 "condições empresariais certinhas.")
+        texto = ("Perfeito, pra empresa a gente tem soluções próprias 😊 Só pra eu te indicar o melhor caminho: "
+                 "a internet é pra *uso comum da empresa* (escritório, Wi-Fi da equipe, sistemas) ou vocês usam "
+                 "*câmeras, alarme, servidor ou algum sistema que precise de IP fixo*? "
+                 "Aí nosso time Comercial já te passa as condições certinhas.")
         d["nota_interna"] = ((d.get("nota_interna") or "").strip() +
                              " [LEAD EMPRESARIAL/PJ — passar condições empresariais, NÃO residencial]").strip()
     # viabilidade só "confirmada_predio" se o CÓDIGO confirmou
