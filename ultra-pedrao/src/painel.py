@@ -15,6 +15,7 @@ PADRAO = {
     "aviso": "",             # AVISO URGENTE (ex.: rompimento) — injetado no contexto do cerebro
     "aviso_ativo": False,     # o aviso so entra no contexto se estiver ativo
     "ajustes": "",           # instrucoes livres do dono em portugues (anexadas ao cerebro)
+    "desbloqueio_confianca": False,  # DESLIGADO por padrao: so o dono liga quando for testar
     "atualizado_em": 0.0,     # epoch da ultima alteracao (pro painel mostrar a vigencia)
     "senha": "",             # senha amigavel do painel (definida pelo dono; vazio = usa token/env)
 }
@@ -45,6 +46,10 @@ def salvar(novo: dict) -> dict:
 
 def ativo() -> bool:
     return bool(ler().get("ativo", True))
+
+def desbloqueio_ativo() -> bool:
+    """Desbloqueio em confiança só age quando o dono liga isto no painel."""
+    return bool(ler().get("desbloqueio_confianca", False))
 
 def modo_efetivo(env_modo: str) -> str:
     """Modo do painel tem prioridade sobre o .env (shadow/pilot/live)."""

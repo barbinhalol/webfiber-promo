@@ -130,6 +130,30 @@ def _get(path: str, **query):
     return d if isinstance(d, list) else ([d] if d else [])
 
 
+def _post(path: str, **fields):
+    """POST urlencoded (usado só pela promessa de pagamento / desbloqueio em confiança)."""
+    tok = _token()
+    if not tok:
+        raise MyCoreErro("token do MyCore não configurado", "auth")
+    url = BASE_URL.rstrip("/") + "/" + path.lstrip("/")
+    data = urllib.parse.urlencode({k: str(v) for k, v in fields.items()}).encode("utf-8")
+    req = urllib.request.Request(url, data=data, method="POST", headers={
+        "Authorization": f"Bearer {tok}", "Accept": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
+            raw = r.read().decode("utf-8")
+    except urllib.error.HTTPError as e:
+        raise MyCoreErro(f"HTTP {e.code} em {path}", "auth" if e.code in (401, 403) else "http")
+    except Exception as e:
+        raise MyCoreErro(f"falha de rede em {path}: {e}", "rede")
+    try:
+        return json.loads(raw)
+    except Exception:
+        return {"raw": raw}
+
+
 def clientes_por_cpf(cpf: str):
     return _get("cliente/list", cpfcnpj=digitos(cpf))
 
@@ -231,3 +255,50 @@ def resolver_fatura(cpf: str, contato: str = None) -> dict:
         envios.append({"tipo": "texto",
                        "text": f"Você tem mais {len(todas) - 1} fatura(s) em aberto. Quer que eu envie também? 😊"})
     return {"status": "entregue", "nome": nome, "envios": envios, "qtd": len(todas)}
+
+
+# ==================== DESBLOQUEIO EM CONFIANÇA (promessa de pagamento) ====================
+# Estrutura pronta; só age quando o dono LIGA no painel (PAINEL.desbloqueio_ativo()).
+# Regras do dono: sempre 3 dias, prazo até as 19h, e só 1x por mês.
+
+_MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho",
+          "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
+
+
+def _mes_pt(dtstr):
+    m = re.match(r"\d{4}-(\d{2})", str(dtstr or ""))
+    return _MESES[int(m.group(1)) - 1] if m else ""
+
+
+def prazo_desbloqueio(dias=3):
+    """Retorna 'DD/MM' de hoje + N dias (o horário 19h é fixo no texto). Container está em BRT."""
+    from datetime import datetime, timedelta
+    return (datetime.now() + timedelta(days=dias)).strftime("%d/%m")
+
+
+def resolver_desbloqueio(cpf: str) -> dict:
+    """SOMENTE CONSULTA a elegibilidade (não desbloqueia nada). Retorna:
+      'elegivel' (com boleto_id + mês da fatura atrasada mais antiga) | 'sem_atraso' |
+      'sem_cadastro' | 'erro'."""
+    try:
+        clientes = clientes_por_cpf(cpf)
+    except MyCoreErro as e:
+        return {"status": "erro", "motivo": e.tipo}
+    if not clientes:
+        return {"status": "sem_cadastro"}
+    atrasadas = []
+    for c in clientes:
+        for f in faturas_atrasadas(c.get("id")):
+            g = dict(f); g["_nome"] = c.get("name") or ""; atrasadas.append(g)
+    if not atrasadas:
+        return {"status": "sem_atraso"}
+    atrasadas.sort(key=lambda f: str(f.get("dt_vencimento") or ""))  # a mais antiga = a que bloqueou
+    fat = atrasadas[0]
+    return {"status": "elegivel", "cpf": digitos(cpf), "boleto_id": fat.get("id"),
+            "mes": _mes_pt(fat.get("dt_vencimento")), "nome": fat.get("_nome"),
+            "valor": _fmt_valor(fat.get("valor"))}
+
+
+def executar_desbloqueio(cpf: str, boleto_id) -> dict:
+    """EXECUTA a promessa de pagamento (status=1 = libera). SÓ é chamado com o recurso LIGADO."""
+    return _post("cliente/promesset", cpfcnpj=digitos(cpf), bid=boleto_id, status="1")

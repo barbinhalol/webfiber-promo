@@ -157,6 +157,14 @@ button.save:active{transform:translateY(1px)}
     </div>
 
     <div class="card">
+      <div class="avhead">
+        <h2 style="margin:0">🔓 Desbloqueio em confiança</h2>
+        <label class="mini-sw"><input type="checkbox" id="desbon"><i></i></label>
+      </div>
+      <div class="hint">Quando LIGADO, o Pedrão oferece o desbloqueio em confiança (3 dias, 1x por mês) pra quem está com fatura em atraso. <b>Deixe DESLIGADO até testarmos juntos.</b></div>
+    </div>
+
+    <div class="card">
       <h2>Ajustes de atendimento</h2>
       <div class="hint">Escreva em português o que ele deve ou não fazer. Ex.: “Não fale em quantidade de clientes. Saudação mais curta.”</div>
       <textarea id="ajustes" maxlength="4000" oninput="cc('ajustes')" placeholder="instruções livres pro Pedrão"></textarea>
@@ -209,6 +217,7 @@ function pintar(p){
   $('allow').value = p.allowlist || '';
   $('aviso').value = p.aviso || ''; cc('aviso');
   $('avon').checked = !!p.aviso_ativo; pintaAviso();
+  $('desbon').checked = !!p.desbloqueio_confianca;
   $('ajustes').value = p.ajustes || ''; cc('ajustes');
   if(p.atualizado_em){ ULT_SAVE = p.atualizado_em*1000; }
   tickFoot();
@@ -301,7 +310,8 @@ async function salvar(){
   try{
     var payload = {
       modo: modoSel(), allowlist: $('allow').value,
-      aviso: $('aviso').value, aviso_ativo: $('avon').checked, ajustes: $('ajustes').value
+      aviso: $('aviso').value, aviso_ativo: $('avon').checked, ajustes: $('ajustes').value,
+      desbloqueio_confianca: $('desbon').checked
     };
     var novaSenha = ($('senha').value||'').trim();
     if(novaSenha){ payload.senha = novaSenha; }

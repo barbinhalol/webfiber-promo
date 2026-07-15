@@ -136,6 +136,80 @@ def refere_anterior(texto):
     """True se o cliente cita algo já dito antes — libera ler o histórico mesmo em sessão nova."""
     return bool(_REF_ANTERIOR.search(texto or ""))
 
+# ---- DESBLOQUEIO EM CONFIANÇA (só age com o recurso LIGADO no painel) ----
+_DESBLOQ_KW = re.compile(
+    r"\b(desbloque|desbloqui|em\s*confian[çc]a|na\s*confian[çc]a|me\s*(libera|libere|desbloqueia)|"
+    r"religa(r|\s*a)?|reativa(r|\s*a)?|me\s*d[áa]\s*(uns|mais|alguns)\s*dias|"
+    r"pag(o|ar)\s*(depois|semana|dia|amanh[ãa])|s[óo]\s*(consigo\s*)?pag(ar|o))\b", re.I)
+_SIM = re.compile(r"\b(sim|quero|pode|isso|claro|com\s*certeza|aceito|fa[çz]a?|pode\s*ser|bora|"
+                  r"ok|isso\s*mesmo|desejo|por\s*favor|manda|vamos|blz|beleza)\b", re.I)
+_NAO = re.compile(r"\b(n[ãa]o|agora\s*n[ãa]o|deixa|depois|melhor\s*n[ãa]o|nem)\b", re.I)
+
+
+def _fastpath_desbloqueio(msg, fatos, contato, sessao_nova):
+    """Fluxo do desbloqueio em confiança (só é chamado quando o dono LIGA no painel):
+    pede CPF -> confere elegibilidade -> pergunta 'deseja fazer?' -> no 'sim', libera (promesset),
+    dá o prazo de 3 dias às 19h e avisa que é 1x por mês."""
+    import mycore as MC, respostas as R
+    from datetime import datetime
+    mes_atual = datetime.now().strftime("%Y-%m")
+    desb = "" if sessao_nova else str(fatos.get("desb") or "")
+
+    # (2) confirmação pendente -> executa no "sim"
+    if desb == "confirma":
+        if _NAO.search(msg) and not _SIM.search(msg):
+            return _fp("Sem problema! 😊 Qualquer coisa é só me chamar. Quer que eu te mande o boleto pra pagar?",
+                       intencao="financeiro", dados={"desb": "feito"})
+        if _SIM.search(msg):
+            cpf, bid, mes = fatos.get("desb_cpf"), fatos.get("desb_bid"), (fatos.get("desb_mes") or "")
+            if not (cpf and bid):
+                return _fp("Deixa eu confirmar rapidinho — me manda seu *CPF* de novo, por gentileza? 😊",
+                           intencao="financeiro", dados={"desb": "aguarda_cpf_desb"})
+            try:
+                MC.executar_desbloqueio(cpf, bid)
+            except Exception:
+                return _fp("Puxa, não consegui concluir o desbloqueio agora 😕 Vou te passar pra nossa equipe do "
+                           "Financeiro pra resolver rapidinho, tá?", acao="transferir", fila=25,
+                           intencao="financeiro", dados={"desb": "feito"})
+            prazo = MC.prazo_desbloqueio(3)
+            txt = (f"Prontinho, liberei o seu acesso em confiança! ✅\n\n"
+                   f"A fatura de *{mes}* precisa ser paga até *dia {prazo}, às 19h*.\n\n"
+                   f"Só um lembrete com carinho: o *desbloqueio em confiança* pode ser feito *uma vez por mês* — "
+                   f"depois disso, o sistema só reativa com o pagamento. Combinado? 😊")
+            return _fp(txt, intencao="financeiro", dados={"desb": "feito", "desbloqueio_mes": mes_atual, "nota_ok": 1})
+        return None  # resposta ambígua -> deixa o LLM conduzir
+
+    # (1) intenção de desbloqueio (ou já estava esperando o CPF pro desbloqueio)
+    if not (_DESBLOQ_KW.search(msg) or desb == "aguarda_cpf_desb"):
+        return None
+    if fatos.get("desbloqueio_mes") == mes_atual:
+        return _fp("Vi aqui que o *desbloqueio em confiança* já foi usado este mês 😊 Ele pode ser feito só uma vez "
+                   "por mês — pra reativar agora, é pelo pagamento. Quer que eu te mande o boleto?",
+                   intencao="financeiro", dados={"desb": "feito"})
+    cpf = MC.extrair_cpf_cnpj(msg)
+    if not cpf:
+        return _fp("Claro! Pra fazer o *desbloqueio em confiança*, me manda só o seu *CPF* (pode ser só os "
+                   "números) 😊", intencao="financeiro", dados={"desb": "aguarda_cpf_desb"})
+    try:
+        res = MC.resolver_desbloqueio(cpf)
+    except Exception:
+        res = {"status": "erro"}
+    if res.get("status") == "elegivel":
+        return _fp(f"Vi que a sua fatura de *{res['mes']}* está em aberto e o acesso está suspenso. Posso te fazer um "
+                   f"*desbloqueio em confiança* de *3 dias*, pra você usar enquanto regulariza 😊\n\n"
+                   f"*Você deseja fazer o desbloqueio em confiança?*",
+                   intencao="financeiro",
+                   dados={"desb": "confirma", "desb_cpf": res["cpf"], "desb_bid": res["boleto_id"],
+                          "desb_mes": res["mes"]})
+    if res.get("status") == "sem_atraso":
+        return _fp("Boa notícia: não vi nenhuma fatura em atraso no seu CPF 😊 seu acesso não está bloqueado por "
+                   "pagamento. Se estiver sem internet, me conta que eu te ajudo pelo suporte!",
+                   intencao="financeiro", dados={"desb": "feito"})
+    # sem cadastro / erro -> Financeiro humano (não inventa nada)
+    return _fp(R.FINANCEIRO_FATURA, acao="transferir", fila=25, intencao="financeiro",
+               nota="[Pedrão] Desbloqueio: não localizei pelo CPF (ou MyCore fora); enviei o link e transferi.",
+               dados={"desb": "feito"})
+
 
 def _fp(texto, acao="responder", intencao="saudacao", fila=0, fid=0, nota="", sup=None, icone="⚡", dados=None):
     dc = dict(dados or {})
@@ -211,6 +285,16 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     #      SEM link. Só entrega se o CPF bater com o número de WhatsApp (anti-golpe/LGPD). Se não
     #      bater/achar/erro -> cai no link da área do cliente + transfere Financeiro (25).
     import respostas as R
+    # 2.4) DESBLOQUEIO EM CONFIANÇA — só age quando o dono LIGA no painel (senão, dorme)
+    try:
+        _desb_on = bool(PAINEL and PAINEL.desbloqueio_ativo())
+    except Exception:
+        _desb_on = False
+    if _desb_on:
+        _dsb = _fastpath_desbloqueio(msg, fatos, contato, sessao_nova)
+        if _dsb is not None:
+            return _dsb
+
     fin_state = "" if sessao_nova else str(fatos.get("fin") or "")
     # entra no fluxo se pediu financeiro AGORA, ou se está aguardando o CPF E a msg tem dígitos
     # (uma tentativa de CPF) — assim, se o cliente mudar de assunto no meio, não fica preso.
