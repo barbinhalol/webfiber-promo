@@ -134,9 +134,11 @@ _DICAS_TEXTO = (
     "• Pra TV, videogame e PC, *cabo de rede* é bem mais estável que o Wi-Fi.\n"
     "• Muitos aparelhos ligados ao mesmo tempo dividem o desempenho da rede.\n"
     "• Reiniciar de vez em quando ajuda — mas se o problema volta sempre, aí o suporte analisa.")
-# muda de assunto no meio do roteiro -> deixa o LLM assumir (server encerra o roteiro)
+# muda de assunto no meio do roteiro -> deixa o LLM assumir (server encerra o roteiro).
+# SEM \b no fim (senão "cancelar"/"cancelamento"/"planos" — as palavras MAIS comuns de desvio —
+# não casavam, e o cliente ficava preso no pedido de nome+CPF do suporte).
 _DESVIO_ASSUNTO = re.compile(
-    r"\b(plano|pre[çc]o|valor|quanto\s+custa|cancel|fatura|boleto|atendente|humano|pessoa\s+de\s+verdade|falar\s+com\s+algu[ée]m)\b", re.I)
+    r"\b(plano|pre[çc]o|valor|quanto\s+custa|cancel|fatura|boleto|atendente|humano|pessoa\s+de\s+verdade|falar\s+com\s+algu[ée]m)", re.I)
 
 # cliente se REFERE a algo dito antes ("você não viu aqui em cima", "já te falei"): mesmo numa
 # conversa FECHADA e reaberta (que começa do zero), aí o Pedrão PODE ler o histórico pra responder.

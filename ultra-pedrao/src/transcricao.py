@@ -25,7 +25,9 @@ def _baixar(media_url, jwt=None, limite_mb=None):
 def _gemini_audio(data, ctype):
     if not C.GEMINI_API_KEY:
         raise TranscricaoError("GEMINI_API_KEY ausente p/ transcrição")
-    model = "gemini-2.0-flash"
+    # 2.0-flash tem cota ZERO no free tier de algumas contas (confirmado ao vivo 15/07/2026);
+    # 2.5-flash aceita audio inline normalmente no free tier.
+    model = os.environ.get("TRANSCRICAO_MODEL", "gemini-2.5-flash")
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={C.GEMINI_API_KEY}"
     body = {"contents": [{"role": "user", "parts": [
         {"text": "Transcreva este áudio em português do Brasil. Devolva SOMENTE a transcrição, sem comentários."},
