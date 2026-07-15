@@ -79,11 +79,11 @@ def _enviar(body, usar="resposta", delay=True):
 
 # Assinatura fixa (como os atendentes humanos assinam "*Nome*:") — deixa claro que é agente virtual
 # sem precisar repetir "sou virtual" no texto. NÃO entra na saudação (que já se apresenta).
-_ASSINATURA = "😎 *Pedrão · Agente Virtual*\n"
+_ASSINATURA = "*Pedrão · Agente Virtual*\n"
 
 def _assinar(texto):
     t = texto or ""
-    if t and "virtual" not in t.lower() and not t.lstrip().startswith("😎") and len(t) > 8:
+    if t and "virtual" not in t.lower() and not t.lstrip().startswith("*Pedrão") and len(t) > 8:
         return _ASSINATURA + t
     return t
 
