@@ -122,7 +122,18 @@ _SUP_RESOLVIDO = re.compile(
     r"pegou|conectou|voltei\s+a\s+navegar|ok\s+agora|consegui|j[áa]\s+voltou)\b", re.I)
 _SUP_NAO_RESOLVIDO = re.compile(
     r"\b(n[ãa]o\s+(voltou|volto|funcion|resolv|pegou|conectou|adiantou)|continua|mesma\s+coisa|"
-    r"nada|ainda\s+(sem|n[ãa]o)|persist|vermelh|piscando|apagad|sem\s+luz|do\s+mesmo\s+jeito|nao\s+deu)\b", re.I)
+    r"nada|ainda\s+(sem|n[ãa]o)|persist|vermelh|loss|piscando|apagad|sem\s+luz|do\s+mesmo\s+jeito|nao\s+deu)\b", re.I)
+
+# dicas rápidas de internet (só enviadas se o cliente ACEITAR) — texto do dono, curto
+_DICAS_TEXTO = (
+    "Boa! 😊 No Wi-Fi, o *5G* geralmente é mais rápido, mas funciona melhor perto do roteador (perde força "
+    "com paredes). Já o *2.4GHz* (2G) alcança mais longe, porém costuma ser mais lento e sofrer interferência.\n\n"
+    "Mais dicas rapidinhas:\n"
+    "• Deixe o roteador em local *alto e aberto* — nunca dentro do armário.\n"
+    "• Longe de micro-ondas, espelhos, paredes grossas e muitos eletrônicos.\n"
+    "• Pra TV, videogame e PC, *cabo de rede* é bem mais estável que o Wi-Fi.\n"
+    "• Muitos aparelhos ligados ao mesmo tempo dividem o desempenho da rede.\n"
+    "• Reiniciar de vez em quando ajuda — mas se o problema volta sempre, aí o suporte analisa.")
 # muda de assunto no meio do roteiro -> deixa o LLM assumir (server encerra o roteiro)
 _DESVIO_ASSUNTO = re.compile(
     r"\b(plano|pre[çc]o|valor|quanto\s+custa|cancel|fatura|boleto|atendente|humano|pessoa\s+de\s+verdade|falar\s+com\s+algu[ée]m)\b", re.I)
@@ -249,37 +260,46 @@ def _suporte_passo(msg, sup, fatos):
         dados = {"sup_nome": nome_real or msg.strip()[:60], "sup_end": end_real}
         prim = nome_real.split(" ")[0].title() if nome_real else ""
         texto = (f"Obrigado{', ' + prim if prim else ''}! Vamos tentar restabelecer a conexão 🙌\n\n"
-                 "Por favor: retire o *roteador* da tomada, aguarde *1 minuto completo*, reconecte na tomada e "
-                 "espere as luzes se estabilizarem.\n\n"
-                 "Me avisa qual a *cor da luz* que acendeu (verde, vermelha…) e se a internet voltou?")
+                 "Por favor: retire o *roteador* da tomada, aguarde *1 minuto completo*, reconecte e espere as luzes "
+                 "se estabilizarem.\n\n"
+                 "Enquanto reinicia, quer que eu te passe umas *dicas rápidas* pra melhorar a internet no dia a dia? 😊\n\n"
+                 "E me avisa qual a *cor da luz* que acendeu (verde, vermelha…) e se a internet voltou?")
         return _fp(texto, intencao="suporte", sup="2", dados=dados)
 
-    # (2) leu a luz / resultado do reinício
+    # (2) leu a luz / resultado do reinício — ou respondeu sobre as dicas
     nome = (fatos.get("sup_nome") or "").strip()
     prim = nome.split(" ")[0].title() if nome else ""
     if _SUP_RESOLVIDO.search(msg) and not _SUP_NAO_RESOLVIDO.search(msg):
         texto = (f"Que ótimo que voltou{', ' + prim if prim else ''}! 😊 Fico à disposição — qualquer coisa é só me "
                  "chamar. Posso te ajudar em mais alguma coisa?")
         return _fp(texto, intencao="suporte", sup="fim")
-    if _SUP_NAO_RESOLVIDO.search(msg):
+    if _SUP_NAO_RESOLVIDO.search(msg):   # luz vermelha / LOSS / não voltou -> falha na fibra, equipe técnica
         end = (fatos.get("sup_end") or "").strip()
         dados_linha = (nome if nome else "(nome a confirmar)") + (f", {end}" if end else " — endereço a confirmar")
         texto = (f"Obrigado por realizar os testes{', ' + prim if prim else ''}. 🙏\n\n"
-                 "Como a conexão não voltou, pode ser algo mais específico. Já documentei tudo que conversamos e "
-                 "encaminhei com *prioridade* pra nossa equipe técnica — eles analisam seu caso logo no primeiro "
-                 "horário da manhã do próximo dia útil. Se normalizar durante a noite, ótimo; se não, a equipe entra "
-                 "em contato com você pela manhã pra resolver de vez.\n\n"
-                 "Só pra confirmar, o resumo do nosso atendimento:\n"
+                 "Essa luz vermelha pode indicar uma falha no sinal da *fibra óptica*, então provavelmente vamos "
+                 "precisar enviar uma *equipe técnica*. Vou registrar tudo agora e, assim que nosso suporte receber "
+                 "esse comunicado, eles dão continuidade e agendam o reparo o quanto antes. *Nada do que você "
+                 "informou vai ficar só por aqui.*\n\n"
+                 "Só pra confirmar, o resumo do atendimento:\n"
                  f"✔️ *Dados:* {dados_linha}\n"
-                 "✔️ *Problema:* sem conexão de internet\n"
-                 "✔️ *Testes:* reiniciou o roteador e a conexão não voltou\n\n"
-                 "Lamento pelo transtorno — sabemos o quanto a internet é importante e vamos cuidar do seu caso até o "
-                 "fim. Pode contar com a *WebFiber Provedor* 💙")
-        nota = (f"[PEDRÃO fora do horário] SUPORTE PRIORITÁRIO | {dados_linha} | Problema: sem conexão | "
-                "Testes: reiniciou o roteador, não voltou | Encaminhar equipe técnica no 1º horário do próximo dia útil.")
+                 "✔️ *Problema:* sem sinal / possível LOSS na fibra (luz vermelha)\n"
+                 "✔️ *Testes:* reiniciou o roteador e a luz continuou vermelha\n\n"
+                 "Pode contar com a *WebFiber Provedor* 💙")
+        nota = (f"[PEDRÃO fora do horário] SUPORTE PRIORITÁRIO | {dados_linha} | Problema: sem sinal / LOSS "
+                "(luz vermelha, possível falha na fibra) | Testes: reiniciou o roteador, luz continuou vermelha | "
+                "Encaminhar equipe técnica pra agendar o reparo.")
         return _fp(texto, acao="transferir", intencao="suporte", fila=24, nota=nota, sup="fim",
                    dados={"nota_ok": 1}, icone="⚡➡️")  # já tem nota rica na transferência -> não repetir no vigia
-    return None  # resposta ambígua sobre a luz -> LLM decide
+    # ainda não falou da luz -> pode ter respondido sobre as DICAS (oferece uma vez só)
+    if not fatos.get("sup_dicas"):
+        if _SIM.search(msg) and not _NAO.search(msg):
+            return _fp(_DICAS_TEXTO + "\n\nE aí, qual a *cor da luz* que acendeu e se a internet voltou?",
+                       intencao="suporte", sup="2", dados={"sup_dicas": 1})
+        if _NAO.search(msg):
+            return _fp("Tranquilo! 😊 Então me avisa qual a *cor da luz* que acendeu e se a internet voltou?",
+                       intencao="suporte", sup="2", dados={"sup_dicas": 1})
+    return None  # resposta ambígua -> LLM decide
 
 def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, contato=None):
     """Decisão pronta SEM LLM pros casos previsíveis do prompt: saudação (sempre como atendente
