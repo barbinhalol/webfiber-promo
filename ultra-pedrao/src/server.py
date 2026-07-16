@@ -91,6 +91,16 @@ async def _vigia_notas():
 async def _ligar_vigia():
     asyncio.create_task(_vigia_notas())
 
+# SENTINELA ANTI-DUPLO-BOT (incidente 15-16/07/2026: canal trocado pro chatbot NATIVO da
+# FlowSeller e o Pedrao continuou respondendo -> DOIS bots na mesma conversa). Os menus do
+# nativo chegam aqui pelo webhook como mensagem do NOSSO numero (fromMe). Ao reconhecer um,
+# o Pedrao se PAUSA sozinho por 10 min (renovado a cada menu). Assim a troca do canal na
+# FlowSeller vira o UNICO interruptor -- sem precisar lembrar do painel.
+_MENU_NATIVO = re.compile(
+    r"(\b[123]\s*-\s*(FALAR COM ATENDENTE|PLANOS\s*/?\s*COMERCIAL|FINANCEIRO)\b|"
+    r"Escolha uma (op[çc][ãa]o|das op[çc][õo]es)|"
+    r"N[ãa]o entendi sua resposta\.?\s*Vamos tentar novamente)", re.I)
+
 def _dedup(key: str) -> bool:
     now = time.time()
     for k, ts in list(_SEEN.items()):
@@ -254,6 +264,13 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
                            "contato_mask": _mask(ev["contato"])},
         })
 
+    # SENTINELA: menu do chatbot NATIVO saindo do nosso número -> registra e pausa o Pedrão
+    # (ANTES do dedup, pra renovar a janela a cada menu visto)
+    if ev["from_me"] and ev["texto"] and _MENU_NATIVO.search(str(ev["texto"])):
+        PAINEL.marcar_bot_nativo()
+        M.log_evento(ev["contato"], "bot_nativo_detectado", {"mask": _mask(ev["contato"])})
+        return {"status": "bot_nativo_detectado_pedrao_em_pausa"}
+
     # idempotência (webhook repetido) — SEM o ts: a FlowSeller às vezes reenvia a MESMA mensagem
     # com timestamp diferente, o que gerava resposta duplicada. Dedup por contato+texto na janela TTL.
     _txt_norm = " ".join(str(ev["texto"]).lower().split())
@@ -276,6 +293,11 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     # liga/desliga pelo painel (o "botão" do dono, sem terminal)
     if not PAINEL.ativo():
         return {"status": "desligado_no_painel"}
+    # chatbot NATIVO da FlowSeller atendendo o canal? -> o Pedrão se cala sozinho (anti-duplo-bot).
+    # Some o menu nativo (canal voltou pro fluxo vazio) -> retoma automático em ~10 min.
+    if PAINEL.bot_nativo_ativo():
+        M.log_evento(ev["contato"], "pausado_bot_nativo", {"mask": _mask(ev["contato"])})
+        return {"status": "pausado_bot_nativo_ativo"}
     _modo = PAINEL.modo_efetivo(C.BOT_MODE)
     # modo teste OU piloto: processa só número(s) autorizado(s) — ignora o resto do movimento de produção
     _lista = C.TESTE_SO_NUMERO or (PAINEL.allowlist_efetiva(C.PILOT_ALLOWLIST) if _modo == "pilot" else [])

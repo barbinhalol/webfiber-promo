@@ -17,6 +17,7 @@ PADRAO = {
     "ajustes": "",           # instrucoes livres do dono em portugues (anexadas ao cerebro)
     "desbloqueio_confianca": False,  # DESLIGADO por padrao: so o dono liga quando for testar
     "saudacao": "",           # ""=usa a saudacao padrao do codigo | texto custom (ex.: evento/feriado)
+    "nativo_ts": 0.0,         # sentinela anti-duplo-bot: quando o menu NATIVO da FlowSeller foi visto
     "atualizado_em": 0.0,     # epoch da ultima alteracao (pro painel mostrar a vigencia)
     "senha": "",             # senha amigavel do painel (definida pelo dono; vazio = usa token/env)
 }
@@ -51,6 +52,21 @@ def ativo() -> bool:
 def desbloqueio_ativo() -> bool:
     """Desbloqueio em confiança só age quando o dono liga isto no painel."""
     return bool(ler().get("desbloqueio_confianca", False))
+
+def marcar_bot_nativo():
+    """SENTINELA ANTI-DUPLO-BOT: registra que o chatbot NATIVO da FlowSeller acabou de mandar
+    um menu (detectado no webhook como mensagem do nosso proprio numero). Enquanto isso estiver
+    'fresco', o Pedrao se cala sozinho -- nunca mais dois bots na mesma conversa."""
+    salvar({"nativo_ts": time.time()})
+
+def bot_nativo_ativo(janela_s: int = 600) -> bool:
+    """True se o menu nativo foi visto nos ultimos janela_s segundos (10 min por padrao).
+    Trocar o canal na FlowSeller vira o UNICO interruptor: ligou o nativo -> Pedrao pausa na hora;
+    voltou pro fluxo vazio -> menus somem e o Pedrao retoma sozinho em ~10 min."""
+    try:
+        return (time.time() - float(ler().get("nativo_ts") or 0)) < janela_s
+    except Exception:
+        return False
 
 def saudacao_custom() -> str:
     """Saudação customizada (ex.: evento/feriado). Vazio = usa a padrão do código (brain._ABERTURA).

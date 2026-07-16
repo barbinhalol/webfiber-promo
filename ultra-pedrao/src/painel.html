@@ -223,6 +223,10 @@ function pintar(p){
   $('dot').className = 'dot ' + (p.ativo?'on':'off');
   $('stlab').textContent = p.ativo ? 'LIGADO' : 'DESLIGADO';
   $('stsub').textContent = p.ativo ? 'atendendo os clientes' : 'não responde ninguém';
+  // sentinela anti-duplo-bot: o robô NATIVO da FlowSeller está no canal -> pausa automática
+  if(p.ativo && p.nativo_ts && (Date.now()/1000 - p.nativo_ts) < 600){
+    $('stsub').textContent = '⚠️ robô nativo da FlowSeller no canal — pausa automática (retoma sozinho quando ele sumir)';
+  }
   var modo = p.modo || 'pilot';
   document.querySelectorAll('#segmodo button').forEach(function(b){ b.className = (b.dataset.v===modo)?'sel':''; });
   $('allow').value = p.allowlist || '';
