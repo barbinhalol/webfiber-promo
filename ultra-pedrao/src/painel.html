@@ -109,6 +109,9 @@ button.save:active{transform:translateY(1px)}
         </div>
         <label class="sw"><input type="checkbox" id="ativo" onchange="toggle()"><i></i></label>
       </div>
+      <div id="nativobox" style="display:none;margin-top:14px">
+        <button class="ghost" style="border-color:var(--warn);color:var(--warn)" onclick="retomarPedrao()">▶️ Retomar Pedrão agora (parar de esperar o robô nativo)</button>
+      </div>
     </div>
 
     <div class="card" id="apikeycard">
@@ -224,9 +227,11 @@ function pintar(p){
   $('stlab').textContent = p.ativo ? 'LIGADO' : 'DESLIGADO';
   $('stsub').textContent = p.ativo ? 'atendendo os clientes' : 'não responde ninguém';
   // sentinela anti-duplo-bot: o robô NATIVO da FlowSeller está no canal -> pausa automática
-  if(p.ativo && p.nativo_ts && (Date.now()/1000 - p.nativo_ts) < 600){
-    $('stsub').textContent = '⚠️ robô nativo da FlowSeller no canal — pausa automática (retoma sozinho quando ele sumir)';
+  var nativoOn = p.ativo && p.nativo_ts && (Date.now()/1000 - p.nativo_ts) < 1800;
+  if(nativoOn){
+    $('stsub').textContent = '⚠️ robô nativo da FlowSeller no canal — Pedrão em pausa automática';
   }
+  $('nativobox').style.display = nativoOn ? 'block' : 'none';
   var modo = p.modo || 'pilot';
   document.querySelectorAll('#segmodo button').forEach(function(b){ b.className = (b.dataset.v===modo)?'sel':''; });
   $('allow').value = p.allowlist || '';
@@ -240,6 +245,10 @@ function pintar(p){
 }
 function pintaAviso(){ $('avcard').className = 'card' + ($('avon').checked?' avon':''); }
 function restaurarSaudacao(){ $('saudacao').value = SAUDACAO_PADRAO; cc('saudacao'); }
+async function retomarPedrao(){
+  try{ var p = await api('POST', {nativo_ts: 0}); pintar(p); vigencia('Pedrão retomado — pausa do robô nativo cancelada'); }
+  catch(e){ alert('Erro ao retomar. Confira a conexão.'); }
+}
 
 document.querySelectorAll('#segmodo button').forEach(function(b){
   b.onclick=function(){ document.querySelectorAll('#segmodo button').forEach(function(x){x.className=''}); b.className='sel'; };

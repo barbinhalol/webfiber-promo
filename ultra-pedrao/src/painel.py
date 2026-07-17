@@ -59,10 +59,12 @@ def marcar_bot_nativo():
     'fresco', o Pedrao se cala sozinho -- nunca mais dois bots na mesma conversa."""
     salvar({"nativo_ts": time.time()})
 
-def bot_nativo_ativo(janela_s: int = 600) -> bool:
-    """True se o menu nativo foi visto nos ultimos janela_s segundos (10 min por padrao).
-    Trocar o canal na FlowSeller vira o UNICO interruptor: ligou o nativo -> Pedrao pausa na hora;
-    voltou pro fluxo vazio -> menus somem e o Pedrao retoma sozinho em ~10 min."""
+def bot_nativo_ativo(janela_s: int = 1800) -> bool:
+    """True se o menu nativo foi visto nos ultimos janela_s segundos (30 min por padrao -- subiu de
+    10 pra 30 porque um VALE de movimento > janela reabria a brecha da 1a mensagem: a janela
+    expirava e a 1a msg de uma conversa nova passava antes do menu nativo daquela conversa sair).
+    Trocar o canal na FlowSeller vira o interruptor: ligou o nativo -> Pedrao pausa; voltou pro fluxo
+    vazio -> clique "Retomar Pedrao agora" no painel (ou espera ~30 min sem menu)."""
     try:
         return (time.time() - float(ler().get("nativo_ts") or 0)) < janela_s
     except Exception:
