@@ -129,7 +129,7 @@ _SUP_INTENCAO = re.compile(
     r"parou\s+de\s+funcionar|t[áa]\s+(lenta|lento|oscilando|caindo|ruim)|internet\s+n[ãa]o)\b", re.I)
 _FINANCEIRO_KW = re.compile(
     r"\b(atras|fatura|boleto|cobran|cortaram|cortada|cortou|bloque|esqueci\s+de\s+pagar|"
-    r"pagamento|vencid|d[ée]bito|negativ|2[ªa]?\s*via|segunda\s+via|desbloque)\b", re.I)
+    r"pagamento|vencid|d[ée]bito|negativ|2[ªa]?\s*via|segunda\s+via|desbloque|financeiro)\b", re.I)
 _SUP_RESOLVIDO = re.compile(
     r"\b(voltou|volto[uw]?|funcion(ou|a)|resolv(eu|ido)|deu\s+certo|normaliz|t[áa]\s+(funcionando|de\s+boa|normal)|"
     r"pegou|conectou|voltei\s+a\s+navegar|ok\s+agora|consegui|j[áa]\s+voltou)\b", re.I)
