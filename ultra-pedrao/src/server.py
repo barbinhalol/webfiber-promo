@@ -155,6 +155,13 @@ def _parse_evento(p: dict):
 def _processar(contato, texto, ctx):
     """Chamado pelo debouncer após agrupar as mensagens do contato."""
     ext = ctx.get("external_key")
+    # SENTINELA — 2ª checagem (pós-debounce), fecha a CORRIDA DO 1º BALÃO: na 1ª mensagem de uma
+    # conversa nova, o menu nativo e o Pedrão reagem À MESMA mensagem ao mesmo tempo; no instante
+    # do webhook o menu ainda não tinha saído, então a 1ª checagem não pegava. Aqui já passaram os
+    # ~2s do agrupamento -> o menu nativo já chegou (fromMe) e marcou o painel -> o Pedrão desiste.
+    if PAINEL.bot_nativo_ativo():
+        M.log_evento(contato, "pausado_bot_nativo_pos_debounce", {"mask": _mask(contato)})
+        return
     # sessão nova/reaberta: a FlowSeller cria um ticket_id novo quando o atendimento anterior
     # foi fechado. Comparamos com o último ticket_id visto pra esse contato -- se mudou (ou é o
     # primeiro contato), sinalizamos pro cérebro cumprimentar do jeito clássico.
