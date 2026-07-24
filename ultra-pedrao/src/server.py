@@ -773,7 +773,9 @@ async def admin_teste_botoes(request: Request, x_admin_token: str = Header(defau
     linha = (body.get("linha") or "").strip()
     if not pix and body.get("cpf"):        # busca uma fatura real no MyCore
         try:
-            r = MC.resolver_fatura(re.sub(r"\D", "", str(body["cpf"])))
+            # client_id: CPF com vários cadastros (o dono só tem boleto no 6817)
+            r = MC.resolver_fatura(re.sub(r"\D", "", str(body["cpf"])),
+                                   client_id=body.get("client_id"))
             f = (r or {}).get("fatura") or {}
             pix = (f.get("pixccola") or "").strip(); linha = (f.get("linhadigitavel") or "").strip()
         except Exception as e:
