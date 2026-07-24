@@ -128,10 +128,12 @@ def nota_interna(external_key, texto, number=None, delay=True):
     return _enviar(body, "resposta", delay=delay)
 
 def transferir(external_key, queue_id, nota=None, texto=None, user_id=None, number=None, delay=True):
-    body = {"externalKey": external_key, "queueId": queue_id, "forceTicketToDepartment": True}
+    # "body" SEMPRE presente (mesmo vazio): sem a chave, a FlowSeller cria um registro de mensagem
+    # vazio que falha ao despachar -> balões "Falha no envio" na tela do time (auditoria 24/07).
+    body = {"externalKey": external_key, "queueId": queue_id, "forceTicketToDepartment": True,
+            "body": _assinar(texto) if texto else ""}
     if number: body["number"] = number
     if user_id: body["forceTicketToUser"] = True; body["userId"] = user_id
-    if texto: body["body"] = _assinar(texto)   # última fala do bot antes do humano — também assinada
     if nota: body["note"] = {"body": nota}
     return _enviar(body, "transfer", delay=delay)
 

@@ -634,6 +634,14 @@ def resumir(historico, resumo_anterior=""):
         return resumo_anterior
 
 def _fallback(motivo, viab, raw=None):
+    # HORÁRIO HUMANO: fallback fica MUDO (nem nota, nem transferência) — se algo escapou dos gates
+    # com a equipe presente, o pior a fazer é transferir ticket vazio e sujar a tela do time
+    # (incidente 24/07: balões "Falha no envio" + notas de "JSON inválido" no meio do expediente).
+    if not S.deve_atuar():
+        return {"acao": "aguardar", "fila": 0, "texto": "", "intencao": "ambiguo",
+                "viabilidade": "naoaplicavel", "motivo": motivo, "nota_interna": "",
+                "_alertas": [motivo + " (horário humano: silêncio)"], "_viabilidade_sistema": viab,
+                "_raw": (raw or "")[:200], "_render": f"🤫 (fallback silencioso, horário humano) — {motivo}"}
     return {"acao": "transferir", "fila": 112, "texto": "", "intencao": "ambiguo",
             "viabilidade": "naoaplicavel", "motivo": motivo,
             "nota_interna": f"[Pedrão] transferência automática — {motivo}",

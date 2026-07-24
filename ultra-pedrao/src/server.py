@@ -554,7 +554,9 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     # horário: Pedrão atua fora do expediente humano. TRAVA (24/07): FORCAR_ATUACAO é flag de
     # TESTE e ficou esquecida no .env -> o Pedrão se apresentou em pleno horário humano por cima
     # da equipe. Em modo LIVE ela passa a ser IGNORADA — só vale em shadow/pilot (teste de verdade).
-    _forcar_teste = C.FORCAR_ATUACAO and PAINEL.modo_efetivo(C.BOT_MODE) != "live"
+    # auditoria 24/07: pilot também ENVIA de verdade (só restringe à allowlist) -> a flag de teste
+    # agora só vale em SHADOW (que não envia nada). live/pilot ignoram.
+    _forcar_teste = C.FORCAR_ATUACAO and PAINEL.modo_efetivo(C.BOT_MODE) == "shadow"
     if not S.deve_atuar() and not _forcar_teste:
         M.log_evento(ev["contato"], "fora_de_atuacao",
                      {"mask": _mask(ev["contato"]), "tem_texto": bool(ev["texto"]), "tipo": ev["tipo"]})
