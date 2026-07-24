@@ -107,11 +107,35 @@ mesma conversa. Essas duas mensagens estão uma abaixo da outra e resolvem sozin
 
 ---
 
-## ETAPA 4 — Teste A/B
+## ETAPA 4 — Teste A/B · **EXECUTADO 24/07, resultado: NENHUMA variante gerou botão**
 
-**Não executado ainda.** Motivo técnico, registrado sem rodeio: `/admin/simular` só devolve a
-decisão do cérebro, **não envia**; e as credenciais da FlowSeller ficam no `.env` da VPS, fora do
-meu alcance. Sem um disparador, a matriz não roda.
+Disparado via `POST /admin/teste-botoes` para 5521964450618 (número do dono), 2 rodadas,
+**28 mensagens**, todas com `enviado=true` e `erro=null`. Código Pix usado: `sha 158494abc7` —
+**o mesmo** que foi entregue no dia 23/07 19:52 nessa mesma conversa.
+
+| Variante | Conteúdo | bytes | sha256 | Botão? |
+|---|---|---|---|---|
+| A | Pix sozinho, como veio da Efí | 171 | `158494abc7` | **não** |
+| D | Pix com descrição na mesma mensagem | 186 | `b60ce56c38` | **não** |
+| E | descrição separada + Pix sozinho | 171 | `158494abc7` | **não** |
+| F | Pix + quebra de linha no fim | 172 | `606d0abcd4` | **não** |
+| A-boleto | 47 dígitos sozinhos | 47 | `e103e9d846` | **não** |
+| D-boleto | 47 dígitos com texto junto | 65 | `3593e03f21` | **não** |
+| F-boleto | 47 dígitos + quebra de linha | 48 | `bc39ce197d` | **não** |
+
+Forense de todas: `mediaType=chat`, `sendType=API`, `typeTemplate=null`, `preview_url=null`,
+NFC ok, zero CRLF, zero espaço nas pontas; os únicos invisíveis são os `U+000A` que a própria
+matriz injetou nas variantes D e F.
+
+**O que isso elimina, agora com teste controlado e não por dedução:** formatação do texto,
+posição do código no balão, texto acompanhando o código, quebra de linha, e diferença entre os
+caminhos de envio. Nenhum desses fatores é a causa.
+
+**O que ainda não foi medido:** as duas observações que só existem no aparelho —
+(a) a mensagem antiga de 23/07, com o **mesmo código**, ainda mostra o botão hoje?
+(b) o mesmo código, enviado de um WhatsApp **pessoal** (fora da conta WABA), mostra o botão?
+(a) separa "renderização em tempo de exibição" de "classificação na entrega";
+(b) separa "aparelho/app" de "nossa conta WABA". Sem elas, qualquer conclusão é chute.
 
 **Disparador criado:** `POST /admin/teste-botoes` (`server.py`), com trava — só envia para número
 do allowlist do piloto ou `TESTE_BOTOES_NUM`. Cada variante vai precedida de rótulo em **mensagem
@@ -196,12 +220,16 @@ agora instalado, ele passa a ser capturado quando disponível.
 
 ## Teste final — Pix e boleto
 
-**Pendentes.** Dependem do deploy e da Etapa 4. Sem resultado, não há nada a declarar aqui.
+**Pix:** 4 variantes enviadas, **0 com botão**. **Boleto:** 3 variantes enviadas, **0 com botão**.
+Ambos com o código chegando isolado no balão, payload limpo e conferido no log forense.
 
 ---
 
 ## Plano B
 
-**Não acionado**, e só entra se a Etapa 4 mostrar que nenhuma variante reproduz o botão: página
-própria de "copia e cola" (botão + QR) em domínio nosso. **Não foi criada** — criar antes de fechar
-a investigação seria contornar o problema em vez de resolvê-lo.
+**Ainda não acionado.** A condição ("o botão automático não pode ser reproduzido") está
+**parcialmente** satisfeita: nenhuma variante nossa reproduz. Falta a medição (b) — o mesmo código
+saindo de um WhatsApp **pessoal**, fora da conta WABA. Se lá o botão aparecer, o problema é da
+nossa conta e tem endereço certo para cobrar; se lá também não aparecer, o recurso não está sendo
+desenhado no aparelho e o Plano B vira a solução: página própria de "copia e cola" (botão + QR)
+em domínio nosso.
