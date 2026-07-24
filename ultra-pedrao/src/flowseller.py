@@ -25,6 +25,49 @@ def _post(apiid, jwt, path_suffix, body):
         try: return json.loads(raw)
         except Exception: return {"raw": raw}
 
+def _forense(url, body, resp=None, erro=None):
+    """Assinatura técnica EXATA de cada envio (investigação dos botões de cópia do WhatsApp,
+    24/07). Grava bytes/sha/codepoints/invisíveis do texto e o que a FlowSeller devolveu, para
+    que qualquer diferença entre um envio que gera o botão e um que não gera fique PROVADA em
+    bytes -- nunca mais suposta. NÃO registra token, JWT, apiId nem cookie."""
+    try:
+        import hashlib, unicodedata
+        t = body.get("body") if isinstance(body.get("body"), str) else ""
+        b = t.encode("utf-8")
+        invis = ["U+%04X@%d" % (ord(c), i) for i, c in enumerate(t)
+                 if unicodedata.category(c) in ("Cf", "Cc") or (c.isspace() and c not in " \n")]
+        d = {
+            "url": (url.split("/v1/")[0] + "/v1/api/external/***"),   # apiId mascarado
+            "metodo": "POST", "content_type": "application/json",
+            "chaves_payload": sorted(body.keys()),
+            "tipo_msg": ("midia" if body.get("mediaUrl") else "nota" if body.get("onlyNote")
+                         else "transferencia" if body.get("queueId") else "texto"),
+            "template": bool(body.get("templateId") or body.get("typeTemplate")),
+            "preview_url": body.get("previewUrl"),          # None = campo não enviado
+            "tem_context": bool(body.get("quotedMsgId")),
+            "bytes": len(b), "caracteres": len(t),
+            "sha256": hashlib.sha256(b).hexdigest(),
+            "nfc": unicodedata.normalize("NFC", t) == t,
+            "crlf": t.count("\r\n"), "lf": t.count("\n") - t.count("\r\n"),
+            "espaco_inicio": len(t) - len(t.lstrip()), "espaco_fim": len(t) - len(t.rstrip()),
+            "invisiveis": invis[:12],
+            "cp_ini": [ord(c) for c in t[:10]], "cp_fim": [ord(c) for c in t[-10:]],
+        }
+        if resp is not None:
+            m = (resp or {}).get("message") or {}
+            tk = m.get("ticket") or {}
+            d.update({"fs_id": m.get("id"), "wamid": m.get("messageId"),
+                      "fs_mediaType": m.get("mediaType"), "fs_sendType": m.get("sendType"),
+                      "fs_typeTemplate": m.get("typeTemplate"), "fs_templateId": m.get("templateId"),
+                      "fs_params": m.get("params"), "fs_ack": m.get("ack"),
+                      "fs_channel": tk.get("channel"), "fs_whatsappId": tk.get("whatsappId")})
+        if erro:
+            d["erro"] = str(erro)[:200]
+        import memory as M
+        M.log_evento(str(body.get("number") or body.get("externalKey") or ""), "envio_forense", d)
+    except Exception:
+        pass   # log forense NUNCA pode derrubar um envio
+
 def _num_permitido_piloto(body):
     """Trava de seguranca do PILOTO: so envia para numeros da PILOT_ALLOWLIST."""
     import re
@@ -76,6 +119,7 @@ def _enviar(body, usar="resposta", delay=True):
                 resp = _post(C.FS_APIID_RESPOSTA, C.FS_JWT_RESPOSTA, "", body)
             else:
                 raise
+        _forense(f"{C.FS_BASE}/v1/api/external/{apiid}", body, resp=resp)
         # Blindagem: a FlowSeller pode devolver HTTP 200 com corpo {} sem criar nada de verdade
         # (visto ao vivo faltando "body" no payload de midia). So consideramos enviado se a
         # resposta realmente trouxer a mensagem criada (tem id, em "message" ou na raiz).
@@ -148,12 +192,15 @@ FASTREPLY_MEDIA = {
     1296: {"text_env": "PLANOS_TEXTO", "imgs_env": "PLANOS_IMAGENS"},  # texto + 3 imagens
 }
 
-def executar_decisao(external_key, d, number=None):
-    """Traduz a decisão JSON do brain em chamada(s) à API externa (respeitando shadow)."""
+def executar_decisao(external_key, d, number=None, marca=None):
+    """Traduz a decisão JSON do brain em chamada(s) à API externa (respeitando shadow).
+    marca: assinatura alternativa (o Copiloto Financeiro passa ASSIN_FINANCEIRO). ESTA é a
+    ÚNICA porta de saída de fatura -- noturno e copiloto usam exatamente este caminho, mesmo
+    payload e mesma cadência (investigação 24/07: nada de lógica duplicada)."""
     acao = d.get("acao")
     nota = (d.get("nota_interna") or "").strip() or None
     if acao == "responder":
-        return responder_texto(external_key, d.get("texto", ""), nota=nota, number=number)
+        return responder_texto(external_key, d.get("texto", ""), nota=nota, number=number, marca=marca)
     if acao == "fastreply":
         fid = d.get("fastReplyId")
         if fid in (1296, 1437, 1438):   # /planos = texto (negrito) + as 3 imagens, tudo de uma vez
@@ -185,7 +232,7 @@ def executar_decisao(external_key, d, number=None):
                 # assina SÓ a 1ª mensagem (senão a assinatura se repetia em ~4 balões da fatura)
                 resultados.append(responder_texto(external_key, e.get("text", ""),
                                                    nota=(nota if primeiro else None), number=number,
-                                                   delay=primeiro, assinar=primeiro))
+                                                   delay=primeiro, assinar=primeiro, marca=marca))
             primeiro = False
         return FSResult(enviado=any(r.get("enviado") for r in resultados), modo=C.BOT_MODE, sequencia=resultados)
     if acao == "transferir":

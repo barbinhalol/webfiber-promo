@@ -171,20 +171,26 @@ def _norm_txt(s):
 def _cop_entregar(ev, res):
     """Entrega a régua completa da fatura assinada *Financeiro WebFiber* (sem cara de robô)."""
     contato, ext = ev["contato"], ev["external_key"]
-    primeiro = True
+    # 24/07: o copiloto tinha a régua DUPLICADA aqui (delay=False em todas, resultado do envio
+    # descartado). Agora usa a MESMA porta do caminho noturno -- mesmo payload, mesma cadência,
+    # mesma checagem de entrega. Só muda a assinatura (*Financeiro WebFiber*).
+    r = FS.executar_decisao(
+        ext,
+        {"acao": "faturas", "_envios": res["envios"],
+         "nota_interna": "[Copiloto Financeiro] Fatura entregue automaticamente (Pix + boleto) "
+                         "pelo CPF/CNPJ informado no chat."},
+        contato, marca=FS.ASSIN_FINANCEIRO)
     for e in res["envios"]:
-        if e.get("tipo") == "pdf" and e.get("url"):
-            FS.enviar_midia(ext, e["url"], legenda=e.get("text") or "", number=contato, delay=False)
-        else:
-            FS.responder_texto(
-                ext, e.get("text", ""), number=contato, delay=False,
-                assinar=primeiro, marca=FS.ASSIN_FINANCEIRO,
-                nota=("[Copiloto Financeiro] Fatura entregue automaticamente (Pix + boleto) "
-                      "pelo CPF/CNPJ informado no chat." if primeiro else None))
-            _registra_txt(contato, e.get("text", ""))
-        primeiro = False
-    M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "fatura_entregue"})
-    return {"status": "copiloto_fatura_entregue"}
+        _registra_txt(contato, e.get("text", ""))
+    # antes da unificação o resultado era DESCARTADO: uma fatura que falhava no envio era logada
+    # como "entregue" e ninguém via. Agora só é falha quando há erro REAL da API (shadow/piloto
+    # devolvem "faria" sem erro e não contam como falha).
+    seq = r.get("sequencia") or [r]
+    erros = [x.get("erro") for x in seq if isinstance(x, dict) and x.get("erro")]
+    M.log_evento(contato, "copiloto", {"mask": _mask(contato),
+                                       "acao": "fatura_FALHOU" if erros else "fatura_entregue",
+                                       "erros": erros[:3], "envio": r})
+    return {"status": "copiloto_fatura_falhou" if erros else "copiloto_fatura_entregue"}
 
 def _cop_ja_fez(fatos, ev, key_tid, key_ts, janela_s):
     """Anti-repetição do copiloto POR CONVERSA (24/07: a janela por tempo silenciava o cliente
@@ -743,6 +749,64 @@ def admin_testar_llm(x_admin_token: str = Header(default="")):
         return {"ok": True, "provider": C.LLM_PROVIDER, "ms": int((_t.time()-t0)*1000), "amostra": (r or "")[:60]}
     except Exception as e:
         return JSONResponse(status_code=503, content={"ok": False, "provider": C.LLM_PROVIDER, "erro": str(e)})
+
+@app.post("/admin/teste-botoes")
+async def admin_teste_botoes(request: Request, x_admin_token: str = Header(default="")):
+    """ETAPA 4 da investigação dos botões de cópia (24/07): dispara a matriz A/B controlada
+    para o NÚMERO DE TESTE, a qualquer hora, sem depender do fluxo noturno.
+
+    Cada variante vai precedida de um rótulo em mensagem SEPARADA, para que o código chegue
+    sozinho no balão (condição do teste). Trava: só envia para números do allowlist do piloto
+    (ou para TESTE_BOTOES_NUM), nunca para cliente."""
+    _admin(x_admin_token)
+    body = await request.json()
+    import mycore as MC
+    numero = re.sub(r"\D", "", str(body.get("numero") or _os.environ.get("TESTE_BOTOES_NUM") or ""))
+    permitidos = [re.sub(r"\D", "", n) for n in
+                  (PAINEL.allowlist_efetiva(C.PILOT_ALLOWLIST) or []) if n]
+    extra = re.sub(r"\D", "", _os.environ.get("TESTE_BOTOES_NUM") or "")
+    if extra: permitidos.append(extra)
+    if not numero or not any(numero.endswith(p) or p.endswith(numero) for p in permitidos if p):
+        raise HTTPException(status_code=400,
+                            detail="numero fora do allowlist de teste (defina TESTE_BOTOES_NUM ou use a allowlist do piloto)")
+    pix = (body.get("pix") or "").strip()
+    linha = (body.get("linha") or "").strip()
+    if not pix and body.get("cpf"):        # busca uma fatura real no MyCore
+        try:
+            r = MC.resolver_fatura(re.sub(r"\D", "", str(body["cpf"])))
+            f = (r or {}).get("fatura") or {}
+            pix = (f.get("pixccola") or "").strip(); linha = (f.get("linhadigitavel") or "").strip()
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"MyCore: {e}")
+    if not pix and not linha:
+        raise HTTPException(status_code=400, detail="informe pix/linha ou um cpf para buscar no MyCore")
+
+    matriz = []
+    if pix:
+        matriz += [("A", "codigo sozinho, exatamente como veio da Efi", pix),
+                   ("D", "codigo PRECEDIDO de descricao na MESMA mensagem", "Segue seu Pix:\n" + pix),
+                   ("E", "descricao em mensagem separada, codigo sozinho depois", pix),
+                   ("F", "codigo com quebra de linha no FIM", pix + "\n")]
+    if linha:
+        matriz += [("A-boleto", "linha digitavel sozinha", linha),
+                   ("D-boleto", "linha com descricao na MESMA mensagem", "Linha digitável:\n" + linha),
+                   ("F-boleto", "linha com quebra de linha no fim", linha + "\n")]
+    saida = []
+    for cod, desc, texto in matriz:
+        FS.responder_texto(numero, f"🧪 TESTE {cod} — {desc}", number=numero,
+                           delay=False, assinar=False)
+        r = FS.responder_texto(numero, texto, number=numero, delay=False, assinar=False)
+        m = ((r.get("resposta") or {}).get("message") or {})
+        saida.append({"variante": cod, "enviado": bool(r.get("enviado")), "erro": r.get("erro"),
+                      "bytes": len(texto.encode("utf-8")),
+                      "sha256": hashlib.sha256(texto.encode("utf-8")).hexdigest()[:16],
+                      "fs_id": m.get("id"), "wamid": m.get("messageId"),
+                      "mediaType": m.get("mediaType"), "sendType": m.get("sendType"),
+                      "typeTemplate": m.get("typeTemplate")})
+    return {"numero": _mask(numero), "variantes": saida,
+            "observar_no_celular": "qual variante mostrou o botao de copiar",
+            "nota": "preview_url/context/template nao existem na API externa da FlowSeller — "
+                    "campos ausentes registrados como None no log forense"}
 
 @app.post("/admin/simular")
 async def admin_simular(request: Request, x_admin_token: str = Header(default="")):
