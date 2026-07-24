@@ -32,7 +32,7 @@ def _post_json(url, headers, payload, timeout):
     except Exception as e:
         raise LLMError(str(e))
 
-def _anthropic(system, user):
+def _anthropic(system, user, model=None):
     """system marcado com cache_control: a Anthropic guarda esse bloco (prompt gigante,
     ~14k tokens) por 5min e cobra só 10% dele nas próximas chamadas. Como o system é IDÊNTICO
     pra todos os contatos, o cache é compartilhado entre todas as conversas enquanto estiver
@@ -45,7 +45,7 @@ def _anthropic(system, user):
         "https://api.anthropic.com/v1/messages",
         {"x-api-key": key, "anthropic-version": "2023-06-01",
          "content-type": "application/json"},
-        {"model": C.LLM_MODEL, "max_tokens": 1024,
+        {"model": model or C.LLM_MODEL, "max_tokens": 1024,
          "system": [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
          "messages": [{"role": "user", "content": user}]},
         C.LLM_TIMEOUT)
@@ -130,9 +130,10 @@ def _claude_cli(system, user):
     except subprocess.TimeoutExpired:
         raise LLMError("claude cli timeout")
 
-def gerar(system: str, user: str) -> str:
+def gerar(system: str, user: str, model: str = None) -> str:
+    """model: override opcional (ex.: Sonnet 5 pros casos complexos); None = LLM_MODEL padrão."""
     p = C.LLM_PROVIDER
-    if p == "anthropic": return _anthropic(system, user)
+    if p == "anthropic": return _anthropic(system, user, model)
     if p == "openai": return _openai(system, user)
     if p == "gemini": return _gemini(system, user)
     if p == "claude_cli": return _claude_cli(system, user)

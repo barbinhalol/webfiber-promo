@@ -18,6 +18,9 @@ PADRAO = {
     "desbloqueio_confianca": False,  # DESLIGADO por padrao: so o dono liga quando for testar
     "saudacao": "",           # ""=usa a saudacao padrao do codigo | texto custom (ex.: evento/feriado)
     "nativo_ts": 0.0,         # sentinela anti-duplo-bot: quando o menu NATIVO da FlowSeller foi visto
+    "sentinela_nativo": False, # DESLIGADA (23/07: dono CANCELOU o Pedrao nativo da FlowSeller ->
+                               # nao ha mais outro bot; a espera de 10-30min virou so atraso inutil).
+                               # Se um dia voltar a existir outro chatbot no canal, liga aqui.
     "atualizado_em": 0.0,     # epoch da ultima alteracao (pro painel mostrar a vigencia)
     "senha": "",             # senha amigavel do painel (definida pelo dono; vazio = usa token/env)
 }
@@ -64,9 +67,14 @@ def bot_nativo_ativo(janela_s: int = 1800) -> bool:
     10 pra 30 porque um VALE de movimento > janela reabria a brecha da 1a mensagem: a janela
     expirava e a 1a msg de uma conversa nova passava antes do menu nativo daquela conversa sair).
     Trocar o canal na FlowSeller vira o interruptor: ligou o nativo -> Pedrao pausa; voltou pro fluxo
-    vazio -> clique "Retomar Pedrao agora" no painel (ou espera ~30 min sem menu)."""
+    vazio -> clique "Retomar Pedrao agora" no painel (ou espera ~30 min sem menu).
+    23/07: SO age com sentinela_nativo LIGADA no painel — o Pedrao nativo foi CANCELADO, entao por
+    padrao nao ha o que esperar e o Ultra Pedrao responde IMEDIATAMENTE."""
     try:
-        return (time.time() - float(ler().get("nativo_ts") or 0)) < janela_s
+        p = ler()
+        if not p.get("sentinela_nativo", False):
+            return False
+        return (time.time() - float(p.get("nativo_ts") or 0)) < janela_s
     except Exception:
         return False
 

@@ -3,10 +3,12 @@
 Os guards NÃO confiam no modelo (bloqueiam preço digitado, placeholder, fastReply/fila inválidos,
 e viabilidade afirmada sem o veredito do sistema)."""
 import json, os, re
+import config as C
 import viability as V
 import llm as L
 import schedule as S
 import sentimento as SENT
+import regras as REG
 try:
     import painel as PAINEL
 except Exception:
@@ -374,12 +376,13 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
             return _dsb
 
     fin_state = "" if sessao_nova else str(fatos.get("fin") or "")
-    # entra no fluxo se pediu financeiro AGORA, ou se está aguardando o CPF E a msg tem dígitos
-    # (uma tentativa de CPF) — assim, se o cliente mudar de assunto no meio, não fica preso.
+    # entra no fluxo se pediu financeiro AGORA, se está aguardando o CPF E a msg tem dígitos,
+    # OU se já foi identificado pelo CPF seco (cpf_ok) e confirmou que quer a fatura.
     _tem_digitos = len(re.sub(r"\D", "", msg)) >= 8
-    if _FINANCEIRO_KW.search(msg) or (fin_state == "aguarda_cpf" and _tem_digitos):
+    if (_FINANCEIRO_KW.search(msg) or (fin_state == "aguarda_cpf" and _tem_digitos)
+            or (fin_state == "cpf_ok" and _SIM.search(msg) and not _NAO.search(msg))):
         import mycore as MC
-        cpf = MC.extrair_cpf_cnpj(msg)
+        cpf = MC.extrair_cpf_cnpj(msg) or (str(fatos.get("fin_cpf") or "") or None if fin_state == "cpf_ok" else None)
         _abre = (_abertura() + "\n\n") if sessao_nova else ""
         # limpa o estado do financeiro. fin="feito" (não "" — o merge_fatos ignora vazios) tira do
         # modo "aguarda_cpf"; nota_ok=1 evita virar "lead" no vigia dos 20min.
@@ -416,6 +419,34 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
                "Claro! Pra já puxar a sua fatura aqui, me manda só o seu *CPF* (pode ser só os números) 😊")
         return _fp(_abre + txt, intencao="financeiro", dados={"fin": "aguarda_cpf", "fin_try": tries + 1},
                    icone="⚡")
+
+    # 2.7) CPF/CNPJ "SECO" (mensagem é praticamente só o documento, sem contexto) — ordem do dono
+    #      23/07: é pra IDENTIFICAR a pessoa no sistema, NUNCA mandar planos. Acha o cadastro,
+    #      chama pelo nome se for pessoa física (com prudência) e pergunta o que ela precisa.
+    import mycore as MC2
+    _doc = MC2.extrair_cpf_cnpj(msg)
+    _sobra = len(re.sub(r"[\d.\-/\s]", "", msg))  # o que sobra tirando números e pontuação de doc
+    if _doc and _sobra <= 4 and MC2.token_configurado():
+        try:
+            d_cli = MC2.dados_cliente_por_cpf(_doc)
+        except Exception:
+            d_cli = None
+        _abre2 = (_ABERTURA + "\n\n") if sessao_nova else ""
+        if d_cli and (d_cli.get("nome") or "").strip():
+            nome_cad = d_cli["nome"].strip()
+            # PJ (CNPJ ou nome comercial) NUNCA é tratado como pessoa; PF usa o 1º nome com respeito
+            _eh_pj = len(_doc) == 14 or re.search(
+                r"\b(ltda|mei?|eireli|epp|s\.?a\.?|com[ée]rcio|servi[çc]os|mercado|padaria|"
+                r"distribuidora|transportes|construtora|igreja|condom[íi]nio|bar|loja)\b", nome_cad, re.I)
+            prim = "" if _eh_pj else nome_cad.split(" ")[0].title()
+            saud_nome = f", {prim}" if (prim and len(prim) >= 3) else ""
+            txt = (f"Achei seu cadastro aqui{saud_nome}! 😊\n\n"
+                   "Você quer baixar a sua *fatura* para pagamento, ou é outro assunto?")
+            return _fp(_abre2 + txt, intencao="financeiro", icone="🪪",
+                       dados={"fin": "cpf_ok", "fin_cpf": _doc, "nome": ("" if _eh_pj else nome_cad)})
+        return _fp(_abre2 + "Não localizei um cadastro com esse CPF. Confere os números pra mim, "
+                   "por gentileza? Ou me conta o que você precisa que eu te ajudo 😊",
+                   intencao="financeiro", icone="🪪")
 
     # 3) início de suporte (só o básico; financeiro tem prioridade e sai pro LLM)
     if _SUP_INTENCAO.search(msg) and not _FINANCEIRO_KW.search(msg):
@@ -470,6 +501,9 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     _tom = SENT.hint_tom(sentimento)
     if _tom:
         ctx.append(_tom)
+    # regras base moram no CÓDIGO (não no painel) — o campo "ajustes" fica livre pro dono,
+    # e o texto do dono entra DEPOIS (prioridade sobre as regras base em caso de conflito)
+    ctx.append(REG.bloco())
     if PAINEL:
         extra = PAINEL.contexto_extra()
         if extra:
@@ -478,8 +512,15 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     user = "\n\n".join(ctx)
     system = SYSTEM_PROMPT + "\n\n## CONTEXTO DE PLANOS (para conversar; preço só pela imagem)\n" + PLANOS_CTX
 
+    # ESCALADA DE MODELO (ordem do dono 23/07): casos complexos vão pro Sonnet 5 (pensa melhor);
+    # o resto fica no Haiku (mais rápido/barato). Complexo = cliente irritado, empresa/PJ,
+    # conversa longa ou mensagem grande (negociação/multiassunto).
+    _complexo = ((sentimento or {}).get("humor") == "irritado" or _EMPRESA.search(texto_todo)
+                 or len(historico) >= 10 or len(mensagem) > 280)
+    _model = getattr(C, "LLM_MODEL_SMART", None) if _complexo else None
+
     try:
-        raw = L.gerar(system, user)
+        raw = L.gerar(system, user, _model) if _model else L.gerar(system, user)
     except L.LLMError as e:
         return _fallback(f"LLM indisponível: {e}", viab)
 

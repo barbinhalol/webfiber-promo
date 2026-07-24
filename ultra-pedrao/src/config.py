@@ -49,6 +49,9 @@ FILAS = {"comercial": 23, "suporte": 24, "financeiro": 25, "atendimento": 112, "
 # ---------------- IA / LLM ----------------
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic").strip().lower()  # anthropic | openai | gemini | claude_cli | fake
 LLM_MODEL = os.environ.get("LLM_MODEL", "claude-haiku-4-5-20251001")
+# modelo "pensante" p/ casos complexos (cliente irritado, empresa/PJ, conversa longa, negociação):
+# o brain escala Haiku -> Sonnet 5 automaticamente nesses casos (ordem do dono 23/07/2026)
+LLM_MODEL_SMART = os.environ.get("LLM_MODEL_SMART", "claude-sonnet-5")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
