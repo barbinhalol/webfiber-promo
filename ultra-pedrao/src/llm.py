@@ -90,12 +90,12 @@ def _fake(system, user):
     low = user.lower()
     if "confirmada_predio" in low:
         return json.dumps({"acao": "fastreply", "fastReplyId": 1296, "fila": 0,
-            "texto": "Boa notícia: a gente já atende seu endereço sim! Olha os planos 👇 Qual fez mais sentido?",
+            "texto": "Olha os planos 👇 Qual fez mais sentido? Já registro seu endereço pro Comercial confirmar tudo com você a partir das 9h.",
             "intencao": "viabilidade", "viabilidade": "confirmada_predio",
             "nota_interna": "[FAKE] lead confirmado", "confianca": 0.9})
     if "provavel" in low:
         return json.dumps({"acao": "responder",
-            "texto": "A gente já tá na sua rua, a probabilidade é boa! Vou passar pro time confirmar certinho.",
+            "texto": "Registrei seu endereço! O time Comercial confirma a cobertura certinha com você a partir das 9h.",
             "intencao": "viabilidade", "viabilidade": "provavel", "fila": 23,
             "nota_interna": "[FAKE] provável", "confianca": 0.7})
     if any(k in low for k in ("cancel", "cancelar")):

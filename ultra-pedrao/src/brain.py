@@ -501,16 +501,17 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     _tom = SENT.hint_tom(sentimento)
     if _tom:
         ctx.append(_tom)
-    # regras base moram no CÓDIGO (não no painel) — o campo "ajustes" fica livre pro dono,
-    # e o texto do dono entra DEPOIS (prioridade sobre as regras base em caso de conflito)
-    ctx.append(REG.bloco())
     if PAINEL:
         extra = PAINEL.contexto_extra()
         if extra:
             ctx.append(extra)
     ctx.append("\nDecida a próxima ação do Pedrão e responda SÓ o JSON no formato definido.")
     user = "\n\n".join(ctx)
-    system = SYSTEM_PROMPT + "\n\n## CONTEXTO DE PLANOS (para conversar; preço só pela imagem)\n" + PLANOS_CTX
+    # REGRAS BASE entram no SYSTEM (estável entre chamadas -> aproveitam o prompt caching da
+    # Anthropic: mais rápido e ~10x mais barato que ir no ctx). Os ajustes do dono ficam no ctx
+    # (variáveis) e entram DEPOIS — em conflito, o que o dono escreveu tem prioridade.
+    system = (SYSTEM_PROMPT + "\n\n" + REG.bloco()
+              + "\n\n## CONTEXTO DE PLANOS (para conversar; preço só pela imagem)\n" + PLANOS_CTX)
 
     # ESCALADA DE MODELO (ordem do dono 23/07): casos complexos vão pro Sonnet 5 (pensa melhor);
     # o resto fica no Haiku (mais rápido/barato). Complexo = cliente irritado, empresa/PJ,
