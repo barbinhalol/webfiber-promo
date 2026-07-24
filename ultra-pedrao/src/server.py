@@ -141,6 +141,11 @@ def _txt_do_bot(contato, texto) -> bool:
         return True
     if t.startswith("Olá! Eu sou o Pedrão"):   # nossa saudação sai SEM assinatura
         return True
+    # NOTAS INTERNAS nossas ecoam pelo webhook como fromMe ("[Copiloto Financeiro] ...",
+    # "[Pedrão] ...") — 24/07 14:39: a nota do multi-cadastro foi classificada como HUMANO e
+    # mutou o ticket 1s depois da lista; o "3" do cliente ficou sem resposta.
+    if t.startswith("["):
+        return True
     # menus/fluxo de botão (nativo/submenus): "1 - ...", "Escolha...", "Selecione...", boas-vindas
     if re.search(r"^\s*\d\s*-\s*\S", t, re.M) or re.search(r"escolha|selecione|bem[- ]vindo", t, re.I):
         return True
