@@ -758,7 +758,7 @@ async def admin_teste_botoes(request: Request, x_admin_token: str = Header(defau
     Cada variante vai precedida de um rótulo em mensagem SEPARADA, para que o código chegue
     sozinho no balão (condição do teste). Trava: só envia para números do allowlist do piloto
     (ou para TESTE_BOTOES_NUM), nunca para cliente."""
-    _admin(x_admin_token)
+    _auth_painel(x_admin_token)   # mesma trava dos outros /admin (senha do painel)
     body = await request.json()
     import mycore as MC
     numero = re.sub(r"\D", "", str(body.get("numero") or _os.environ.get("TESTE_BOTOES_NUM") or ""))
