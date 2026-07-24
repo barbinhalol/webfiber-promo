@@ -177,6 +177,24 @@ def _cop_entregar(ev, res):
     M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "fatura_entregue"})
     return {"status": "copiloto_fatura_entregue"}
 
+def _cop_ja_fez(fatos, ev, key_tid, key_ts, janela_s):
+    """Anti-repetição do copiloto POR CONVERSA (24/07: a janela por tempo silenciava o cliente
+    que abria um ticket NOVO em menos de 30min — visto no teste do dono às 14:18). Regra:
+    mesmo ticket -> não repete; ticket NOVO -> pode de novo; sem ticket_id -> janela de tempo."""
+    tid = ev.get("ticket_id")
+    if tid is not None:
+        return str(fatos.get(key_tid) or "") == str(tid)
+    try:
+        return time.time() - float(fatos.get(key_ts) or 0) < janela_s
+    except Exception:
+        return False
+
+def _cop_marca(contato, ev, key_tid, key_ts):
+    d = {key_ts: time.time()}
+    if ev.get("ticket_id") is not None:
+        d[key_tid] = str(ev.get("ticket_id"))
+    M.merge_fatos(contato, d)
+
 def _copiloto(ev):
     """Atende a fila do Financeiro em modo 'invisível': só fatura, e só até um humano digitar."""
     import mycore as MC
@@ -282,43 +300,33 @@ def _copiloto(ev):
         return {"status": "copiloto_cpf_nao_achado"}
     # clique do botão FINANCEIRO (entrou na fila) -> saudação de SETOR, natural, como um humano
     if _BTN_FIN.match(texto):
-        try:
-            if time.time() - float(fatos.get("cop_greet_ts") or 0) < 1800:
-                return {"status": "copiloto_ja_saudou"}
-        except Exception:
-            pass
+        if _cop_ja_fez(fatos, ev, "cop_greet_tid", "cop_greet_ts", 1800):
+            return {"status": "copiloto_ja_saudou"}
         t = "Olá! Aqui é do setor *Financeiro* da WebFiber 😊 Em que posso te ajudar?"
         FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO)
         _registra_txt(contato, t)
-        M.merge_fatos(contato, {"cop_greet_ts": time.time()})
+        _cop_marca(contato, ev, "cop_greet_tid", "cop_greet_ts")
         M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "saudacao_setor"})
         return {"status": "copiloto_saudacao_setor"}
     if _BTN_FATURA.match(texto) or _COP_KW.search(texto):
-        # pediu fatura/pix/2ª via (botão ou escrito) -> pede o documento. 1x a cada 10min.
-        try:
-            if time.time() - float(fatos.get("cop_ask_ts") or 0) < 600:
-                return {"status": "copiloto_ja_perguntou"}
-        except Exception:
-            pass
+        # pediu fatura/pix/2ª via (botão ou escrito) -> pede o documento. 1x por conversa.
+        if _cop_ja_fez(fatos, ev, "cop_ask_tid", "cop_ask_ts", 600):
+            return {"status": "copiloto_ja_perguntou"}
         t = ("Claro! Me envia abaixo os números do seu *CPF ou CNPJ* que eu já te mando a "
              "fatura com o *Pix* e o *boleto* 😊")
         FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO)
         _registra_txt(contato, t)
-        M.merge_fatos(contato, {"cop_ask_ts": time.time()})
+        _cop_marca(contato, ev, "cop_ask_tid", "cop_ask_ts")
         M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "pediu_cpf"})
         return {"status": "copiloto_pediu_cpf"}
     # PRIMEIRA fala na fila ainda sem intenção clara ("Ola", "oi, tudo bem?") -> saudação de
-    # setor 1x (24/07: o clique FINANCEIRO chega ANTES da fila ser marcada, então a saudação
-    # não disparava e o cliente ficava no vácuo até dizer "boleto").
-    try:
-        _ja_saudou = time.time() - float(fatos.get("cop_greet_ts") or 0) < 1800
-    except Exception:
-        _ja_saudou = False
-    if not _ja_saudou:
+    # setor 1x POR CONVERSA (24/07: o clique FINANCEIRO chega ANTES da fila ser marcada, então
+    # a saudação não disparava e o cliente ficava no vácuo até dizer "boleto").
+    if not _cop_ja_fez(fatos, ev, "cop_greet_tid", "cop_greet_ts", 1800):
         t = "Olá! Aqui é do setor *Financeiro* da WebFiber 😊 Em que posso te ajudar?"
         FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO)
         _registra_txt(contato, t)
-        M.merge_fatos(contato, {"cop_greet_ts": time.time()})
+        _cop_marca(contato, ev, "cop_greet_tid", "cop_greet_ts")
         M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "saudacao_setor"})
         return {"status": "copiloto_saudacao_setor"}
     # já saudado e o assunto não é fatura -> silêncio absoluto (humano cuida)
