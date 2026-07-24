@@ -172,6 +172,18 @@ def dados_cliente_por_cpf(cpf: str):
     return {"nome": (c.get("name") or "").strip(), "endereco": endereco}
 
 
+def cadastros_por_cpf(cpf: str):
+    """Lista TODOS os cadastros do CPF/CNPJ com id + nome + endereço — pra quando a pessoa tem
+    mais de um contrato (2 casas, Airbnb com várias locações, empresa com filiais): o bot lista
+    os endereços numerados e pergunta qual é, antes de entregar a fatura."""
+    out = []
+    for c in clientes_por_cpf(cpf):
+        partes = [c.get("street"), c.get("street_number"), c.get("street_comp"), c.get("neighbor")]
+        end = ", ".join(str(p).strip() for p in partes if p and str(p).strip())
+        out.append({"id": c.get("id"), "nome": (c.get("name") or "").strip(), "endereco": end})
+    return out
+
+
 def _faturas(path, client_id):
     # PROPAGA o erro (antes engolia e virava [] -> o bot dizia "tudo em dia" pra devedor quando o
     # MyCore caía). Quem chama trata: se der erro, cai no fallback em vez de afirmar que não deve.
@@ -236,18 +248,23 @@ def _envios_da_fatura(nome, fatura, atrasada):
     return envios
 
 
-def resolver_fatura(cpf: str, contato: str = None) -> dict:
+def resolver_fatura(cpf: str, contato: str = None, client_id=None) -> dict:
     """Núcleo da regra (CPF-only, ordem do dono 14/07/2026 — sem conferir telefone). Retorna:
       status: 'entregue'  -> envios prontos (achou cadastro + fatura pelo CPF)
               'sem_fatura'-> achou o cadastro, mas está tudo em dia
               'fallback'  -> CPF sem cadastro / erro / MyCore fora -> link + transfere Financeiro
-      (contato fica só p/ log/uso futuro; NÃO é mais usado pra liberar a fatura)."""
+      client_id: quando o CPF tem VÁRIOS cadastros e o cliente já escolheu qual (multi-endereço),
+      filtra a busca só naquele cadastro. (contato fica só p/ log.)"""
     try:
         clientes = clientes_por_cpf(cpf)
     except MyCoreErro as e:
         return {"status": "fallback", "motivo": f"mycore_{e.tipo}"}
     if not clientes:
         return {"status": "fallback", "motivo": "cpf_sem_cadastro"}
+    if client_id is not None:
+        so_esse = [c for c in clientes if str(c.get("id")) == str(client_id)]
+        if so_esse:
+            clientes = so_esse
 
     nome = clientes[0].get("name") or ""
     atrasadas, abertas, erro_fatura = [], [], False

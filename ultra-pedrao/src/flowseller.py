@@ -2,11 +2,13 @@
 """Cliente da API EXTERNA da FlowSeller (mapa em docs/API_EXTERNA.md).
 Respeita BOT_MODE: em 'shadow' NUNCA chama a API (só devolve o que faria).
 Endpoint central: POST /v1/api/external/{apiId} com corpo SendMessageBase."""
-import json, random, time, urllib.request, urllib.error
+import json, os, random, time, urllib.request, urllib.error
 import config as C
 
-DELAY_MIN_S = 2
-DELAY_MAX_S = 4
+# "tempo de digitação" simulado antes de cada envio real. 24/07 (pedido de velocidade do dono):
+# caiu de 2-4s pra 1-2s; ajustável por env sem mexer no código.
+DELAY_MIN_S = float(os.environ.get("FS_DELAY_MIN_S", "1"))
+DELAY_MAX_S = float(os.environ.get("FS_DELAY_MAX_S", "2"))
 
 class FSResult(dict):
     pass

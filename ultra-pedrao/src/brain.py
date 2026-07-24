@@ -380,16 +380,44 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     # OU se já foi identificado pelo CPF seco (cpf_ok) e confirmou que quer a fatura.
     _tem_digitos = len(re.sub(r"\D", "", msg)) >= 8
     if (_FINANCEIRO_KW.search(msg) or (fin_state == "aguarda_cpf" and _tem_digitos)
-            or (fin_state == "cpf_ok" and _SIM.search(msg) and not _NAO.search(msg))):
+            or (fin_state == "cpf_ok" and _SIM.search(msg) and not _NAO.search(msg))
+            or (fin_state == "escolhe" and re.fullmatch(r"\s*\d{1,2}\s*", msg or ""))):
         import mycore as MC
         cpf = MC.extrair_cpf_cnpj(msg) or (str(fatos.get("fin_cpf") or "") or None if fin_state == "cpf_ok" else None)
         _abre = (_abertura() + "\n\n") if sessao_nova else ""
         # limpa o estado do financeiro. fin="feito" (não "" — o merge_fatos ignora vazios) tira do
         # modo "aguarda_cpf"; nota_ok=1 evita virar "lead" no vigia dos 20min.
         _limpa_fin = {"fin": "feito", "fin_try": 0, "nota_ok": 1}
-        if cpf and MC.token_configurado():
+        # multi-endereço: cliente escolheu o número da lista? recupera o CPF e o cadastro escolhido
+        client_id = None
+        if fin_state == "escolhe":
+            m_esc = re.fullmatch(r"\s*(\d{1,2})\s*", msg or "")
             try:
-                res = MC.resolver_fatura(cpf, contato)   # CPF-only: contato não gateia mais
+                _ops = json.loads(str(fatos.get("fin_ids") or "[]"))
+            except Exception:
+                _ops = []
+            if m_esc and _ops and 1 <= int(m_esc.group(1)) <= len(_ops):
+                cpf = str(fatos.get("fin_cpf") or "") or cpf
+                client_id = _ops[int(m_esc.group(1)) - 1].get("id")
+        if cpf and MC.token_configurado():
+            # CPF/CNPJ com MAIS DE UM cadastro (2 casas, Airbnb com várias locações, filiais):
+            # lista os endereços numerados e pergunta qual é ANTES de entregar a fatura.
+            if client_id is None:
+                try:
+                    _cads = MC.cadastros_por_cpf(cpf)
+                except Exception:
+                    _cads = []
+                if len(_cads) >= 2:
+                    _ops2 = [{"id": c.get("id"), "end": (c.get("endereco") or c.get("nome") or "")} for c in _cads[:9]]
+                    _linhas = "\n".join(f"*{i+1})* {o['end'] or 'Cadastro'}" for i, o in enumerate(_ops2))
+                    return _fp(_abre + "Encontrei *mais de um cadastro* no seu CPF/CNPJ 😊 Pra eu enviar a "
+                               "fatura certa, me diz qual é o endereço:\n\n" + _linhas +
+                               "\n\nResponda só com o *número*.",
+                               intencao="financeiro", icone="🏠",
+                               dados={"fin": "escolhe", "fin_cpf": cpf,
+                                      "fin_ids": json.dumps(_ops2, ensure_ascii=False)})
+            try:
+                res = MC.resolver_fatura(cpf, contato, client_id=client_id)   # CPF-only
             except Exception:
                 res = {"status": "fallback", "motivo": "excecao"}
             if res.get("status") == "entregue":
@@ -414,9 +442,9 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
                        nota="[Pedrão] Financeiro — enviei o link e transferi pro setor.",
                        dados=_limpa_fin, icone="⚡➡️")
         # tem dígitos mas não validou como CPF? avisa; senão, pede pela 1ª vez
-        txt = ("Esse CPF não parece certo — confere e me manda de novo, só os números? 😊"
+        txt = ("Esse número não parece certo — confere e me manda de novo o *CPF ou CNPJ*, só os números? 😊"
                if _tem_digitos else
-               "Claro! Pra já puxar a sua fatura aqui, me manda só o seu *CPF* (pode ser só os números) 😊")
+               "Claro! Pra já puxar a sua fatura aqui, me manda o seu *CPF ou CNPJ* (pode ser só os números) 😊")
         return _fp(_abre + txt, intencao="financeiro", dados={"fin": "aguarda_cpf", "fin_try": tries + 1},
                    icone="⚡")
 

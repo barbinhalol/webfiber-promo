@@ -142,6 +142,28 @@ def _txt_do_bot(contato, texto) -> bool:
             return True
     return False
 
+def _norm_txt(s):
+    import unicodedata
+    return unicodedata.normalize("NFKD", str(s or "")).encode("ascii", "ignore").decode().lower()
+
+def _cop_entregar(ev, res):
+    """Entrega a régua completa da fatura assinada *Financeiro WebFiber* (sem cara de robô)."""
+    contato, ext = ev["contato"], ev["external_key"]
+    primeiro = True
+    for e in res["envios"]:
+        if e.get("tipo") == "pdf" and e.get("url"):
+            FS.enviar_midia(ext, e["url"], legenda=e.get("text") or "", number=contato, delay=False)
+        else:
+            FS.responder_texto(
+                ext, e.get("text", ""), number=contato, delay=False,
+                assinar=primeiro, marca=FS.ASSIN_FINANCEIRO,
+                nota=("[Copiloto Financeiro] Fatura entregue automaticamente (Pix + boleto) "
+                      "pelo CPF/CNPJ informado no chat." if primeiro else None))
+            _registra_txt(contato, e.get("text", ""))
+        primeiro = False
+    M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "fatura_entregue"})
+    return {"status": "copiloto_fatura_entregue"}
+
 def _copiloto(ev):
     """Atende a fila do Financeiro em modo 'invisível': só fatura, e só até um humano digitar."""
     import mycore as MC
@@ -149,27 +171,77 @@ def _copiloto(ev):
     contato, ext = ev["contato"], ev["external_key"]
     texto = str(ev["texto"])
     fatos = M.get_fatos(contato)
+
+    # (0) ESCOLHA DE ENDEREÇO pendente (CPF/CNPJ com mais de um cadastro — ex.: Airbnb com
+    #     várias locações): aceita o NÚMERO ("1", "2"...) ou o nome da rua escrito.
+    ids_raw = str(fatos.get("cop_ids") or "")
+    if ids_raw and ids_raw not in ("-", "0"):
+        try:
+            opcoes = json.loads(ids_raw)
+        except Exception:
+            opcoes = []
+        escolhido = None
+        m = re.fullmatch(r"\s*(\d{1,2})\s*\)?\.?\s*", texto)
+        if m and opcoes and 1 <= int(m.group(1)) <= len(opcoes):
+            escolhido = opcoes[int(m.group(1)) - 1]
+        elif opcoes:  # tentou escrever o endereço: casa por trecho (rua/bairro) com >=4 letras
+            tn = _norm_txt(texto)
+            cands = [o for o in opcoes if any(len(w) >= 4 and w in tn for w in _norm_txt(o.get("end")).split())]
+            if len(cands) == 1:
+                escolhido = cands[0]
+        if escolhido:
+            try:
+                res = MC.resolver_fatura(str(fatos.get("cop_cpf") or ""), contato, client_id=escolhido.get("id"))
+            except Exception:
+                res = {"status": "fallback", "motivo": "excecao"}
+            M.merge_fatos(contato, {"cop_ids": "-"})
+            if res.get("status") == "entregue":
+                return _cop_entregar(ev, res)
+            if res.get("status") == "sem_fatura":
+                t = "Boa notícia! 😊 Esse cadastro está com tudo em dia — nenhuma fatura em aberto."
+                FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO,
+                                   nota="[Copiloto Financeiro] Cadastro escolhido sem fatura em aberto.")
+                _registra_txt(contato, t)
+                return {"status": "copiloto_sem_fatura"}
+            FS.responder_texto(ext, R.FINANCEIRO_FATURA, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO,
+                               nota="[Copiloto Financeiro] Falha ao buscar a fatura do cadastro escolhido; enviei o link.")
+            return {"status": "copiloto_fallback"}
+        # não entendeu a escolha: re-pergunta UMA vez; na 2ª falha, silencia e deixa pro humano
+        if int(fatos.get("cop_esc_try") or 0) >= 1:
+            M.merge_fatos(contato, {"cop_ids": "-"})
+            M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "escolha_nao_entendida_silencio"})
+            return {"status": "copiloto_silencio"}
+        linhas = "\n".join(f"*{i+1})* {o.get('end') or o.get('nome') or 'Cadastro'}" for i, o in enumerate(opcoes))
+        t = "Só me confirma respondendo com o *número* da opção, por gentileza 😊\n\n" + linhas
+        FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO)
+        _registra_txt(contato, t)
+        M.merge_fatos(contato, {"cop_esc_try": 1})
+        return {"status": "copiloto_reperguntou_escolha"}
+
     cpf = MC.extrair_cpf_cnpj(texto)
     if cpf and MC.token_configurado():
+        # CPF/CNPJ com MAIS DE UM cadastro? -> lista os endereços numerados e pergunta qual é
+        try:
+            cadastros = MC.cadastros_por_cpf(cpf)
+        except Exception:
+            cadastros = []
+        if len(cadastros) >= 2:
+            ops = [{"id": c.get("id"), "end": (c.get("endereco") or c.get("nome") or "")} for c in cadastros[:9]]
+            linhas = "\n".join(f"*{i+1})* {o['end'] or 'Cadastro'}" for i, o in enumerate(ops))
+            t = ("Encontrei *mais de um cadastro* no seu CPF/CNPJ 😊 Pra eu enviar a fatura certa, "
+                 "me diz qual é o endereço:\n\n" + linhas + "\n\nResponda só com o *número*.")
+            FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO,
+                               nota="[Copiloto Financeiro] CPF/CNPJ com múltiplos cadastros; pedi pra escolher o endereço.")
+            _registra_txt(contato, t)
+            M.merge_fatos(contato, {"cop_cpf": cpf, "cop_ids": json.dumps(ops, ensure_ascii=False), "cop_esc_try": "0"})
+            M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "multi_cadastro_perguntou", "n": len(cadastros)})
+            return {"status": "copiloto_escolha_endereco"}
         try:
             res = MC.resolver_fatura(cpf, contato)
         except Exception:
             res = {"status": "fallback", "motivo": "excecao"}
         if res.get("status") == "entregue":
-            primeiro = True
-            for e in res["envios"]:
-                if e.get("tipo") == "pdf" and e.get("url"):
-                    FS.enviar_midia(ext, e["url"], legenda=e.get("text") or "", number=contato, delay=False)
-                else:
-                    FS.responder_texto(
-                        ext, e.get("text", ""), number=contato, delay=primeiro,
-                        assinar=primeiro, marca=FS.ASSIN_FINANCEIRO,
-                        nota=("[Copiloto Financeiro] Fatura entregue automaticamente (Pix + boleto) "
-                              "pelo CPF informado no chat." if primeiro else None))
-                    _registra_txt(contato, e.get("text", ""))
-                primeiro = False
-            M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "fatura_entregue"})
-            return {"status": "copiloto_fatura_entregue"}
+            return _cop_entregar(ev, res)
         if res.get("status") == "sem_fatura":
             t = ("Boa notícia! 😊 Não encontrei nenhuma fatura em aberto no seu CPF — está tudo em dia. "
                  "Precisando de mais alguma coisa do Financeiro, é só falar por aqui.")
@@ -192,7 +264,7 @@ def _copiloto(ev):
         except Exception:
             pass
         t = ("Posso te ajudar por aqui mesmo 😊 Você deseja a sua *fatura* (Pix ou boleto)?\n\n"
-             "É só me enviar abaixo os números do seu *CPF* que eu já te envio.")
+             "É só me enviar abaixo os números do seu *CPF ou CNPJ* que eu já te envio.")
         FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO)
         _registra_txt(contato, t)
         M.merge_fatos(contato, {"cop_ask_ts": time.time()})
