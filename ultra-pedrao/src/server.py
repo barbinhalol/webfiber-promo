@@ -101,6 +101,106 @@ _MENU_NATIVO = re.compile(
     r"Escolha uma (op[çc][ãa]o|das op[çc][õo]es)|"
     r"N[ãa]o entendi sua resposta\.?\s*Vamos tentar novamente)", re.I)
 
+# ==================== COPILOTO FINANCEIRO (ordem do dono 24/07/2026) ====================
+# Durante o HORÁRIO HUMANO, quem clica "FINANCEIRO" no menu cai na fila 25 e esperava atendente
+# até pra pegar 2ª via. O copiloto entrega a fatura (Pix+boleto) na fila, assinado
+# "*Financeiro WebFiber*" (sem se apresentar como robô). Regras: atendente ACEITAR não o para
+# (aceitam e demoram); atendente DIGITAR qualquer coisa -> silencia naquele ticket na hora.
+FILA_FINANCEIRO = C.FILAS.get("financeiro", 25)
+_COP_KW = re.compile(r"(financeiro|fatura|boleto|pix|2\s*ª?\s*via|segunda\s+via|pagamento|"
+                     r"c[óo]digo\s+de\s+barras|linha\s+digit|vencimento|pagar)", re.I)
+
+_BOT_TXT = {}  # contato -> [(ts, texto enviado por nós)] — p/ distinguir humano de bot no fromMe
+
+def _registra_txt(contato, texto):
+    t = (texto or "").strip()
+    if not t:
+        return
+    l = _BOT_TXT.setdefault(contato, [])
+    l.append((time.time(), t))
+    del l[:-20]
+
+def _txt_do_bot(contato, texto) -> bool:
+    """True se a mensagem fromMe foi gerada por BOT (nosso ou menu nativo) — não por um humano."""
+    t = (texto or "").strip()
+    if not t:
+        return True
+    if t.startswith("*Pedrão") or t.startswith("*Financeiro"):
+        return True
+    # menus de botão (nativo/submenus): linhas "1 - ..." ou "Escolha ..."
+    if re.search(r"^\s*\d\s*-\s*\S", t, re.M) or re.search(r"escolha", t, re.I):
+        return True
+    # pedaços da entrega de fatura sem assinatura (Pix copia-e-cola EMV, linha digitável, avisos)
+    if re.match(r"^000201", t) or re.match(r"^[\d\s.]{40,}$", t):
+        return True
+    if ("Linha digitável" in t or "Pra pagar na hora" in t or "Achei sua fatura" in t
+            or "Ou pague pelo boleto" in t or t.startswith("⏱️")):
+        return True
+    now = time.time()
+    for ts, txt in _BOT_TXT.get(contato, []):
+        if now - ts < 3600 and (txt == t or t.startswith(txt[:60])):
+            return True
+    return False
+
+def _copiloto(ev):
+    """Atende a fila do Financeiro em modo 'invisível': só fatura, e só até um humano digitar."""
+    import mycore as MC
+    import respostas as R
+    contato, ext = ev["contato"], ev["external_key"]
+    texto = str(ev["texto"])
+    fatos = M.get_fatos(contato)
+    cpf = MC.extrair_cpf_cnpj(texto)
+    if cpf and MC.token_configurado():
+        try:
+            res = MC.resolver_fatura(cpf, contato)
+        except Exception:
+            res = {"status": "fallback", "motivo": "excecao"}
+        if res.get("status") == "entregue":
+            primeiro = True
+            for e in res["envios"]:
+                if e.get("tipo") == "pdf" and e.get("url"):
+                    FS.enviar_midia(ext, e["url"], legenda=e.get("text") or "", number=contato, delay=False)
+                else:
+                    FS.responder_texto(
+                        ext, e.get("text", ""), number=contato, delay=primeiro,
+                        assinar=primeiro, marca=FS.ASSIN_FINANCEIRO,
+                        nota=("[Copiloto Financeiro] Fatura entregue automaticamente (Pix + boleto) "
+                              "pelo CPF informado no chat." if primeiro else None))
+                    _registra_txt(contato, e.get("text", ""))
+                primeiro = False
+            M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "fatura_entregue"})
+            return {"status": "copiloto_fatura_entregue"}
+        if res.get("status") == "sem_fatura":
+            t = ("Boa notícia! 😊 Não encontrei nenhuma fatura em aberto no seu CPF — está tudo em dia. "
+                 "Precisando de mais alguma coisa do Financeiro, é só falar por aqui.")
+            FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO,
+                               nota="[Copiloto Financeiro] CPF consultado: sem fatura em aberto.")
+            _registra_txt(contato, t)
+            M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "sem_fatura"})
+            return {"status": "copiloto_sem_fatura"}
+        # não achou o CPF / MyCore fora: manda o link oficial e deixa o humano seguir (sem transferir — já está na fila)
+        FS.responder_texto(ext, R.FINANCEIRO_FATURA, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO,
+                           nota="[Copiloto Financeiro] Não localizei pelo CPF (ou sistema fora); "
+                                "enviei o link da área do cliente. Atendimento humano segue normal.")
+        M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "fallback_link"})
+        return {"status": "copiloto_fallback"}
+    if _COP_KW.search(texto):
+        # pergunta 1x (não fica repetindo se a pessoa clicar em vários botões)
+        try:
+            if time.time() - float(fatos.get("cop_ask_ts") or 0) < 600:
+                return {"status": "copiloto_ja_perguntou"}
+        except Exception:
+            pass
+        t = ("Posso te ajudar por aqui mesmo 😊 Você deseja a sua *fatura* (Pix ou boleto)?\n\n"
+             "É só me enviar abaixo os números do seu *CPF* que eu já te envio.")
+        FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO)
+        _registra_txt(contato, t)
+        M.merge_fatos(contato, {"cop_ask_ts": time.time()})
+        M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "pediu_cpf"})
+        return {"status": "copiloto_pediu_cpf"}
+    # assunto que não é fatura -> silêncio absoluto (humano cuida)
+    return {"status": "copiloto_silencio"}
+
 def _dedup(key: str) -> bool:
     now = time.time()
     for k, ts in list(_SEEN.items()):
@@ -228,6 +328,10 @@ def _processar(contato, texto, ctx):
         except Exception: pass
 
     resultado = FS.executar_decisao(ext, d, contato) if ext else {"erro": "sem external_key"}
+    # registra o que NÓS enviamos (o detector de "humano digitou" usa isso pra não nos confundir)
+    _registra_txt(contato, d.get("texto"))
+    for _e in (d.get("_envios") or []):
+        _registra_txt(contato, _e.get("text"))
     if d.get("acao") in ("responder", "fastreply") and d.get("texto"):
         M.add_mensagem(contato, ext, "pedrao", d["texto"])
 
@@ -278,6 +382,14 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
         M.log_evento(ev["contato"], "bot_nativo_detectado", {"mask": _mask(ev["contato"])})
         return {"status": "bot_nativo_detectado_pedrao_em_pausa"}
 
+    # HUMANO DIGITOU nesta conversa? (fromMe que não é nosso nem menu de bot) -> o copiloto
+    # silencia NAQUELE ticket na hora (ordem do dono: aceitar não para; digitar para).
+    if ev["from_me"] and ev["texto"] and not _txt_do_bot(ev["contato"], str(ev["texto"])):
+        if ev.get("ticket_id") is not None:
+            M.merge_fatos(ev["contato"], {"cop_mute_ticket": str(ev["ticket_id"])})
+            M.log_evento(ev["contato"], "copiloto",
+                         {"mask": _mask(ev["contato"]), "acao": "humano_digitou_silenciei"})
+
     # idempotência (webhook repetido) — SEM o ts: a FlowSeller às vezes reenvia a MESMA mensagem
     # com timestamp diferente, o que gerava resposta duplicada. Dedup por contato+texto na janela TTL.
     _txt_norm = " ".join(str(ev["texto"]).lower().split())
@@ -293,6 +405,13 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     # — senão ele atropela o atendimento humano (falha grave: cliente transferido pro Suporte
     # recebia mensagem comercial do bot).
     if ev.get("status") == "open" or ev.get("user_id") or ev.get("queue_id"):
+        # COPILOTO FINANCEIRO: fila 25 + copiloto ligado + nenhum humano DIGITOU neste ticket
+        # -> o bot entrega a fatura ali mesmo (mesmo com atendente tendo ACEITADO — eles aceitam
+        # e demoram; quem manda parar é o humano DIGITAR, tratado no marcador cop_mute_ticket).
+        if (str(ev.get("queue_id") or "") == str(FILA_FINANCEIRO)
+                and PAINEL.ativo() and PAINEL.copiloto_ativo() and ev["texto"]
+                and str(M.get_fatos(ev["contato"]).get("cop_mute_ticket") or "") != str(ev.get("ticket_id"))):
+            return await asyncio.to_thread(_copiloto, ev)
         M.log_evento(ev["contato"], "ignorado_humano_assumiu",
                      {"mask": _mask(ev["contato"]), "status": ev.get("status"),
                       "user": bool(ev.get("user_id")), "queue": ev.get("queue_id")})

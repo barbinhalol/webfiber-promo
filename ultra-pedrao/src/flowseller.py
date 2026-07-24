@@ -62,7 +62,18 @@ def _enviar(body, usar="resposta", delay=True):
     try:
         if delay:
             time.sleep(random.uniform(DELAY_MIN_S, DELAY_MAX_S))
-        resp = _post(apiid, jwt, "", body)
+        try:
+            resp = _post(apiid, jwt, "", body)
+        except urllib.error.HTTPError as e:
+            # 24/07: a config de TRANSFER morreu junto com o cancelamento do Pedrao nativo
+            # (HTTP 403 Invalid token) e as transferencias paravam mudas. Fallback automatico:
+            # credencial de transfer invalida -> tenta de novo com a credencial de RESPOSTA
+            # (o SendMessageBase aceita queueId por qualquer config valida).
+            if usar == "transfer" and e.code in (401, 403) and C.FS_APIID_RESPOSTA and \
+                    (apiid, jwt) != (C.FS_APIID_RESPOSTA, C.FS_JWT_RESPOSTA):
+                resp = _post(C.FS_APIID_RESPOSTA, C.FS_JWT_RESPOSTA, "", body)
+            else:
+                raise
         # Blindagem: a FlowSeller pode devolver HTTP 200 com corpo {} sem criar nada de verdade
         # (visto ao vivo faltando "body" no payload de midia). So consideramos enviado se a
         # resposta realmente trouxer a mensagem criada (tem id, em "message" ou na raiz).
@@ -80,17 +91,22 @@ def _enviar(body, usar="resposta", delay=True):
 # Assinatura fixa (como os atendentes humanos assinam "*Nome*:") — deixa claro que é agente virtual
 # sem precisar repetir "sou virtual" no texto. NÃO entra na saudação (que já se apresenta).
 _ASSINATURA = "*Pedrão · Agente Virtual*\n"
+# Copiloto Financeiro (horário humano): assinatura NEUTRA de setor — o cliente não vê "agente
+# virtual"; parece o time do Financeiro respondendo (ordem do dono 24/07).
+ASSIN_FINANCEIRO = "*Financeiro WebFiber*\n"
 
-def _assinar(texto):
+def _assinar(texto, marca=None):
     t = texto or ""
-    if t and "virtual" not in t.lower() and not t.lstrip().startswith("*Pedrão") and len(t) > 8:
-        return _ASSINATURA + t
+    pref = marca or _ASSINATURA
+    if t and "virtual" not in t.lower() and not t.lstrip().startswith(("*Pedrão", "*Financeiro")) and len(t) > 8:
+        return pref + t
     return t
 
-def responder_texto(external_key, texto, nota=None, number=None, delay=True, assinar=True):
+def responder_texto(external_key, texto, nota=None, number=None, delay=True, assinar=True, marca=None):
     # assinar=False p/ conteúdo que o cliente vai COPIAR (Pix copia-e-cola, linha digitável):
     # a assinatura no topo sujaria o copiar/colar no app do banco.
-    body = {"externalKey": external_key, "body": (_assinar(texto) if assinar else (texto or ""))}
+    # marca: assinatura alternativa (ex.: ASSIN_FINANCEIRO no copiloto).
+    body = {"externalKey": external_key, "body": (_assinar(texto, marca) if assinar else (texto or ""))}
     if number: body["number"] = number
     if nota: body["note"] = {"body": nota}
     return _enviar(body, "resposta", delay=delay)

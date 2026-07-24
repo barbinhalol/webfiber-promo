@@ -17,6 +17,8 @@ PADRAO = {
     "ajustes": "",           # instrucoes livres do dono em portugues (anexadas ao cerebro)
     "desbloqueio_confianca": False,  # DESLIGADO por padrao: so o dono liga quando for testar
     "saudacao": "",           # ""=usa a saudacao padrao do codigo | texto custom (ex.: evento/feriado)
+    "copiloto_financeiro": False,  # Copiloto: entrega fatura na fila do Financeiro (horario humano),
+                                   # assinado "*Financeiro WebFiber*", cala quando um humano DIGITA
     "nativo_ts": 0.0,         # sentinela anti-duplo-bot: quando o menu NATIVO da FlowSeller foi visto
     "sentinela_nativo": False, # DESLIGADA (23/07: dono CANCELOU o Pedrao nativo da FlowSeller ->
                                # nao ha mais outro bot; a espera de 10-30min virou so atraso inutil).
@@ -77,6 +79,10 @@ def bot_nativo_ativo(janela_s: int = 1800) -> bool:
         return (time.time() - float(p.get("nativo_ts") or 0)) < janela_s
     except Exception:
         return False
+
+def copiloto_ativo() -> bool:
+    """Copiloto Financeiro: entrega fatura na fila do Financeiro durante o horario humano."""
+    return bool(ler().get("copiloto_financeiro", False))
 
 def saudacao_custom() -> str:
     """Saudação customizada (ex.: evento/feriado). Vazio = usa a padrão do código (brain._ABERTURA).

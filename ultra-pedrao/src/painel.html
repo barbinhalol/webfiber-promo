@@ -161,6 +161,14 @@ button.save:active{transform:translateY(1px)}
 
     <div class="card">
       <div class="avhead">
+        <h2 style="margin:0">🤝 Copiloto Financeiro (horário humano)</h2>
+        <label class="mini-sw"><input type="checkbox" id="copon"><i></i></label>
+      </div>
+      <div class="hint">Quando LIGADO: quem cai na fila do <b>Financeiro</b> (clicou no menu) recebe na hora a oferta de 2ª via — manda o CPF e o sistema entrega <b>Pix + boleto</b> assinado <b>*Financeiro WebFiber*</b> (sem se apresentar como robô). Atendente <b>aceitar</b> não interrompe; atendente <b>digitar</b> qualquer coisa silencia o copiloto naquele atendimento na hora. Outros assuntos: ele fica mudo e o humano atende normal.</div>
+    </div>
+
+    <div class="card">
+      <div class="avhead">
         <h2 style="margin:0">🔓 Desbloqueio em confiança</h2>
         <label class="mini-sw"><input type="checkbox" id="desbon"><i></i></label>
       </div>
@@ -238,6 +246,7 @@ function pintar(p){
   $('aviso').value = p.aviso || ''; cc('aviso');
   $('avon').checked = !!p.aviso_ativo; pintaAviso();
   $('desbon').checked = !!p.desbloqueio_confianca;
+  $('copon').checked = !!p.copiloto_financeiro;
   $('saudacao').value = (p.saudacao || '').trim() || SAUDACAO_PADRAO; cc('saudacao');
   $('ajustes').value = p.ajustes || ''; cc('ajustes');
   if(p.atualizado_em){ ULT_SAVE = p.atualizado_em*1000; }
@@ -340,7 +349,8 @@ async function salvar(){
     var payload = {
       modo: modoSel(), allowlist: $('allow').value,
       aviso: $('aviso').value, aviso_ativo: $('avon').checked, ajustes: $('ajustes').value,
-      desbloqueio_confianca: $('desbon').checked, saudacao: saud
+      desbloqueio_confianca: $('desbon').checked, saudacao: saud,
+      copiloto_financeiro: $('copon').checked
     };
     var novaSenha = ($('senha').value||'').trim();
     if(novaSenha){ payload.senha = novaSenha; }
