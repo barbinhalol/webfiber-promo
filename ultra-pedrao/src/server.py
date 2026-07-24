@@ -307,7 +307,21 @@ def _copiloto(ev):
         M.merge_fatos(contato, {"cop_ask_ts": time.time()})
         M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "pediu_cpf"})
         return {"status": "copiloto_pediu_cpf"}
-    # assunto que não é fatura -> silêncio absoluto (humano cuida)
+    # PRIMEIRA fala na fila ainda sem intenção clara ("Ola", "oi, tudo bem?") -> saudação de
+    # setor 1x (24/07: o clique FINANCEIRO chega ANTES da fila ser marcada, então a saudação
+    # não disparava e o cliente ficava no vácuo até dizer "boleto").
+    try:
+        _ja_saudou = time.time() - float(fatos.get("cop_greet_ts") or 0) < 1800
+    except Exception:
+        _ja_saudou = False
+    if not _ja_saudou:
+        t = "Olá! Aqui é do setor *Financeiro* da WebFiber 😊 Em que posso te ajudar?"
+        FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO)
+        _registra_txt(contato, t)
+        M.merge_fatos(contato, {"cop_greet_ts": time.time()})
+        M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "saudacao_setor"})
+        return {"status": "copiloto_saudacao_setor"}
+    # já saudado e o assunto não é fatura -> silêncio absoluto (humano cuida)
     return {"status": "copiloto_silencio"}
 
 def _dedup(key: str) -> bool:
@@ -528,6 +542,12 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     # liga/desliga pelo painel (o "botão" do dono, sem terminal)
     if not PAINEL.ativo():
         return {"status": "desligado_no_painel"}
+    # CLIQUE NO BOTÃO "FINANCEIRO" chega ANTES de a FlowSeller marcar a fila no ticket (visto ao
+    # vivo 24/07 13:34: saudação não disparava e o cliente ficava no vácuo). Com o copiloto ligado,
+    # o clique dispara a saudação de setor NA HORA — o ticket entra na fila 25 logo em seguida.
+    if (PAINEL.copiloto_ativo() and ev["texto"] and _BTN_FIN.match(str(ev["texto"]))
+            and str(M.get_fatos(ev["contato"]).get("cop_mute_ticket") or "") != str(ev.get("ticket_id"))):
+        return await asyncio.to_thread(_copiloto, ev)
     # chatbot NATIVO da FlowSeller atendendo o canal? -> o Pedrão se cala sozinho (anti-duplo-bot).
     # Some o menu nativo (canal voltou pro fluxo vazio) -> retoma automático em ~10 min.
     if PAINEL.bot_nativo_ativo():
