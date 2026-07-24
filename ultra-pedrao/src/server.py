@@ -766,9 +766,13 @@ async def admin_teste_botoes(request: Request, x_admin_token: str = Header(defau
                   (PAINEL.allowlist_efetiva(C.PILOT_ALLOWLIST) or []) if n]
     extra = re.sub(r"\D", "", _os.environ.get("TESTE_BOTOES_NUM") or "")
     if extra: permitidos.append(extra)
-    if not numero or not any(numero.endswith(p) or p.endswith(numero) for p in permitidos if p):
+    na_lista = any(numero.endswith(p) or p.endswith(numero) for p in permitidos if p)
+    # com o bot liberado pra todos a allowlist do piloto fica vazia; nesse caso exige confirmação
+    # explícita do número na própria chamada (que só sai com o token de admin).
+    if not numero or not (na_lista or (not permitidos and body.get("confirmo_numero_de_teste"))):
         raise HTTPException(status_code=400,
-                            detail="numero fora do allowlist de teste (defina TESTE_BOTOES_NUM ou use a allowlist do piloto)")
+                            detail="numero fora do allowlist de teste (use TESTE_BOTOES_NUM, a "
+                                   "allowlist do piloto, ou confirmo_numero_de_teste=true)")
     pix = (body.get("pix") or "").strip()
     linha = (body.get("linha") or "").strip()
     if not pix and body.get("cpf"):        # busca uma fatura real no MyCore
