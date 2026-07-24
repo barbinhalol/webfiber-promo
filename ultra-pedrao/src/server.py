@@ -107,8 +107,13 @@ _MENU_NATIVO = re.compile(
 # "*Financeiro WebFiber*" (sem se apresentar como robô). Regras: atendente ACEITAR não o para
 # (aceitam e demoram); atendente DIGITAR qualquer coisa -> silencia naquele ticket na hora.
 FILA_FINANCEIRO = C.FILAS.get("financeiro", 25)
-_COP_KW = re.compile(r"(financeiro|fatura|boleto|pix|2\s*ª?\s*via|segunda\s+via|pagamento|"
+_COP_KW = re.compile(r"(financeiro|fatura|boleto|pix|2\s*[ªº°]?\s*via|segunda\s+via|pagamento|"
                      r"c[óo]digo\s+de\s+barras|linha\s+digit|vencimento|pagar)", re.I)
+# clique do botão FINANCEIRO (entrada na fila) -> saudação de SETOR, como um humano faria
+_BTN_FIN = re.compile(r"^\s*(3\s*-\s*)?financeiro\s*$", re.I)
+# botões que já dizem O QUE a pessoa quer -> vai direto pro CPF
+_BTN_FATURA = re.compile(r"^\s*(baixar\s+boleto|2\s*[ªº°]?\s*via(\s+da\s+fatura)?|"
+                         r"segunda\s+via(\s+da\s+fatura)?|pix)\s*$", re.I)
 
 _BOT_TXT = {}  # contato -> [(ts, texto enviado por nós)] — p/ distinguir humano de bot no fromMe
 
@@ -121,14 +126,22 @@ def _registra_txt(contato, texto):
     del l[:-20]
 
 def _txt_do_bot(contato, texto) -> bool:
-    """True se a mensagem fromMe foi gerada por BOT (nosso ou menu nativo) — não por um humano."""
+    """True se a mensagem fromMe foi gerada por BOT (nosso ou fluxo nativo) — não por um humano.
+    24/07: lista ampliada — o submenu do fluxo ('Selecione uma opção:'), as respostas enlatadas
+    (link da área do cliente) e a nossa própria saudação eram classificados como HUMANO e mutavam
+    o copiloto injustamente (visto ao vivo: cascata de humano_digitou_silenciei)."""
     t = (texto or "").strip()
     if not t:
         return True
     if t.startswith("*Pedrão") or t.startswith("*Financeiro"):
         return True
-    # menus de botão (nativo/submenus): linhas "1 - ..." ou "Escolha ..."
-    if re.search(r"^\s*\d\s*-\s*\S", t, re.M) or re.search(r"escolha", t, re.I):
+    if t.startswith("Olá! Eu sou o Pedrão"):   # nossa saudação sai SEM assinatura
+        return True
+    # menus/fluxo de botão (nativo/submenus): "1 - ...", "Escolha...", "Selecione...", boas-vindas
+    if re.search(r"^\s*\d\s*-\s*\S", t, re.M) or re.search(r"escolha|selecione|bem[- ]vindo", t, re.I):
+        return True
+    # respostas enlatadas do fluxo (link da área do cliente / textos oficiais de fatura)
+    if "areadocliente" in t.lower() or "Para baixar a sua Fatura" in t:
         return True
     # pedaços da entrega de fatura sem assinatura (Pix copia-e-cola EMV, linha digitável, avisos)
     if re.match(r"^000201", t) or re.match(r"^[\d\s.]{40,}$", t):
@@ -203,8 +216,12 @@ def _copiloto(ev):
                                    nota="[Copiloto Financeiro] Cadastro escolhido sem fatura em aberto.")
                 _registra_txt(contato, t)
                 return {"status": "copiloto_sem_fatura"}
-            FS.responder_texto(ext, R.FINANCEIRO_FATURA, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO,
-                               nota="[Copiloto Financeiro] Falha ao buscar a fatura do cadastro escolhido; enviei o link.")
+            t = ("Não consegui puxar a fatura desse cadastro agora 😕 Já avisei nossa equipe do "
+                 "Financeiro — eles te enviam por aqui mesmo.")
+            FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO,
+                               nota="[Copiloto Financeiro] ⚠️ Falha ao buscar a fatura do cadastro escolhido "
+                                    "— ENVIAR MANUALMENTE pro cliente.")
+            _registra_txt(contato, t)
             return {"status": "copiloto_fallback"}
         # não entendeu a escolha: re-pergunta UMA vez; na 2ª falha, silencia e deixa pro humano
         if int(fatos.get("cop_esc_try") or 0) >= 1:
@@ -250,21 +267,41 @@ def _copiloto(ev):
             _registra_txt(contato, t)
             M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "sem_fatura"})
             return {"status": "copiloto_sem_fatura"}
-        # não achou o CPF / MyCore fora: manda o link oficial e deixa o humano seguir (sem transferir — já está na fila)
-        FS.responder_texto(ext, R.FINANCEIRO_FATURA, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO,
-                           nota="[Copiloto Financeiro] Não localizei pelo CPF (ou sistema fora); "
-                                "enviei o link da área do cliente. Atendimento humano segue normal.")
-        M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "fallback_link"})
-        return {"status": "copiloto_fallback"}
-    if _COP_KW.search(texto):
-        # pergunta 1x (não fica repetindo se a pessoa clicar em vários botões)
+        # não achou o CPF / MyCore fora: SEM link de área do cliente (ordem do dono 24/07 — nada
+        # de "cara de robô"). Pede pra conferir 1x; na 2ª falha, silencia e o humano assume.
+        if int(fatos.get("cop_fail") or 0) >= 1:
+            M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "cpf_falhou_2x_silencio"})
+            return {"status": "copiloto_silencio"}
+        t = ("Não localizei o cadastro com esse número 😊 Pode conferir os dígitos do "
+             "*CPF ou CNPJ* e me enviar de novo, por gentileza?")
+        FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO,
+                           nota="[Copiloto Financeiro] CPF/CNPJ não localizado; pedi pra conferir.")
+        _registra_txt(contato, t)
+        M.merge_fatos(contato, {"cop_fail": 1})
+        M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "cpf_nao_achado"})
+        return {"status": "copiloto_cpf_nao_achado"}
+    # clique do botão FINANCEIRO (entrou na fila) -> saudação de SETOR, natural, como um humano
+    if _BTN_FIN.match(texto):
+        try:
+            if time.time() - float(fatos.get("cop_greet_ts") or 0) < 1800:
+                return {"status": "copiloto_ja_saudou"}
+        except Exception:
+            pass
+        t = "Olá! Aqui é do setor *Financeiro* da WebFiber 😊 Em que posso te ajudar?"
+        FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO)
+        _registra_txt(contato, t)
+        M.merge_fatos(contato, {"cop_greet_ts": time.time()})
+        M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "saudacao_setor"})
+        return {"status": "copiloto_saudacao_setor"}
+    if _BTN_FATURA.match(texto) or _COP_KW.search(texto):
+        # pediu fatura/pix/2ª via (botão ou escrito) -> pede o documento. 1x a cada 10min.
         try:
             if time.time() - float(fatos.get("cop_ask_ts") or 0) < 600:
                 return {"status": "copiloto_ja_perguntou"}
         except Exception:
             pass
-        t = ("Posso te ajudar por aqui mesmo 😊 Você deseja a sua *fatura* (Pix ou boleto)?\n\n"
-             "É só me enviar abaixo os números do seu *CPF ou CNPJ* que eu já te envio.")
+        t = ("Claro! Me envia abaixo os números do seu *CPF ou CNPJ* que eu já te mando a "
+             "fatura com o *Pix* e o *boleto* 😊")
         FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO)
         _registra_txt(contato, t)
         M.merge_fatos(contato, {"cop_ask_ts": time.time()})
@@ -514,8 +551,11 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     if not ev["texto"] and ev["tipo"] not in ("audio", "ptt", "voice"):
         return {"status": "ignorado_vazio"}
 
-    # horário: Pedrão atua fora do expediente humano (FORCAR_ATUACAO ignora o gate p/ teste — segue shadow)
-    if not S.deve_atuar() and not C.FORCAR_ATUACAO:
+    # horário: Pedrão atua fora do expediente humano. TRAVA (24/07): FORCAR_ATUACAO é flag de
+    # TESTE e ficou esquecida no .env -> o Pedrão se apresentou em pleno horário humano por cima
+    # da equipe. Em modo LIVE ela passa a ser IGNORADA — só vale em shadow/pilot (teste de verdade).
+    _forcar_teste = C.FORCAR_ATUACAO and PAINEL.modo_efetivo(C.BOT_MODE) != "live"
+    if not S.deve_atuar() and not _forcar_teste:
         M.log_evento(ev["contato"], "fora_de_atuacao",
                      {"mask": _mask(ev["contato"]), "tem_texto": bool(ev["texto"]), "tipo": ev["tipo"]})
         return {"status": "dentro_horario_humano_nao_atua"}
