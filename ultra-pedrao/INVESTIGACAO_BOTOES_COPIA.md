@@ -1,6 +1,17 @@
 # Investigação — sumiço dos botões "Copiar código Pix" / "Copiar código do boleto"
 
-**Aberto:** 24/07/2026 · **Status:** causa **não fechada**; escopo reduzido por eliminação com prova.
+**Aberto:** 24/07/2026 · **FECHADO:** 24/07/2026 · **Status:** **CAUSA CONFIRMADA.**
+
+> ## ✅ CONCLUSÃO (confirmada pelo dono, por teste em vários aparelhos)
+> O botão **aparece normalmente em todos os aparelhos testados** — os **clientes recebem o botão**.
+> O único aparelho que **não** renderiza é o do próprio dono (o número de teste 5521964450618).
+> Logo, a causa é **renderização client-side naquele aparelho/instalação do WhatsApp** — não é o
+> nosso envio, não é a FlowSeller, não é a Meta ter removido nada. É a hipótese 1, agora provada e
+> localizada num único device. **Não há nada a corrigir em produção.**
+>
+> Isso bate 100% com a evidência de bytes: nosso envio é idêntico e válido, a FlowSeller entrega
+> igual, e a única variável que sobrava era o aparelho que exibe. Confirmada.
+
 **Sintoma:** até 17/07 as mensagens de fatura chegavam no celular com o botão nativo de copiar.
 Hoje (24/07) o mesmo tipo de mensagem chega sem o botão. **Os dois botões sumiram juntos.**
 
@@ -252,9 +263,27 @@ Ambos com o código chegando isolado no balão, payload limpo e conferido no log
 
 ## Plano B
 
-**Ainda não acionado.** A condição ("o botão automático não pode ser reproduzido") está
-**parcialmente** satisfeita: nenhuma variante nossa reproduz. Falta a medição (b) — o mesmo código
-saindo de um WhatsApp **pessoal**, fora da conta WABA. Se lá o botão aparecer, o problema é da
-nossa conta e tem endereço certo para cobrar; se lá também não aparecer, o recurso não está sendo
-desenhado no aparelho e o Plano B vira a solução: página própria de "copia e cola" (botão + QR)
-em domínio nosso.
+**Não é necessário.** A condição que o justificaria ("clientes não recebem o botão") **não se
+verificou**: os clientes recebem. O sintoma existe só no aparelho do dono. Página própria de
+"copia e cola" fica como ideia de futuro (imuniza contra qualquer mudança da Meta e serve
+aparelhos que não renderizam), mas **não como correção de um problema de produção** — porque não
+há problema de produção.
+
+## Para o botão voltar NO APARELHO DO DONO (device-side, não é código)
+
+Ordem do mais provável ao menos: (1) atualizar o WhatsApp na Play Store para a última versão — a
+detecção do código é gated por versão/rollout do app; (2) se estiver no **WhatsApp Beta**, sair do
+programa beta e voltar à versão estável; (3) forçar parada + limpar **cache** (não os dados) do
+WhatsApp; (4) em último caso, reinstalar. Nada disso toca no sistema.
+
+## O que a investigação deixou de bom (não foi desperdício)
+
+1. **Bug real corrigido:** o Copiloto Financeiro descartava o resultado do envio e registrava
+   "fatura entregue" mesmo quando **todos** os POSTs falhavam. Agora detecta falha de verdade e
+   registra `fatura_FALHOU`. (Foi o que fez a mensagem das 14:49 "sumir" do banco.)
+2. **Caminhos unificados:** copiloto e noturno usam a mesma porta de envio — fim da lógica
+   duplicada.
+3. **Log forense permanente:** qualquer envio agora tem assinatura técnica (bytes, sha, wamid,
+   tipo, template, canal). Se algo parecido voltar, a resposta sai em minutos.
+4. **`POST /admin/teste-botoes`:** disparador de teste A/B com trava de número, para diagnóstico
+   futuro sem depender do horário.
