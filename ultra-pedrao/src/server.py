@@ -26,7 +26,11 @@ _os.makedirs(_PLANOS_DIR, exist_ok=True)
 app.mount("/planos", StaticFiles(directory=_PLANOS_DIR), name="planos")
 
 _SEEN = {}  # idempotência: hash do evento -> ts (dedup de webhook repetido)
-_SEEN_TTL = 600
+# 24/07: TTL caiu 600->120s e a chave ganhou o ticket_id. Os BOTÕES do menu geram sempre o mesmo
+# texto ("Ola", "FINANCEIRO") — com 10min de janela por contato+texto, o 2º teste/clique em
+# conversa nova era engolido SEM LOG (o dono viu o copiloto "mudo"). O dedup existe só pra
+# reentrega do MESMO webhook, que acontece em segundos.
+_SEEN_TTL = 120
 _START_TS = time.time()
 
 # ---- NOTA INTERNA DO LEAD (ordem do dono 14/07/2026) ----
@@ -522,9 +526,11 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
                          {"mask": _mask(ev["contato"]), "acao": "humano_digitou_silenciei"})
 
     # idempotência (webhook repetido) — SEM o ts: a FlowSeller às vezes reenvia a MESMA mensagem
-    # com timestamp diferente, o que gerava resposta duplicada. Dedup por contato+texto na janela TTL.
+    # com timestamp diferente, o que gerava resposta duplicada. Dedup por contato+TICKET+texto
+    # (ticket na chave: conversa nova nunca é confundida com duplicata da anterior).
     _txt_norm = " ".join(str(ev["texto"]).lower().split())
-    key = hashlib.sha256((str(ev["external_key"]) + "|" + _txt_norm).encode()).hexdigest()
+    key = hashlib.sha256((str(ev["external_key"]) + "|" + str(ev.get("ticket_id") or "") + "|"
+                          + _txt_norm).encode()).hexdigest()
     if _txt_norm and _dedup(key):
         return {"status": "duplicado_ignorado"}
 
