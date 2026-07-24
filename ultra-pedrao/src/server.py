@@ -780,8 +780,20 @@ async def admin_teste_botoes(request: Request, x_admin_token: str = Header(defau
             # client_id: CPF com vários cadastros (o dono só tem boleto no 6817)
             r = MC.resolver_fatura(re.sub(r"\D", "", str(body["cpf"])),
                                    client_id=body.get("client_id"))
-            f = (r or {}).get("fatura") or {}
-            pix = (f.get("pixccola") or "").strip(); linha = (f.get("linhadigitavel") or "").strip()
+            if (r or {}).get("status") != "entregue":
+                raise HTTPException(status_code=404,
+                                    detail=f"MyCore não devolveu fatura (status={(r or {}).get('status')}, "
+                                           f"motivo={(r or {}).get('motivo')})")
+            # resolver_fatura devolve a RÉGUA pronta em 'envios'; o Pix e a linha digitável são
+            # os itens tipo 'raw' -- é de lá que a matriz A/B tira os códigos.
+            for e in (r.get("envios") or []):
+                t = (e.get("text") or "").strip()
+                if "BR.GOV.BCB.PIX" in t and not pix:
+                    pix = t
+                elif t.isdigit() and len(t) in (47, 48) and not linha:
+                    linha = t
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(status_code=502, detail=f"MyCore: {e}")
     if not pix and not linha:
