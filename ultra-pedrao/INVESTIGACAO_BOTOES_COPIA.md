@@ -173,7 +173,32 @@ carregados do tenant 9.
 
 **Sobre "a API só aceita `body`":** verificado no código que **nós** só mandamos
 `externalKey`/`body`/`number`/`mediaUrl`/`note`/`queueId`. Que a API não aceite **mais nada** ainda
-**não está provado** — falta ler o bundle do painel / a documentação do parceiro. Fica em aberto.
+**não está provado** — falta a documentação do parceiro. Fica em aberto.
+
+### Inspeção do bundle do painel (24/07) — três achados
+
+1. **São DUAS APIs distintas.** `externalKey` **não aparece em nenhum** dos 9 bundles do painel.
+   O painel usa a **API interna**: `POST /messages/{ticketId}` (e `/messages/{id}/resend`).
+   O nosso bot usa a **API externa**: `POST /v1/api/external/{apiId}`. Caminhos diferentes dentro
+   da FlowSeller — logo, "envio manual pelo painel" e "envio do bot" **não são comparáveis por
+   suposição**, têm que ser testados.
+2. **O painel conhece `interactive`, `buttons`, `templateId`, `typeTemplate`, `params`,
+   `mentions`, `scheduleDate`, `sendType`, `mediaType`.** Ou seja, a plataforma **tem vocabulário
+   de mensagem interativa**. Nada disso é expressável na API externa que usamos hoje. Isso
+   fortalece a hipótese 2 (existe capacidade que não estamos usando) e é o que deve ser
+   perguntado ao suporte, com nome de campo.
+3. **Canal waba exige TEMPLATE para iniciar conversa.** No diálogo "Criar Atendimento", ao
+   escolher o canal *WebFiber Provedor*, o painel **substitui o campo de mensagem livre por um
+   seletor de Template obrigatório**. É a regra da janela de 24h da Meta. Consequência prática:
+   o envio manual de texto livre (variante K) só é possível **dentro** de uma conversa com janela
+   aberta — não dá para iniciar uma.
+
+**Bloqueio da variante K:** para comparar "envio manual × envio do bot" com o mesmo código, é
+preciso uma janela de 24h aberta com o número de teste (o cliente precisa ter mandado alguma
+mensagem). Sem isso o painel só deixa mandar template.
+
+**Acesso à API interna por script: bloqueado.** O ambiente protege o token de sessão do
+navegador (leitura recusada) — não foi contornado, por decisão.
 
 ---
 
