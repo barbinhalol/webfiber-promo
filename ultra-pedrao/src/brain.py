@@ -209,6 +209,19 @@ _JA_CLIENTE = re.compile(
     r"\b(plano|velocidade|internet|pacote)\b|"
     r"\b(teste\s+de\s+velocidade|speedtest|s[óo]\s+(d[áa]|chega|vem|t[áa]\s+dando)\s*\d+)\b", re.I)
 
+# MUDANÇA DE ENDEREÇO. 25/07: testado ao vivo, o modelo respondia "Dá sim! A gente leva a
+# internet junto" SEM saber o endereço -- promessa de cobertura que a equipe pode não cumprir.
+# Reescrever a regra não bastou (o prompt principal puxa forte pro fluxo de venda), então virou
+# CÓDIGO: resposta fixa, correta, e de graça.
+_MUDANCA_END = re.compile(
+    r"\b(mud(ar|an[çc]a|ando)|me\s+mudo|vou\s+me\s+mudar|troc(ar|a)\s+de\s+(casa|endere[çc]o)|"
+    r"casa\s+nova|apartamento\s+novo|outro\s+endere[çc]o|novo\s+endere[çc]o|transferir\s+(a\s+)?"
+    r"(internet|linha|ponto))\b", re.I)
+# "plano" fica de FORA daqui: "quero mudar meu plano" é upgrade (regra 18), não mudança de casa.
+_LEVAR_INTERNET = re.compile(
+    r"\b(levar?|lev(o|a)|transferir)\b[^.!?]{0,30}\b(internet|net|linha|ponto|servi[çc]o)\b|"
+    r"\b(internet|net)\b[^.!?]{0,20}\bvai\s+junto\b", re.I)
+
 # pediu HUMANO -> atender na hora, sem insistir (regra 15)
 _QUER_HUMANO = re.compile(
     r"\b(atendente|humano|pessoa\s+de\s+verdade|falar\s+com\s+(algu[ée]m|uma\s+pessoa|gente)|"
@@ -465,6 +478,31 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     if sup in ("1", "2"):
         return _suporte_passo(msg, sup, fatos, historico)
 
+    # 0.5) MUDANÇA DE ENDEREÇO e UPGRADE DE PLANO: dois casos em que o modelo insistia em
+    # PROMETER o que não pode (que a internet "vai junto" pro endereço novo) ou em tratar cliente
+    # de anos como lead novo (pedir rua/número "pra ver viabilidade"). Resposta fixa aqui, sem IA.
+    if _JA_CLIENTE.search(msg) and _PLANOS_INTENCAO.search(msg) and not _SUP_INTENCAO.search(msg):
+        _abre0 = (_abertura() + "\n\n") if sessao_nova else ""
+        return _fp(_abre0 + "Perfeito! Vou registrar seu pedido de *mudança de plano* e o time "
+                   "Comercial te passa a condição certinha e faz a troca 😊\n\n"
+                   "Me confirma o *CPF* do titular, por gentileza?",
+                   intencao="venda", icone="⬆️",
+                   nota="[Pedrão] UPGRADE/TROCA DE PLANO — cliente ATUAL pedindo mudança. "
+                        "Comercial retorna com valor e data. (Não mandei tabela de planos nem "
+                        "pedi endereço: ele já é atendido.)")
+
+    # ...mas quem fala de "casa nova" PERGUNTANDO PREÇO é lead novo querendo contratar, não
+    # cliente mudando de endereço -- esse vai pro fluxo de planos/LLM, não pra cá.
+    if ((_MUDANCA_END.search(msg) or _LEVAR_INTERNET.search(msg))
+            and not _FINANCEIRO_KW.search(msg) and not _PLANOS_INTENCAO.search(msg)):
+        _abre0 = (_abertura() + "\n\n") if sessao_nova else ""
+        return _fp(_abre0 + "Posso registrar sim! 😊 Quem confirma se a gente já atende o endereço "
+                   "novo — e combina a data da mudança com você — é a nossa equipe.\n\n"
+                   "Me passa o *endereço novo* (rua, número e bairro)?",
+                   intencao="mudanca_endereco", icone="📦",
+                   nota="[Pedrão] MUDANÇA DE ENDEREÇO — cliente quer levar o serviço pra outro "
+                        "endereço. Confirmar viabilidade no endereço novo e agendar. NÃO foi "
+                        "prometido nada sobre cobertura nem custo.")
     # 1) saudação pura -> abertura fixa "Olá!", sem anunciar conversa anterior (mesmo se reaberta)
     if _SAUDACAO_PURA.match(msg) and not _SINAIS_COMPLEXOS.search(msg):
         if sessao_nova:  # 1º contato OU reaberto: mesma saudação simples, sem relembrar o histórico
