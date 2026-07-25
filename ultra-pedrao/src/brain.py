@@ -222,6 +222,19 @@ _LEVAR_INTERNET = re.compile(
     r"\b(levar?|lev(o|a)|transferir)\b[^.!?]{0,30}\b(internet|net|linha|ponto|servi[çc]o)\b|"
     r"\b(internet|net)\b[^.!?]{0,20}\bvai\s+junto\b", re.I)
 
+# quer TROCAR de plano (upgrade/downgrade) — intenção de mudança, não reclamação
+# "internet" fica de FORA: "mudar a internet" tanto pode ser trocar de plano quanto levar pra
+# outra casa -- ambíguo demais pra atalho, vai pro LLM. Upgrade fala de plano/velocidade/mega.
+_QUER_UPGRADE = re.compile(
+    r"\b(aumentar|subir|melhorar|trocar|mudar|migrar|upgrade|downgrade|reduzir|baixar|passar)\b"
+    r"[^.!?]{0,20}\b(plano|velocidade|pacote|mega|giga)\b|"
+    r"\b(quero|queria|gostaria|posso)\b[^.!?]{0,20}\b(outro|um)\s+plano\b", re.I)
+# RECLAMAÇÃO de velocidade entregue (regra 19) — nunca tratar como oportunidade de venda
+_RECLAMA_VELOCIDADE = re.compile(
+    r"\b(teste\s+de\s+velocidade|speedtest|medi(r|ndo)|s[óo]\s+(d[áa]|chega|vem|t[áa]\s+dando|"
+    r"pega)\s*\d+|n[ãa]o\s+(chega|d[áa]|entrega)\s*\d+|\d+\s*(mega|mb).{0,12}\bs[óo]\b|"
+    r"pago\s+por\s+\d+|contratei\s+\d+)\b", re.I)
+
 # pediu HUMANO -> atender na hora, sem insistir (regra 15)
 _QUER_HUMANO = re.compile(
     r"\b(atendente|humano|pessoa\s+de\s+verdade|falar\s+com\s+(algu[ée]m|uma\s+pessoa|gente)|"
@@ -481,7 +494,11 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     # 0.5) MUDANÇA DE ENDEREÇO e UPGRADE DE PLANO: dois casos em que o modelo insistia em
     # PROMETER o que não pode (que a internet "vai junto" pro endereço novo) ou em tratar cliente
     # de anos como lead novo (pedir rua/número "pra ver viabilidade"). Resposta fixa aqui, sem IA.
-    if _JA_CLIENTE.search(msg) and _PLANOS_INTENCAO.search(msg) and not _SUP_INTENCAO.search(msg):
+    # ...mas SÓ quando ele quer MUDAR de plano. "Contratei 700 e o teste dá 180" também casa
+    # _JA_CLIENTE e é RECLAMAÇÃO de velocidade (regra 19) -- responder "vou registrar sua
+    # mudança de plano" ali seria vender pra quem está reclamando. Esse vai pro LLM.
+    if (_QUER_UPGRADE.search(msg) and not _RECLAMA_VELOCIDADE.search(msg)
+            and not _SUP_INTENCAO.search(msg)):
         _abre0 = (_abertura() + "\n\n") if sessao_nova else ""
         return _fp(_abre0 + "Perfeito! Vou registrar seu pedido de *mudança de plano* e o time "
                    "Comercial te passa a condição certinha e faz a troca 😊\n\n"
