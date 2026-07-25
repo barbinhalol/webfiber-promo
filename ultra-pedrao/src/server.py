@@ -413,6 +413,7 @@ def _cop_segurar(ev, fatos):
     if _cop_ja_fez(fatos, ev, "cop_hold_tid", "cop_hold_ts", 900):
         M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "ja_segurou_silencio"})
         return {"status": "copiloto_ja_segurou"}
+    _t0 = time.time()
     trat = _cop_tratamento(contato, fatos, ev)
     idx = int(time.time()) % len(_ESPERAS)
     t = _ESPERAS[idx].format(trat=trat)
@@ -424,8 +425,11 @@ def _cop_segurar(ev, fatos):
     FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO, nota=nota)
     _registra_txt(contato, t)
     _cop_marca(contato, ev, "cop_hold_tid", "cop_hold_ts")
+    # quanto tempo o atendente levou pra ver a nota, medido de verdade (o dono perguntou "em
+    # quantos segundos?" — agora tem número em cada atendimento, não estimativa)
     M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "segurou_p_humano",
-                                       "pedido": texto[:120]})
+                                       "pedido": texto[:120],
+                                       "ms_ate_nota": int((time.time() - _t0) * 1000)})
     return {"status": "copiloto_segurou_para_humano"}
 
 def _dedup(key: str) -> bool:
