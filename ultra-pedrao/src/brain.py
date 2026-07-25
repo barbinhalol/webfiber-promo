@@ -833,6 +833,13 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
                    "Use exatamente esses prazos — não invente outro nem diga só 'próximo dia útil'.]")
     except Exception:
         pass
+    # DOIS PEDIDOS na mesma mensagem: tirar do atalho não bastou -- o modelo também respondia
+    # só o primeiro. A regra 4 vira aviso explícito, com os dois assuntos nomeados.
+    if _PLANOS_INTENCAO.search(mensagem) and _FINANCEIRO_KW.search(mensagem):
+        ctx.append("[ATENÇÃO — DOIS PEDIDOS NA MESMA MENSAGEM: o cliente falou de PLANOS/VALORES "
+                   "e de FATURA/BOLETO. A regra 4 manda atender OS DOIS, nunca metade. Resolva "
+                   "primeiro o que você faz sozinho (a fatura, pedindo o CPF) e trate o outro "
+                   "assunto na mesma resposta.]")
     ctx.append(V.hint_para_prompt(viab))
     # REINCIDÊNCIA: o cliente que já trouxe o mesmo problema semana passada não pode ser tratado
     # como chamado novo -- é a coisa mais humana que existe ("vi que você já falou disso") e a
