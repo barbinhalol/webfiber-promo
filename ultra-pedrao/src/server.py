@@ -879,6 +879,15 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     if (PAINEL.copiloto_ativo() and ev["texto"] and _BTN_FIN.match(str(ev["texto"]))
             and not _cop_mudo(ev)):
         return await asyncio.to_thread(_copiloto, ev)
+    # ⛔ REGRA DURA (ordem do dono 25/07 09:50): com o copiloto LIGADO, o clique FINANCEIRO é
+    # assunto EXCLUSIVO do copiloto — se ele não respondeu acima (mute de atendente real, gate,
+    # o que for), a resposta certa é SILÊNCIO, NUNCA o cérebro do Pedrão. Foi exatamente o que
+    # aconteceu de manhã: um mute falso tirou o copiloto e o clique caiu no LLM, que "inventou"
+    # apresentação e 'vou te encaminhar' no lugar da frase padrão do setor.
+    if PAINEL.copiloto_ativo() and ev["texto"] and _BTN_FIN.match(str(ev["texto"])):
+        M.log_evento(ev["contato"], "clique_fin_so_copiloto",
+                     {"mask": _mask(ev["contato"]), "motivo": "copiloto mudo/gate — Pedrão não assume"})
+        return {"status": "clique_financeiro_so_copiloto"}
 
     # ⛔ SÓ COPILOTO (ordem do dono 25/07, canal "ATENDIMENTO + ULTRA PEDRÃO"): o chatbot normal da
     # FlowSeller é quem atende; o Pedrão NÃO PODE aparecer "em hipótese nenhuma". O que ele viu: o
