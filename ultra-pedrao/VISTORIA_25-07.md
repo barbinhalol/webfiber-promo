@@ -1,6 +1,6 @@
 # Vistoria completa — Ultra Pedrão (madrugada 24→25/07)
 
-**Tudo já está NO AR.** Deploy feito por mim via terminal, container saudável, bateria **237/237**.
+**Tudo já está NO AR.** Deploy feito por mim via terminal, container saudável, bateria **242/242**.
 Você não precisa colar nada. Este documento é só pra você conferir o que mudou.
 
 ---
@@ -224,10 +224,32 @@ Deixei um monitor rodando: assim que houver movimento suficiente, eu te trago os
 
 ---
 
-## ✅ Bateria de testes: 237/237
+## ✅ Bateria de testes: 242/242
 
-De 145 para **237 verificações**. As novas cobrem **cada frase real** que produzia resposta errada —
+De 145 para **242 verificações**. As novas cobrem **cada frase real** que produzia resposta errada —
 então esses erros não voltam sem o teste apitar.
+
+---
+
+## 🔬 O método que usei (e o que ele revelou)
+
+Trabalhei em ciclos: **medir → corrigir → medir de novo**. Isso pegou coisas que uma leitura de
+código sozinha não pegaria — inclusive **erros meus**:
+
+1. Corrigi o bug da luz vermelha ontem → **a auditoria mostrou 3 portas ainda abertas**.
+2. Escrevi 9 regras novas → **testei ao vivo e 3 falharam**, porque o prompt principal vence a
+   regra escrita. Só resolveu virando código.
+3. Criei o atalho de upgrade → **na medição seguinte peguei que ele "vendia" para quem estava
+   reclamando de velocidade**. Regressão minha, corrigida na mesma noite.
+4. Dei o relógio ao modelo → **ele abriu conversa com "Opa, madrugada!"**. Corrigido.
+
+Cada um desses virou teste na bateria. É por isso que ela saiu de 145 para **242 verificações**:
+não são testes decorativos, é cada erro real que apareceu, congelado para não voltar.
+
+**Uma medição que mudou minha prioridade:** o tempo de resposta é praticamente **linear no número
+de tokens que o modelo escreve** (~60 por segundo). 119 tokens = 1,9s; 347 tokens = 5,1s. Ou seja:
+mandar o bot ser conciso não é só melhor de ler no celular — é a alavanca mais barata de
+velocidade que existe aqui.
 
 ---
 
