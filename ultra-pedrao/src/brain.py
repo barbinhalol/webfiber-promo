@@ -26,6 +26,17 @@ QUICK = {1296, 1437, 1438, 3304, 1858, 1846, 1884, 2260, 2620, 2326, 3535, 1299,
 FILAS = {23, 24, 25, 112, 26}
 
 _PRECO = re.compile(r"(R\$\s*\d|\bpor\s+\d+\s*reais\b|\bfica\s+em\s+\d|\b\d{2,4}[.,]\d{2}\b)", re.I)
+# CONDIÇÃO COMERCIAL INVENTADA (25/07, teste ao vivo): perguntado "vocês cobram taxa de
+# instalação?", o bot respondeu "Sim, a gente cobra instalação — mas dá pra parcelar em até 3x
+# no cartão". Nada disso foi confirmado pelo dono: é a regra 11 (nunca invente) sendo furada por
+# um caminho que o guard de PREÇO não cobria, porque não tem número em reais.
+_COND_COMERCIAL = re.compile(
+    r"\b(\d+\s*x\s*(no\s+|sem\s+|de\s+)?(cart[ãa]o|juros|vezes)|parcel\w+\s+em\s+\d+|"
+    r"(taxa|custo|valor)\s+de\s+(instala|ades[ãa]o|habilita)\w*|"
+    r"(cobra|cobramos|tem)\s+(taxa|ades[ãa]o|multa|fidelidade)|"
+    r"(instala[çc][ãa]o|ades[ãa]o|visita)\s+(é|e|sai|fica|custa)\s+(gr[áa]tis|de\s+gra[çc]a|zero)|"
+    r"sem\s+(taxa|custo|fidelidade|multa)\s+(de\s+)?(instala|ades|nenhum)|"
+    r"(gr[áa]tis|de\s+gra[çc]a|isento)\s+(a\s+)?(instala[çc][ãa]o|ades[ãa]o|taxa))\b", re.I)
 _PLACEHOLDER = re.compile(r"\[[^\]]*\]|\{\{[^}]*\}\}")
 # não expor quantidade de clientes/vizinhos ("mais de 80 vizinhos", "500 na rua") — soa exagero
 _CONTAGEM = re.compile(r"\b(?:mais de\s*|cerca de\s*|uns?\s*)?\d{1,4}\s*(clientes?|vizinhos?|atendidos?|casas?|apto?s?|apartamentos?|moradores?|fam[íi]lias?)\b", re.I)
@@ -239,10 +250,15 @@ _JA_CLIENTE = re.compile(
 # internet junto" SEM saber o endereço -- promessa de cobertura que a equipe pode não cumprir.
 # Reescrever a regra não bastou (o prompt principal puxa forte pro fluxo de venda), então virou
 # CÓDIGO: resposta fixa, correta, e de graça.
+# 25/07: a 1ª versão casava "mudar" solto -- e "quero mudar a SENHA do meu wifi" caiu no fluxo
+# de mudança de endereço, respondendo "me passa o endereço novo". Agora exige contexto de LUGAR.
 _MUDANCA_END = re.compile(
-    r"\b(mud(ar|an[çc]a|ando)|me\s+mudo|vou\s+me\s+mudar|troc(ar|a)\s+de\s+(casa|endere[çc]o)|"
-    r"casa\s+nova|apartamento\s+novo|outro\s+endere[çc]o|novo\s+endere[çc]o|transferir\s+(a\s+)?"
-    r"(internet|linha|ponto))\b", re.I)
+    r"\b(me\s+mudo|vou\s+me\s+mudar|t[ôo]\s+de\s+mudan[çc]a|"
+    r"mud(ar|an[çc]a|ando)\s+(de\s+)?(casa|endere[çc]o|apartamento|resid[êe]ncia|im[óo]vel|"
+    r"pra\s+outr[ao]|de\s+bairro)|"
+    r"troc(ar|a)\s+de\s+(casa|endere[çc]o)|casa\s+nova|apartamento\s+novo|"
+    r"outro\s+endere[çc]o|novo\s+endere[çc]o|"
+    r"transferir\s+(a\s+)?(internet|linha|ponto))\b", re.I)
 # "plano" fica de FORA daqui: "quero mudar meu plano" é upgrade (regra 18), não mudança de casa.
 _LEVAR_INTERNET = re.compile(
     r"\b(levar?|lev(o|a)|transferir)\b[^.!?]{0,30}\b(internet|net|linha|ponto|servi[çc]o)\b|"
@@ -910,6 +926,14 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     if texto and _PRECO.search(texto):
         alertas.append("GUARD: preço em texto bloqueado")
         texto = "Já te mostro os valores certinhos na tabela oficial 🙂"
+    if texto and _COND_COMERCIAL.search(texto):
+        # taxa de instalação, parcelamento, fidelidade, "é grátis": nada disso está definido
+        # aqui — quem informa é o Comercial. Remove só a frase que inventou.
+        alertas.append("GUARD: condicao comercial inventada removida")
+        novo = _remove_sentencas(texto, _COND_COMERCIAL)
+        texto = novo if len(novo) >= 15 else (
+            "Sobre valores e condições de instalação, quem passa certinho é o nosso time "
+            "Comercial 😊 Me diz a rua, número e bairro que eu já registro seu contato.")
     if texto and _PLACEHOLDER.search(texto):
         alertas.append("GUARD: placeholder removido")
         texto = _PLACEHOLDER.sub("", texto).strip()
