@@ -444,12 +444,29 @@ def _suporte_passo(msg, sup, fatos, historico=None):
         import mycore as MC
         nome_real, end_real = "", ""
         cpf = MC.extrair_cpf_cnpj(msg)
-        if not cpf:   # sem CPF ainda: pede de novo (até 2x) antes de seguir — não pula a coleta
+        # regra 5: quem JÁ reiniciou por conta própria não pode ouvir "reinicia de novo".
+        # Isto vinha DEPOIS do pedido de CPF -- então "já reiniciei 3 vezes" era ignorado e o
+        # cliente recebia o pedido de CPF de novo, como se não tivesse dito nada (visto em
+        # teste de conversa 25/07). Agora é a PRIMEIRA coisa checada.
+        _ja_reset = (_JA_REINICIOU.search(msg) or fatos.get("sup_ja_reset")
+                     or _ja_disse(historico, _JA_REINICIOU))
+        if _ja_reset:
+            return None
+        if not cpf:
+            # O cliente respondeu alguma coisa que não é CPF. Se ele PERGUNTOU ou reclamou
+            # ("e aí? vai demorar?", "já faz 2 dias"), repetir o pedido de CPF palavra por
+            # palavra é o pior atendimento possível -- e era exatamente o que acontecia, em
+            # loop (regra 9). O atalho pede UMA vez; daí em diante quem conduz é o LLM, que
+            # responde o que a pessoa falou e pede o dado sem soar robô.
             tries = int(fatos.get("sup_try") or 0)
-            if tries < 2:
-                return _fp("Pra eu já achar seu cadastro e agilizar (sem te fazer repetir tudo depois), me confirma "
-                           "só o seu *nome* e o *CPF* (pode ser só os números)? 🙏",
-                           intencao="suporte", sup="1", dados={"sup_try": tries + 1})
+            # "?" = o cliente PERGUNTOU algo; tries>=1 = já pedimos uma vez. Nos dois casos,
+            # repetir seria robô. ("meu nome é João" não tem "?" e é a 1ª vez -> pede o CPF
+            # que falta, que é o certo.)
+            if tries >= 1 or "?" in msg:
+                return None
+            return _fp("Pra eu já achar seu cadastro e agilizar (sem te fazer repetir tudo depois), me confirma "
+                       "só o seu *nome* e o *CPF* (pode ser só os números)? 🙏",
+                       intencao="suporte", sup="1", dados={"sup_try": tries + 1})
         if cpf:
             try:
                 d = MC.dados_cliente_por_cpf(cpf)
@@ -463,9 +480,6 @@ def _suporte_passo(msg, sup, fatos, historico=None):
         dados = {"sup_end": end_real}
         if nome_real:
             dados["sup_nome"] = nome_real
-        # regra 5: quem JÁ reiniciou por conta própria não pode ouvir "reinicia de novo"
-        if _JA_REINICIOU.search(msg) or fatos.get("sup_ja_reset") or _ja_disse(historico, _JA_REINICIOU):
-            return None
         prim = nome_real.split(" ")[0].title() if nome_real else ""
         texto = (f"Obrigado{', ' + prim if prim else ''}! Vamos tentar restabelecer a conexão 🙌\n\n"
                  "Faz o seguinte: tira o *roteador* da tomada, conta *1 minutinho* e liga de novo — "
