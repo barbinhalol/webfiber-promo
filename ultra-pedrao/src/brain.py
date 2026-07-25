@@ -277,6 +277,15 @@ _RECLAMA_VELOCIDADE = re.compile(
     r"pega)\s*\d+|n[ãa]o\s+(chega|d[áa]|entrega)\s*\d+|\d+\s*(mega|mb).{0,12}\bs[óo]\b|"
     r"pago\s+por\s+\d+|contratei\s+\d+)\b", re.I)
 
+# TROCA DE NOME/SENHA DO WI-FI: a regra 5 diz que o Pedrão NÃO executa e NÃO ensina — registra e
+# a equipe faz. Testado ao vivo: o modelo respondia "você precisa acessar o roteador direto, qual
+# o modelo do aparelho?", mandando o cliente mexer na configuração sozinho.
+_SENHA_WIFI = re.compile(
+    r"\b(mudar|trocar|alterar|mud(a|ar)|nova|esqueci|resetar|configurar|ver|saber|qual)\b"
+    r"[^.!?]{0,25}\b(senha|nome)\b[^.!?]{0,18}\b(wi-?fi|rede|roteador|internet)\b|"
+    r"\b(senha|nome)\s+(d[oa]\s+)?(wi-?fi|rede)\b[^.!?]{0,25}\b(mudar|trocar|alterar|nova|esqueci)\b",
+    re.I)
+
 # pediu HUMANO -> atender na hora, sem insistir (regra 15)
 _QUER_HUMANO = re.compile(
     r"\b(atendente|humano|pessoa\s+de\s+verdade|falar\s+com\s+(algu[ée]m|uma\s+pessoa|gente)|"
@@ -532,6 +541,18 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     # 0) roteiro de suporte JÁ em andamento tem prioridade
     if sup in ("1", "2"):
         return _suporte_passo(msg, sup, fatos, historico)
+
+    # 0.4) SENHA/NOME DO WI-FI: regra 5 — o Pedrão não executa nem ensina a mexer no roteador.
+    if _SENHA_WIFI.search(msg):
+        _abre0 = (_abertura() + "\n\n") if sessao_nova else ""
+        return _fp(_abre0 + "Consigo registrar isso pra você! 😊 A troca de *nome ou senha do "
+                   "Wi-Fi* quem faz é a nossa equipe técnica — assim ninguém corre risco de "
+                   "perder a conexão.\n\n"
+                   f"Já deixo anotado e eles falam com você {S.proximo_atendimento(setor='suporte')}. "
+                   "Me confirma o *CPF* do titular?",
+                   intencao="suporte", icone="🔑",
+                   nota="[Pedrão] TROCA DE NOME/SENHA DO WI-FI — cliente pediu; equipe técnica "
+                        "executa. NÃO foi passada nenhuma instrução de acesso ao roteador.")
 
     # 0.5) MUDANÇA DE ENDEREÇO e UPGRADE DE PLANO: dois casos em que o modelo insistia em
     # PROMETER o que não pode (que a internet "vai junto" pro endereço novo) ou em tratar cliente
