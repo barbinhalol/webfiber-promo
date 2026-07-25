@@ -51,7 +51,27 @@ _COBERTURA_ASSERT = re.compile(
     r"a\s+gente\s+j[áa]\s+(t[áa]|atende|tem\s+rede)|j[áa]\s+(tem|temos)\s+(rede|cobertura|fibra)\s+(a[íi]|na|l[áa])|"
     r"cobertura\s+(confirmada|garantida|boa)|com\s+certeza\s+(atende|chega|vai\s+pegar)|"
     r"vai\s+ter\s+(uma\s+)?internet\s+de\s+qualidade|"
-    r"(temos|tem)\s+(rede|fibra|cobertura)\s+(a[íi]|nessa|na\s+sua))", re.I)
+    r"(temos|tem)\s+(rede|fibra|cobertura)\s+(a[íi]|nessa|na\s+sua)|"
+    # 25/07 (teste ao vivo): "voces fazem instalacao em qual bairro? moro na tijuca" ->
+    # "A gente atende na Tijuca sim!" -- afirmação de cobertura com NOME DE BAIRRO, que os
+    # padrões acima (que exigiam "na rua"/"aí"/"lá") não pegavam. O "(?<!se )" preserva a frase
+    # legítima "quem confirma SE a gente atende o endereço novo é a equipe".
+    r"(?<!se\s)\batende(mos)?\s+(a|na|no|em)\s+\w+[^.!?]{0,20}\bsim\b|"
+    r"\batendemos\s+(a|na|no|em|essa|esse|sua|seu)\b|"
+    r"\b(sim|claro|com\s+certeza)[,!]?\s+(a\s+gente\s+|n[óo]s\s+)?atende(mos)?\b|"
+    r"\bj[áa]\s+atende(mos)?\s+(a|na|no|em)\s+\w+)", re.I)
+
+# "SE a gente atende o endereço novo, quem confirma é a equipe" é o oposto de uma promessa --
+# é justamente a frase certa. Sem isto, o guard apagava a resposta correta junto com a errada.
+_COB_CONDICIONAL = re.compile(r"\bse\b[^.!?]{0,40}\batende|\bconfirm\w+[^.!?]{0,40}\batende|"
+                              r"\batende[^.!?]{0,30}\b[ée]\s+a\s+(nossa\s+)?equipe", re.I)
+
+def _afirma_cobertura(texto):
+    """True só quando o texto AFIRMA que atende. Frase condicional/de encaminhamento não conta."""
+    for frase in re.split(r"(?<=[.!?\n])\s+", texto or ""):
+        if _COBERTURA_ASSERT.search(frase) and not _COB_CONDICIONAL.search(frase):
+            return True
+    return False
 
 def _remove_sentencas(texto, padrao, protege=None):
     """Tira só as FRASES que batem no padrão (mantém o resto da mensagem).
@@ -197,7 +217,13 @@ _FIN_RECLAMACAO = re.compile(
     r"\b(j[áa]\s+(paguei|foi\s+pago|t[áa]\s+pag\w*)|paguei\s+(e|mas|ontem|hoje|dia|no\s+dia)|comprovante|"
     r"cobran[çc]a\s+(indevida|errada|duplicada|a\s+mais)|cobrando\s+(a\s+mais|errado|dobrado|duas\s+vezes)|"
     r"n[ãa]o\s+reconhe[çc]o|valor\s+(errado|diferente|a\s+mais)|negativ\w*|serasa|spc|"
-    r"desconto|parcel\w*|acordo|mudar\s+(o\s+)?vencimento|adiar|prorrog\w*)\b", re.I)
+    r"desconto|parcel\w*|acordo|mudar\s+(o\s+)?vencimento|adiar|prorrog\w*|"
+    # 25/07 (teste ao vivo): "posso pagar semana que vem? to sem grana agora" recebia uma
+    # resposta incoerente pedindo endereço. Pedir PRAZO é regra 6: o Pedrão não tem autoridade,
+    # só registra e encaminha ao Financeiro.
+    r"pag(ar|o)\s+(semana|mes|m[êe]s|dia|depois|amanh[ãa]|segunda|s[óo]\s+dia)|"
+    r"(sem|t[ôo]\s+sem|estou\s+sem)\s+(grana|dinheiro|condi[çc])|"
+    r"d[áa]\s+pra\s+esperar|me\s+d[áa]\s+(um\s+)?prazo|mais\s+(uns\s+)?dias?\s+pra\s+pagar)\b", re.I)
 
 # JÁ É CLIENTE falando do PRÓPRIO plano (upgrade, velocidade entregue): NÃO é lead novo --
 # mandar tabela de planos e pedir endereço "pra ver viabilidade" pra quem é cliente há meses
@@ -530,8 +556,12 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     #    (empresa/PJ sai pro LLM: planos e ficha empresariais são diferentes)
     # _JA_CLIENTE: quem fala do PRÓPRIO plano (upgrade, velocidade entregue) NÃO é lead novo --
     # mandar tabela de planos + pedir endereço pra "viabilidade" pra cliente de meses é ofensivo.
+    # _FINANCEIRO_KW: "quero o valor dos planos E me manda minha fatura" tem DOIS pedidos -- o
+    # atalho respondia só o primeiro e ignorava metade da mensagem (regra 4). Vai pro LLM, que
+    # atende os dois.
     if (_PLANOS_INTENCAO.search(msg) and not _SINAIS_COMPLEXOS.search(msg)
             and not _EMPRESA.search(msg) and not _JA_CLIENTE.search(msg)
+            and not _FINANCEIRO_KW.search(msg)
             and len(msg.split()) <= 18):
         if sessao_nova:
             texto = (f"{_abertura()} Você já conhece nossos planos? E me diz uma coisa: "
@@ -563,8 +593,13 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     # _FIN_RECLAMACAO: "já paguei e cortaram", cobrança indevida, negativação, pedido de desconto
     # ou acordo NÃO é pedido de 2ª via -- entregar boleto em aberto nesses casos gera fúria e
     # Procon. Regra 6: registrar e encaminhar ao Financeiro humano (o LLM conduz).
+    # DOIS PEDIDOS na mesma mensagem ("quero o valor dos planos E me manda minha fatura"):
+    # a regra 4 manda atender os DOIS. O atalho responderia só um e ignoraria metade -- some
+    # daqui e o LLM conduz. (Só quando há conjunção; "fatura do plano 700" segue no atalho.)
+    _dois_pedidos = bool(_PLANOS_INTENCAO.search(msg) and _FINANCEIRO_KW.search(msg)
+                         and re.search(r"\b(e|e\s+tamb[ée]m|tamb[ée]m|junto|al[ée]m\s+disso)\b", msg, re.I))
     if ((_FINANCEIRO_KW.search(msg) and not _FIN_RECLAMACAO.search(msg)
-            and not _DOC_NAO_FATURA.search(msg))
+            and not _DOC_NAO_FATURA.search(msg) and not _dois_pedidos)
             or (fin_state == "aguarda_cpf" and _tem_digitos)
             or (fin_state == "cpf_ok" and _SIM.search(msg) and not _NAO.search(msg))
             or (fin_state == "escolhe" and re.fullmatch(r"\s*\d{1,2}\s*", msg or ""))):
@@ -903,9 +938,9 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     # ORDEM DO DONO (14/07/2026 — revisada): o bot PODE confirmar cobertura QUANDO o código confirmou
     # o prédio (3+ clientes no mesmo rua+número = CONFIRMADA_PREDIO). Fora disso, NUNCA confirma nem
     # nega — quem confirma é a equipe. Suaviza SÓ a frase de cobertura (mantém planos e próximo passo).
-    if texto and viab["status"] != V.CONFIRMADA_PREDIO and _COBERTURA_ASSERT.search(texto):
+    if texto and viab["status"] != V.CONFIRMADA_PREDIO and _afirma_cobertura(texto):
         alertas.append("GUARD: afirmacao de cobertura suavizada")
-        novo = _remove_sentencas(texto, _COBERTURA_ASSERT)
+        novo = _remove_sentencas(texto, _COBERTURA_ASSERT, protege=_COB_CONDICIONAL)
         texto = novo if len(novo) >= 15 else ("A chance de atender aí é boa! Mas deixa eu confirmar a viabilidade "
                  "certinha do seu endereço com a equipe pra não te passar info errada.")
     # NUNCA cravar data/hora de visita/conserto — remove SÓ a frase da data (mantém o resto da resposta);
