@@ -83,6 +83,19 @@ def _post_json(url, headers, payload, timeout):
     except Exception as e:
         raise LLMError(str(e))
 
+# O prefill ("{" como primeira fala do assistant) é REJEITADO pelos modelos novos da Anthropic
+# — Sonnet 5, Opus 5 e toda a família 4.6+ devolvem HTTP 400 "This model does not support
+# assistant messages". Pego nos logs 25/07 08:02: junto com o `temperature`, era o 2º motivo de
+# TODA escalada pro modelo esperto falhar na 1ª tentativa e só responder porque o retry caía no
+# Haiku — os casos difíceis (cliente irritado, PJ, suporte travado) rodavam no modelo fraco em
+# silêncio, gastando o dobro do tempo (falha + retry).
+# Allowlist e não denylist de propósito: são os modelos NOVOS que rejeitam, então qualquer modelo
+# futuro entra sem prefill por padrão, em vez de quebrar de novo.
+_PREFILL_OK = re.compile(r"(haiku-4-5|haiku-3|sonnet-4-5|sonnet-3|opus-4-5|opus-4-1|opus-4-0)", re.I)
+
+def _aceita_prefill(model: str) -> bool:
+    return bool(_PREFILL_OK.search(model or ""))
+
 def _anthropic(system, user, model=None):
     """system marcado com cache_control: a Anthropic guarda esse bloco (prompt gigante,
     ~14k tokens) por 5min e cobra só 10% dele nas próximas chamadas. Como o system é IDÊNTICO
@@ -92,6 +105,14 @@ def _anthropic(system, user, model=None):
     key = _anthropic_key()
     if not key:
         raise LLMError("ANTHROPIC_API_KEY ausente")
+    modelo = model or C.LLM_MODEL
+    prefill = _aceita_prefill(modelo)
+    msgs = [{"role": "user", "content": user}]
+    if prefill:
+        # já abre o JSON pelo modelo -> ele não escreve conversa antes ("Claro! Aqui está:"),
+        # economiza tokens e elimina a maior causa de "JSON inválido". A resposta volta SEM a
+        # chave inicial, recolocada logo abaixo.
+        msgs.append({"role": "assistant", "content": "{"})
     out = _post_json(
         "https://api.anthropic.com/v1/messages",
         {"x-api-key": key, "anthropic-version": "2023-06-01",
@@ -107,18 +128,18 @@ def _anthropic(system, user, model=None):
         # model", HTTP 400) -- pego nos logs 25/07: TODA escalada pro modelo esperto falhava na
         # 1ª tentativa e só respondia porque o retry caía no Haiku. Ou seja, os casos complexos
         # (cliente irritado, PJ, suporte travado) estavam perdendo o modelo melhor em silêncio.
-        # O prefill "{" abaixo já garante o formato JSON, que era o motivo do temperature baixo.
-        {"model": model or C.LLM_MODEL, "max_tokens": 2000,
+        # A instrução de formato no system + o _parse_json tolerante já garantem o JSON quando
+        # o modelo não aceita prefill.
+        {"model": modelo, "max_tokens": 2000,
          "system": [{"type": "text", "text": system,
                      "cache_control": {"type": "ephemeral", "ttl": "1h"}}],
-         "messages": [{"role": "user", "content": user},
-                      # prefill: já abre o JSON pelo modelo -> ele não escreve conversa antes
-                      # ("Claro! Aqui está:"), economiza tokens e elimina a maior causa de
-                      # "JSON inválido". A resposta volta SEM a chave inicial, recolocada abaixo.
-                      {"role": "assistant", "content": "{"}]},
+         "messages": msgs},
         C.LLM_TIMEOUT)
     txt = "".join(b.get("text", "") for b in out.get("content", []) if b.get("type") == "text")
-    txt = "{" + txt if txt and not txt.lstrip().startswith("{") else txt
+    # só recoloca a chave quando ELA foi consumida pelo prefill; sem prefill o modelo devolve o
+    # JSON inteiro e prefixar "{" corromperia a resposta.
+    if prefill and txt and not txt.lstrip().startswith("{"):
+        txt = "{" + txt
     # MEDIÇÃO: sem registrar o usage era impossível saber se o cache do prompt estava acertando
     # (ele vale ~13k tokens por chamada). cache_read alto = quente; cache_creation alto toda hora
     # = frio, e aí o dinheiro e o tempo estão indo embora.
