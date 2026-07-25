@@ -52,6 +52,12 @@ LLM_MODEL = os.environ.get("LLM_MODEL", "claude-haiku-4-5-20251001")
 # modelo "pensante" p/ casos complexos (cliente irritado, empresa/PJ, conversa longa, negociação):
 # o brain escala Haiku -> Sonnet 5 automaticamente nesses casos (ordem do dono 23/07/2026)
 LLM_MODEL_SMART = os.environ.get("LLM_MODEL_SMART", "claude-sonnet-5")
+# ESFORÇO do modelo esperto. O Sonnet 5 liga "adaptive thinking" sozinho e roda em effort=high
+# por padrão -- medido em 25/07: 14,5s por resposta e ~1000 tokens de saída (a maior parte
+# pensamento invisível), mesmo com o cache quente. Num WhatsApp isso parece que o bot morreu.
+# "low" mantém a escalada valendo a pena (modelo melhor nos casos difíceis) sem o pensamento
+# longo que o prompt do Pedrão -- já estruturado e com roteiro -- não precisa.
+LLM_EFFORT_SMART = os.environ.get("LLM_EFFORT_SMART", "low").strip().lower()
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")

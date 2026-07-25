@@ -96,6 +96,14 @@ _PREFILL_OK = re.compile(r"(haiku-4-5|haiku-3|sonnet-4-5|sonnet-3|opus-4-5|opus-
 def _aceita_prefill(model: str) -> bool:
     return bool(_PREFILL_OK.search(model or ""))
 
+# `output_config.effort` controla profundidade do raciocínio (e, portanto, latência). Existe só
+# nos modelos novos -- o Haiku 4.5 e o Sonnet 4.5 devolvem 400 se receberem o parâmetro, então
+# ele NÃO pode ir em toda chamada (o Haiku é quem responde a maioria das mensagens).
+_EFFORT_OK = re.compile(r"(sonnet-5|opus-5|opus-4-[678]|sonnet-4-6|opus-4-5|fable-5|mythos-5)", re.I)
+
+def _aceita_effort(model: str) -> bool:
+    return bool(_EFFORT_OK.search(model or ""))
+
 def _anthropic(system, user, model=None):
     """system marcado com cache_control: a Anthropic guarda esse bloco (prompt gigante,
     ~14k tokens) por 5min e cobra só 10% dele nas próximas chamadas. Como o system é IDÊNTICO
@@ -113,6 +121,12 @@ def _anthropic(system, user, model=None):
         # economiza tokens e elimina a maior causa de "JSON inválido". A resposta volta SEM a
         # chave inicial, recolocada logo abaixo.
         msgs.append({"role": "assistant", "content": "{"})
+    corpo = {"model": modelo, "max_tokens": 2000,
+             "system": [{"type": "text", "text": system,
+                         "cache_control": {"type": "ephemeral", "ttl": "1h"}}],
+             "messages": msgs}
+    if _aceita_effort(modelo) and C.LLM_EFFORT_SMART:
+        corpo["output_config"] = {"effort": C.LLM_EFFORT_SMART}
     out = _post_json(
         "https://api.anthropic.com/v1/messages",
         {"x-api-key": key, "anthropic-version": "2023-06-01",
@@ -130,10 +144,7 @@ def _anthropic(system, user, model=None):
         # (cliente irritado, PJ, suporte travado) estavam perdendo o modelo melhor em silêncio.
         # A instrução de formato no system + o _parse_json tolerante já garantem o JSON quando
         # o modelo não aceita prefill.
-        {"model": modelo, "max_tokens": 2000,
-         "system": [{"type": "text", "text": system,
-                     "cache_control": {"type": "ephemeral", "ttl": "1h"}}],
-         "messages": msgs},
+        corpo,
         C.LLM_TIMEOUT)
     txt = "".join(b.get("text", "") for b in out.get("content", []) if b.get("type") == "text")
     # só recoloca a chave quando ELA foi consumida pelo prefill; sem prefill o modelo devolve o
@@ -149,7 +160,9 @@ def _anthropic(system, user, model=None):
             "cache_read": u.get("cache_read_input_tokens", 0),
             "cache_write": u.get("cache_creation_input_tokens", 0),
             "entrada": u.get("input_tokens", 0), "saida": u.get("output_tokens", 0),
-            "modelo": model or C.LLM_MODEL, "truncado": out.get("stop_reason") == "max_tokens",
+            "modelo": modelo, "truncado": out.get("stop_reason") == "max_tokens",
+            "esforco": (corpo.get("output_config") or {}).get("effort", "-"),
+            "prefill": prefill,
         })
         if ULTIMO_USO["truncado"]:
             import memory as _M
