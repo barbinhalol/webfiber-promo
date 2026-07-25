@@ -1220,6 +1220,18 @@ async def admin_resgate(request: Request, x_admin_token: str = Header(default=""
         if tipo in ATENDIDO or (tipo == "copiloto" and p.get("acao")):
             silenciados.pop(c, None)
 
+    # 3) AGRADECIMENTO = prova de que JÁ falou com alguém (ordem do dono 25/07: "'muito obrigado
+    # Patrick' mostra que falou com alguém, então esse não dispara"). Mandar "desculpa a demora"
+    # pra quem acabou de elogiar o atendimento é pior do que não mandar nada.
+    _JA_FALOU = re.compile(
+        r"\b(obrigad|agrade[çc]|valeu|excelente\s+atendimento|[óo]timo\s+atendimento|"
+        r"muito\s+bom\s+atendimento|resolvido|era\s+isso\s+mesmo|show|perfeito,?\s+obrigad)", re.I)
+    for c, v in list(silenciados.items()):
+        if _JA_FALOU.search(v["texto"]):
+            silenciados.pop(c, None)
+    for c in (body.get("excluir") or []):        # exclusão manual, quando o dono mandar
+        silenciados.pop(str(c), None)
+
     alvos = [{"contato": c, "mask": _mask(c), "texto": v["texto"][:70],
               "quando": time.strftime("%H:%M", time.localtime(v["ts"]))}
              for c, v in silenciados.items()]
