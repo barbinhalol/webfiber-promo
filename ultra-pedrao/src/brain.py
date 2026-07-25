@@ -786,9 +786,13 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     # equipe volta sem depender de conta de cabeça.
     try:
         _ag = S._agora()
-        _per = S.periodo_do_dia(_ag) or "madrugada"
+        _per = S.periodo_do_dia(_ag)
+        # entre 0h e 5h não existe cumprimento de período: o modelo escreveu "Opa, madrugada!"
+        # quando recebeu a palavra crua. Na madrugada ele só não cumprimenta por horário.
+        _cump = (f"cumprimente com \"{_per}\" (e nunca outro)" if _per else
+                 "é MADRUGADA: não use \"bom dia/boa tarde/boa noite\" — comece direto, com \"Olá!\"")
         ctx.append(f"[AGORA: {S._DIAS[_ag.weekday()]}, {_ag.strftime('%d/%m/%Y %H:%M')} — "
-                   f"cumprimente com \"{_per}\" (e nunca outro). "
+                   f"{_cump}. "
                    f"A equipe de SUPORTE volta {S.proximo_atendimento(_ag, 'suporte')}; "
                    f"COMERCIAL e FINANCEIRO voltam {S.proximo_atendimento(_ag, 'comercial')}. "
                    "Use exatamente esses prazos — não invente outro nem diga só 'próximo dia útil'.]")
