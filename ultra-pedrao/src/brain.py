@@ -803,8 +803,12 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     # nota_interna (50-120 tokens) em TODA resposta e o server APAGA ela em qualquer ação que não
     # seja transferir (server.py) -- era ~1s por mensagem gerado pra ser descartado. Idem motivo/
     # confianca, que os guards sobrescrevem.
+    # Medido em produção: o tempo de resposta é praticamente linear no número de tokens que o
+    # modelo escreve (~60 tok/s). 119 tokens = 1,9s; 347 tokens = 5,1s. Ou seja, cada frase a
+    # mais é espera direta do cliente -- e no WhatsApp a mensagem curta ainda é melhor de ler.
     ctx.append("\nResponda SÓ o JSON, no formato definido, e o mais CURTO possível:\n"
                "• sempre: acao, texto\n"
+               "• texto: no MÁXIMO ~400 caracteres (2-4 linhas). Frase a mais = cliente esperando.\n"
                "• só quando fizer sentido: intencao, fila, fastReplyId, dados_coletados\n"
                "• nota_interna: SOMENTE quando acao=\"transferir\" (nos outros casos é descartada)\n"
                "• não escreva motivo, confianca nem viabilidade — o sistema já calcula.")
