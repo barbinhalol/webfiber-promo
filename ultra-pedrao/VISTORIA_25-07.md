@@ -127,7 +127,47 @@ planos + pedido de endereço "pra verificar viabilidade". Agora é tratado como 
 
 ---
 
-## 📏 6. AGORA DÁ PRA MEDIR (não é mais opinião)
+## 📊 6. RESULTADO MEDIDO EM PRODUÇÃO (não é estimativa)
+
+Rodei mensagens reais de cliente contra o bot **no ar**, sem enviar nada a ninguém:
+
+| Mensagem do cliente | Tempo do cérebro | Caminho |
+|---|---|---|
+| "oi boa noite" | **0 ms** | atalho (sem IA) |
+| "minha internet caiu" | **11 ms** | atalho |
+| "quanto custa o plano de 1 giga?" | **1 ms** | atalho |
+| "quero a segunda via da fatura" | **1 ms** | atalho |
+| "já paguei e vocês cortaram minha internet" | 3,2 s | IA |
+| "contratei 700 mega e o teste dá só 180" | 2,9 s | IA |
+| "quero falar com um atendente" | 2,0 s | IA |
+| "gostaria de cancelar, vou me mudar" | 2,2 s | IA |
+
+**Cache do prompt: quente em 100% das chamadas** — 20.409 tokens lidos do cache em vez de
+reprocessados a cada mensagem.
+
+**Efeito da regra "WhatsApp, não e-mail"** (medido antes/depois na mesma mensagem):
+
+| Mensagem | Antes | Depois |
+|---|---|---|
+| "contratei 700 mega e o teste dá 180" | 5,3 s | **2,9 s** (-45%) |
+| "já paguei e vocês cortaram" | 4,5 s | **3,2 s** (-29%) |
+| "quero falar com um atendente" | 2,6 s | **2,0 s** (-20%) |
+
+**Placar geral:** **56% das mensagens são respondidas sem IA nenhuma** (instantâneas e de graça).
+O resto responde em ~2 a 3 segundos. Antes, o caminho típico levava 10 a 13 segundos.
+
+### E a qualidade, medida junto
+
+- "já paguei e vocês cortaram" → *"Poxa, que chato isso. Vou registrar que você já pagou e a
+  internet foi cortada… encaminho com prioridade pro time de Financeiro"* — **não mandou boleto.**
+- "contratei 700 e dá 180" → *"180 é bem menos do que os 700 que você contratou, né. Você testou
+  no **cabo de rede** ou pelo **Wi-Fi**?"* — **não mandou tabela de planos.**
+- "a luz tá piscando" → *"Entendi que a luz tá piscando…"* — **usou as palavras do cliente**, não
+  cravou "luz vermelha".
+
+---
+
+## 📏 7. COMO VOCÊ ACOMPANHA SOZINHO
 
 Abra: `https://pedrao.webfiberprovedorcliente.cloud/health`
 
@@ -143,7 +183,7 @@ Deixei um monitor rodando: assim que houver movimento suficiente, eu te trago os
 
 ---
 
-## 🧹 7. LIMPEZA
+## 🧹 8. LIMPEZA
 
 - **Erro vermelho no fim de todo deploy** eliminado: havia um Caddy no `docker-compose` que
   disputava as portas 80/443 com o nginx da VPS e por isso **nunca subiu uma única vez** (confirmei:
