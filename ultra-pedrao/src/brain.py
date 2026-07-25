@@ -811,7 +811,10 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
                "• texto: no MÁXIMO ~400 caracteres (2-4 linhas). Frase a mais = cliente esperando.\n"
                "• só quando fizer sentido: intencao, fila, fastReplyId, dados_coletados\n"
                "• nota_interna: SOMENTE quando acao=\"transferir\" (nos outros casos é descartada)\n"
-               "• não escreva motivo, confianca nem viabilidade — o sistema já calcula.")
+               "• NÃO escreva: motivo, confianca, viabilidade, emocao, temperatura — o sistema "
+               "calcula tudo isso sozinho, e o que você escrever nesses campos é jogado fora.\n"
+               "• dados_coletados: só as chaves que você REALMENTE descobriu. Campo vazio "
+               "(\"nome\": \"\") é descartado — não escreva.")
     user = "\n\n".join(ctx)
     # REGRAS BASE entram no SYSTEM (estável entre chamadas -> aproveitam o prompt caching da
     # Anthropic: mais rápido e ~10x mais barato que ir no ctx). Os ajustes do dono ficam no ctx
