@@ -97,6 +97,12 @@ def _enviar(body, usar="resposta", delay=True):
     apiid = C.FS_APIID_RESPOSTA if usar == "resposta" else (C.FS_APIID_TRANSFER or C.FS_APIID_RESPOSTA)
     jwt = C.FS_JWT_RESPOSTA if usar == "resposta" else (C.FS_JWT_TRANSFER or C.FS_JWT_RESPOSTA)
     plan = {"endpoint": f"POST /v1/api/external/{{{usar}}}", "body": body}
+    # TRAVA ANTI-BALÃO-VAZIO (incidente 24/07 22:16, ao vivo): mensagem sem texto vira balão
+    # vermelho "Erro / Tentar novamente" no WhatsApp do cliente. Mídia (legenda vazia é válida)
+    # e nota interna (onlyNote) passam; texto puro vazio, NUNCA.
+    if not body.get("mediaUrl") and not body.get("onlyNote") and not str(body.get("body") or "").strip():
+        return FSResult(enviado=False, modo=modo, erro="bloqueado: mensagem de texto vazia "
+                                                       "(viraria balão de erro no cliente)", faria=plan)
     if modo == "shadow":
         return FSResult(enviado=False, modo="shadow", faria=plan)
     # TRAVA DUPLA: no piloto, so envia para a allowlist (mesmo que o filtro de processamento falhe)
@@ -141,6 +147,13 @@ _ASSINATURA = "*Pedrão · Agente Virtual*\n"
 # virtual"; parece o time do Financeiro respondendo (ordem do dono 24/07).
 ASSIN_FINANCEIRO = "*Financeiro WebFiber*\n"
 
+def _prox_atendimento(setor="suporte"):
+    try:
+        import schedule as _S
+        return _S.proximo_atendimento(setor=setor)
+    except Exception:
+        return "no próximo dia útil, a partir das 9h"
+
 def _assinar(texto, marca=None):
     t = texto or ""
     pref = marca or _ASSINATURA
@@ -172,10 +185,17 @@ def nota_interna(external_key, texto, number=None, delay=True):
     return _enviar(body, "resposta", delay=delay)
 
 def transferir(external_key, queue_id, nota=None, texto=None, user_id=None, number=None, delay=True):
-    # "body" SEMPRE presente (mesmo vazio): sem a chave, a FlowSeller cria um registro de mensagem
-    # vazio que falha ao despachar -> balões "Falha no envio" na tela do time (auditoria 24/07).
+    # "body" SEMPRE presente: sem a chave, a FlowSeller cria um registro de mensagem vazio que
+    # falha ao despachar (auditoria 24/07). MAS a chave com string VAZIA dá no mesmo -- incidente
+    # 24/07 22:16, ao vivo com cliente: o fallback de "JSON inválido" transferiu com texto="",
+    # a FlowSeller gravou body:"" e o WhatsApp recusou -> DOIS balões vermelhos "Erro / Tentar
+    # novamente" na cara do cliente. Agora: sem texto, o cliente recebe uma frase real (nunca
+    # um balão vazio) com o dia certo em que a equipe volta.
+    if not (texto or "").strip():
+        texto = ("Vou registrar seu atendimento aqui e nossa equipe fala com você "
+                 + _prox_atendimento() + ", combinado? 😊")
     body = {"externalKey": external_key, "queueId": queue_id, "forceTicketToDepartment": True,
-            "body": _assinar(texto) if texto else ""}
+            "body": _assinar(texto)}
     if number: body["number"] = number
     if user_id: body["forceTicketToUser"] = True; body["userId"] = user_id
     if nota: body["note"] = {"body": nota}

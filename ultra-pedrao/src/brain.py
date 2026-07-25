@@ -511,11 +511,56 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     return None
 
 def _parse_json(txt):
-    if not txt: return None
-    i, j = txt.find("{"), txt.rfind("}")
-    if i < 0 or j < 0: return None
-    try: return json.loads(txt[i:j+1])
-    except Exception: return None
+    """Lê o JSON da resposta do modelo. TOLERANTE a truncamento (incidente 24/07 22:16: a
+    resposta bateu no teto de tokens, o JSON veio cortado no meio, o parser estrito devolveu
+    None e o cliente levou uma transferência automática com balão de erro).
+    Ordem: (1) JSON puro; (2) fecha chaves/aspas que ficaram abertas; (3) resgata os campos
+    essenciais por regex. Só devolve None quando NADA dá pra aproveitar."""
+    if not txt:
+        return None
+    i = txt.find("{")
+    if i < 0:
+        return None
+    j = txt.rfind("}")
+    if j > i:
+        try:
+            return json.loads(txt[i:j + 1])
+        except Exception:
+            pass
+    bruto = txt[i:]
+    # (2) tentativa de reparo: fecha string aberta e as chaves/colchetes que faltam
+    s = bruto
+    if s.count('"') % 2:
+        s += '"'
+    s += "]" * max(0, s.count("[") - s.count("]"))
+    s += "}" * max(0, s.count("{") - s.count("}"))
+    try:
+        return json.loads(s)
+    except Exception:
+        pass
+    # (3) resgate por regex: o que importa de verdade é a AÇÃO e o TEXTO pro cliente
+    def _campo(nome):
+        m = re.search(r'"%s"\s*:\s*"((?:[^"\\]|\\.)*)"' % nome, bruto)
+        if not m:
+            return ""
+        try:
+            return json.loads('"' + m.group(1) + '"')
+        except Exception:
+            return m.group(1)
+    texto = _campo("texto")
+    if not texto:
+        return None
+    d = {"acao": _campo("acao") or "responder", "texto": texto,
+         "intencao": _campo("intencao") or "ambiguo",
+         "viabilidade": _campo("viabilidade") or "naoaplicavel",
+         "nota_interna": _campo("nota_interna"), "_json_reparado": True}
+    m = re.search(r'"fila"\s*:\s*(\d+)', bruto)
+    if m:
+        d["fila"] = int(m.group(1))
+    m = re.search(r'"fastReplyId"\s*:\s*(\d+)', bruto)
+    if m:
+        d["fastReplyId"] = int(m.group(1))
+    return d
 
 def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, resumo="", sentimento=None):
     """historico: [{'de':'cliente'|'pedrao','texto':...}]; memoria_cliente: dict de fatos por contato.

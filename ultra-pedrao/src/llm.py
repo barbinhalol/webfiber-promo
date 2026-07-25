@@ -9,14 +9,23 @@ class LLMError(Exception):
 
 _KEY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "anthropic_key.txt")
 
+# PERF (25/07): a chave era lida do DISCO a cada mensagem. Agora fica em cache e só é relida
+# quando o arquivo muda (mtime+tamanho) -- o painel continua trocando a chave sem reiniciar.
+_KEY_CACHE = {"chave": None, "valor": None}
+
 def _anthropic_key():
     """Chave da Anthropic: prioriza o arquivo data/anthropic_key.txt (salvo pelo painel, sem
-    terminal e sem reiniciar) e cai pro .env se o arquivo não existir. Lido a cada chamada."""
+    terminal e sem reiniciar) e cai pro .env se o arquivo não existir."""
     try:
+        st = os.stat(_KEY_FILE)
+        sig = (st.st_mtime_ns, st.st_size)
+        if _KEY_CACHE["chave"] == sig and _KEY_CACHE["valor"]:
+            return _KEY_CACHE["valor"]
         with open(_KEY_FILE, encoding="utf-8") as f:
             k = f.read().strip()
-            if k:
-                return k
+        if k:
+            _KEY_CACHE["chave"], _KEY_CACHE["valor"] = sig, k
+            return k
     except Exception:
         pass
     return C.ANTHROPIC_API_KEY
@@ -45,11 +54,29 @@ def _anthropic(system, user, model=None):
         "https://api.anthropic.com/v1/messages",
         {"x-api-key": key, "anthropic-version": "2023-06-01",
          "content-type": "application/json"},
-        {"model": model or C.LLM_MODEL, "max_tokens": 1024,
+        # max_tokens 1024 -> 2000: em 24/07 22:16 (ao vivo) a resposta do Sonnet bateu no teto,
+        # o JSON veio truncado e o cliente levou balão de erro. Teto maior NÃO deixa mais lento
+        # (a latência depende dos tokens realmente gerados), só evita o corte.
+        # temperature baixa: o formato pedido é JSON — criatividade aqui só gera desvio de forma.
+        {"model": model or C.LLM_MODEL, "max_tokens": 2000, "temperature": 0.4,
          "system": [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
-         "messages": [{"role": "user", "content": user}]},
+         "messages": [{"role": "user", "content": user},
+                      # prefill: já abre o JSON pelo modelo -> ele não escreve conversa antes
+                      # ("Claro! Aqui está:"), economiza tokens e elimina a maior causa de
+                      # "JSON inválido". A resposta volta SEM a chave inicial, recolocada abaixo.
+                      {"role": "assistant", "content": "{"}]},
         C.LLM_TIMEOUT)
-    return "".join(b.get("text", "") for b in out.get("content", []) if b.get("type") == "text")
+    txt = "".join(b.get("text", "") for b in out.get("content", []) if b.get("type") == "text")
+    txt = "{" + txt if txt and not txt.lstrip().startswith("{") else txt
+    if out.get("stop_reason") == "max_tokens":
+        # não derruba a resposta (o parser tolerante do brain repara), mas deixa rastro
+        try:
+            import memory as _M
+            _M.log_evento("sistema", "llm_truncado",
+                          {"modelo": model or C.LLM_MODEL, "chars": len(txt)})
+        except Exception:
+            pass
+    return txt
 
 def _openai(system, user):
     """A OpenAI cacheia automaticamente o prefixo repetido (o system prompt) quando ele tem

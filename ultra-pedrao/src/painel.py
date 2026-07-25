@@ -31,11 +31,23 @@ def senha_ok(tok: str) -> bool:
     s = (ler().get("senha") or "").strip()
     return bool(s) and tok == s
 
+# PERF (25/07): ler() era chamado 6-8x por mensagem (ativo, copiloto_ativo, modo_efetivo,
+# bot_nativo_ativo, allowlist, ajustes...) e CADA uma abria + parseava o JSON do disco.
+# Agora o resultado fica em cache e só é relido quando o arquivo MUDA (mtime+tamanho) --
+# o efeito continua IMEDIATO ao salvar pelo painel, sem o I/O repetido.
+_CACHE = {"chave": None, "dados": None}
+
 def ler() -> dict:
     try:
+        st = os.stat(PATH)
+        chave = (st.st_mtime_ns, st.st_size)
+        if _CACHE["chave"] == chave and _CACHE["dados"] is not None:
+            return dict(_CACHE["dados"])           # cópia: quem chamar não altera o cache
         with open(PATH, encoding="utf-8") as f:
             d = json.load(f)
-        return {**PADRAO, **d}
+        cheio = {**PADRAO, **d}
+        _CACHE["chave"], _CACHE["dados"] = chave, cheio
+        return dict(cheio)
     except Exception:
         return dict(PADRAO)
 
