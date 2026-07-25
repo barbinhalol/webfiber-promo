@@ -321,7 +321,15 @@ _LEVAR_INTERNET = re.compile(
 _QUER_UPGRADE = re.compile(
     r"\b(aumentar|subir|melhorar|trocar|mudar|migrar|upgrade|downgrade|reduzir|baixar|passar)\b"
     r"[^.!?]{0,20}\b(plano|velocidade|pacote|mega|giga)\b|"
-    r"\b(quero|queria|gostaria|posso)\b[^.!?]{0,20}\b(outro|um)\s+plano\b", re.I)
+    r"\b(quero|queria|gostaria|posso)\b[^.!?]{0,20}\bmeu\s+plano\b", re.I)
+# ⛔ LEAD NOVO (25/07 15:36, achado em produção): "Olá! Vim pelo site e quero contratar um plano
+# da WebFiber." é a frase PADRÃO de quem vem do site e do anúncio do Facebook — o lead mais caro
+# que existe. O `_QUER_UPGRADE` casava "quero ... um plano" e respondia "vou registrar sua
+# MUDANÇA DE PLANO, me confirma o CPF do titular": tratava comprador como cliente antigo e
+# pedia CPF que ele não tem. Quem CONTRATA/ASSINA/QUER ORÇAMENTO é lead: vai pro fluxo comercial.
+_LEAD_NOVO = re.compile(
+    r"\b(contratar|assinar|adquirir|instalar|or[çc]amento|quero\s+internet|"
+    r"vim\s+pelo\s+site|pelo\s+an[úu]ncio|vi\s+(o\s+)?an[úu]ncio|ainda\s+n[ãa]o\s+(sou|tenho))\b", re.I)
 # RECLAMAÇÃO de velocidade entregue (regra 19) — nunca tratar como oportunidade de venda
 _RECLAMA_VELOCIDADE = re.compile(
     r"\b(teste\s+de\s+velocidade|speedtest|medi(r|ndo)|s[óo]\s+(d[áa]|chega|vem|t[áa]\s+dando|"
@@ -653,7 +661,10 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     # ...mas SÓ quando ele quer MUDAR de plano. "Contratei 700 e o teste dá 180" também casa
     # _JA_CLIENTE e é RECLAMAÇÃO de velocidade (regra 19) -- responder "vou registrar sua
     # mudança de plano" ali seria vender pra quem está reclamando. Esse vai pro LLM.
+    # ...e SÓ pra quem JÁ É CLIENTE: "quero contratar um plano" / "vim pelo site" é LEAD NOVO
+    # (a frase padrão do site e do anúncio) e não pode receber "sua mudança de plano + CPF".
     if (_QUER_UPGRADE.search(msg) and not _RECLAMA_VELOCIDADE.search(msg)
+            and not _LEAD_NOVO.search(msg)
             and not _SUP_INTENCAO.search(msg)):
         _abre0 = (_abertura() + "\n\n") if sessao_nova else ""
         return _fp(_abre0 + "Perfeito! Vou registrar seu pedido de *mudança de plano* e o time "

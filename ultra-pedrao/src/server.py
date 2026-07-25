@@ -1162,6 +1162,85 @@ async def admin_teste_botoes(request: Request, x_admin_token: str = Header(defau
             "nota": "preview_url/context/template nao existem na API externa da FlowSeller — "
                     "campos ausentes registrados como None no log forense"}
 
+def _eventos_desde(desde: float):
+    """Eventos (ts, contato, tipo, payload) a partir de um epoch — usado pelo resgate."""
+    import sqlite3
+    con = sqlite3.connect(C.SQLITE_PATH)
+    rows = con.execute("SELECT ts,contato,tipo,payload FROM eventos WHERE ts>=? ORDER BY ts",
+                       (desde,)).fetchall()
+    con.close()
+    out = []
+    for ts, contato, tipo, payload in rows:
+        try:
+            p = json.loads(payload) if payload else {}
+        except Exception:
+            p = {}
+        out.append({"ts": ts, "contato": contato, "tipo": tipo, "payload": p})
+    return out
+
+@app.post("/admin/resgate")
+async def admin_resgate(request: Request, x_admin_token: str = Header(default="")):
+    """RESGATE de quem ficou SEM RESPOSTA NENHUMA (ordem do dono 25/07 15:36, depois que a flag
+    `so_copiloto` calou leads reais entre 15:10 e 15:34 — inclusive lead de anúncio pago).
+
+    Regra do dono, literal: só resgata quem NÃO recebeu resposta de ninguém. **Se um atendente
+    falou, o Pedrão NÃO responde.** O Pedrão se apresenta e dá continuidade.
+
+    Body: {"desde": "HH:MM" ou epoch, "confirmar": false}
+      confirmar=false (padrão) -> DRY-RUN: só lista quem seria resgatado, não manda nada.
+    """
+    _auth_painel(x_admin_token)
+    body = await request.json() if await request.body() else {}
+    desde = body.get("desde")
+    if isinstance(desde, str) and ":" in desde:
+        from datetime import datetime as _dt
+        hoje = _dt.now(S._TZ) if S._TZ else _dt.now()
+        hh, mm = desde.split(":")[:2]
+        desde = hoje.replace(hour=int(hh), minute=int(mm), second=0, microsecond=0).timestamp()
+    desde = float(desde or (time.time() - 6 * 3600))
+    confirmar = bool(body.get("confirmar"))
+
+    # 1) quem CHEGOU e foi calado no período (a flag registra o texto do cliente)
+    silenciados = {}
+    for e in _eventos_desde(desde):
+        if float(e.get("ts") or 0) < desde:
+            continue
+        if e.get("tipo") == "so_copiloto_silenciou":
+            p = e.get("payload") or {}
+            txt = (p.get("texto") or "").strip()
+            if txt:                       # o evento sem texto é o gêmeo do webhook (ignorar)
+                silenciados.setdefault(e["contato"], {"ts": float(e["ts"]), "texto": txt})
+    # 2) quem JÁ TEVE resposta de alguém (nossa OU de atendente) sai da lista — regra do dono
+    ATENDIDO = {"decisao", "copiloto", "ignorado_humano_assumiu", "nota_lead"}
+    for e in _eventos_desde(desde):
+        c = e.get("contato")
+        if c not in silenciados or float(e.get("ts") or 0) < silenciados[c]["ts"]:
+            continue
+        tipo, p = e.get("tipo"), (e.get("payload") or {})
+        if tipo in ATENDIDO or (tipo == "copiloto" and p.get("acao")):
+            silenciados.pop(c, None)
+
+    alvos = [{"contato": c, "mask": _mask(c), "texto": v["texto"][:70],
+              "quando": time.strftime("%H:%M", time.localtime(v["ts"]))}
+             for c, v in silenciados.items()]
+    if not confirmar:
+        return {"dry_run": True, "quantos": len(alvos), "alvos": alvos,
+                "obs": "nada foi enviado; repita com confirmar=true para o Pedrão se apresentar"}
+
+    TXT = ("Olá! Eu sou o Pedrão, agente virtual da WebFiber 😊 Desculpa a demora em te responder "
+           "aqui — vi sua mensagem e não quero te deixar sem retorno.\n\n"
+           "Me conta o que você precisa que eu já resolvo ou chamo a equipe certa pra você.")
+    enviados, falhas = [], []
+    for a in alvos:
+        try:
+            r = await asyncio.to_thread(FS.responder_texto, a["contato"], TXT,
+                                        number=a["contato"], assinar=False, delay=False)
+            (enviados if not r.get("erro") else falhas).append(a["mask"])
+            M.log_evento(a["contato"], "resgate_enviado", {"mask": a["mask"]})
+        except Exception as ex:
+            falhas.append(f'{a["mask"]}: {ex}')
+    return {"dry_run": False, "enviados": len(enviados), "falhas": falhas, "detalhe": enviados}
+
 @app.post("/admin/simular")
 async def admin_simular(request: Request, x_admin_token: str = Header(default="")):
     """Testa uma mensagem sem passar pela FlowSeller: retorna a decisão do cérebro (e quanto
