@@ -1,6 +1,6 @@
 # Vistoria completa — Ultra Pedrão (madrugada 24→25/07)
 
-**Tudo já está NO AR.** Deploy feito por mim via terminal, container saudável, bateria **290/290**.
+**Tudo já está NO AR.** Deploy feito por mim via terminal, container saudável, bateria **297/297**.
 Você não precisa colar nada. Este documento é só pra você conferir o que mudou.
 
 ---
@@ -224,9 +224,9 @@ Deixei um monitor rodando: assim que houver movimento suficiente, eu te trago os
 
 ---
 
-## ✅ Bateria de testes: 290/290
+## ✅ Bateria de testes: 297/297
 
-De 145 para **290 verificações**. As novas cobrem **cada frase real** que produzia resposta errada —
+De 145 para **297 verificações**. As novas cobrem **cada frase real** que produzia resposta errada —
 então esses erros não voltam sem o teste apitar.
 
 ---
@@ -265,11 +265,50 @@ Todos corrigidos e virados teste. Destaques:
 
 ---
 
+## 🔁 4ª rodada — o pior erro da noite (só aparece em CONVERSA)
+
+Até aqui eu testava **mensagens isoladas**. Quando testei uma **conversa de verdade**, com vários
+turnos, achei o pior problema de todos:
+
+> **Cliente:** minha internet caiu
+> **Pedrão:** *(pede nome e CPF)*
+> **Cliente:** já reiniciei o roteador 3 vezes
+> **Pedrão:** *"Pra eu já achar seu cadastro… me confirma nome e CPF?"* ← **ignorou o que ele disse**
+> **Cliente:** e agora? continua sem nada
+> **Pedrão:** *"Pra eu já achar seu cadastro… me confirma nome e CPF?"* ← **palavra por palavra igual**
+> **Cliente:** mas quanto tempo? já faz 2 dias
+> **Pedrão:** *"Faz o seguinte: tira o roteador da tomada…"* ← **sem CPF, do nada**
+
+Três defeitos no mesmo trecho de código:
+
+1. A verificação de "já reiniciei" (regra 5) vinha **depois** do pedido de CPF — quem dizia que já
+   tinha reiniciado era tratado como se não tivesse falado nada.
+2. O pedido de CPF **se repetia idêntico**, mesmo quando o cliente perguntava outra coisa (regra 9).
+3. Esgotadas as tentativas, ele **mandava reiniciar sem ter identificado ninguém** e sem responder
+   a pergunta.
+
+**Como ficou agora, no mesmo diálogo:**
+
+> **Cliente:** já reiniciei o roteador 3 vezes
+> **Pedrão:** *"Ótimo, você já fez o básico então. Deixa eu registrar isso aqui com prioridade."*
+> **Cliente:** e agora? continua sem nada
+> **Pedrão:** *"Relaxa que já tá registrado. Como você já reiniciou 3 vezes e continua sem nada, a
+> equipe de SUPORTE entra em contato **hoje (sábado) a partir das 9h**."*
+
+O atalho agora pede o CPF **uma vez**; se o cliente pergunta algo, quem assume é o modelo — que
+responde o que a pessoa falou. O fluxo bom não mudou: quem manda só o nome continua recebendo o
+pedido do CPF que falta.
+
+A bateria ganhou uma seção que roda **conversas inteiras**, não mensagens soltas.
+
+---
+
 ## 🔬 O método que usei (e o que ele revelou)
 
 Trabalhei em ciclos: **medir → corrigir → medir de novo**. Isso pegou coisas que uma leitura de
 código sozinha não pegaria — inclusive **erros meus**:
 
+0. Testei só mensagens isoladas por 3 rodadas → **a 4ª, com conversa de verdade, achou o pior erro de todos**.
 1. Corrigi o bug da luz vermelha ontem → **a auditoria mostrou 3 portas ainda abertas**.
 2. Escrevi 9 regras novas → **testei ao vivo e 3 falharam**, porque o prompt principal vence a
    regra escrita. Só resolveu virando código.
