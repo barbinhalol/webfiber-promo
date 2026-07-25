@@ -784,6 +784,22 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     if (PAINEL.copiloto_ativo() and ev["texto"] and _BTN_FIN.match(str(ev["texto"]))
             and not _cop_mudo(ev)):
         return await asyncio.to_thread(_copiloto, ev)
+
+    # ⛔ SÓ COPILOTO (ordem do dono 25/07, canal "ATENDIMENTO + ULTRA PEDRÃO"): o chatbot normal da
+    # FlowSeller é quem atende; o Pedrão NÃO PODE aparecer "em hipótese nenhuma". O que ele viu: o
+    # cliente clicou FINANCEIRO, o copiloto saudou certo às 08:51 e 1 minuto depois o Pedrão se
+    # APRESENTOU ("Eu sou o Pedrão, atendente virtual...") e ainda ofereceu PLANOS — a mensagem do
+    # clique voltou pelo webhook num formato que não casou com ^FINANCEIRO$ (veio junto do texto do
+    # menu citado), escapou do caminho do copiloto e caiu no cérebro normal.
+    # Daqui pra baixo mora TODO o caminho do Pedrão — então a trava fica aqui, DEPOIS dos dois
+    # caminhos do copiloto (fila do Financeiro e clique no botão), que continuam funcionando.
+    # É trava de CÓDIGO, não regra de prompt: a lição de 25/07 é que regra escrita não segura o
+    # modelo (ele já ignorou as regras 16 e 18 escritas).
+    if PAINEL.so_copiloto():
+        M.log_evento(ev["contato"], "so_copiloto_silenciou",
+                     {"mask": _mask(ev["contato"]), "texto": (str(ev["texto"] or ""))[:60]})
+        return {"status": "so_copiloto_pedrao_calado"}
+
     # chatbot NATIVO da FlowSeller atendendo o canal? -> o Pedrão se cala sozinho (anti-duplo-bot).
     # Some o menu nativo (canal voltou pro fluxo vazio) -> retoma automático em ~10 min.
     if PAINEL.bot_nativo_ativo():

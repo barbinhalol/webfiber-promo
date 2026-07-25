@@ -19,6 +19,11 @@ PADRAO = {
     "saudacao": "",           # ""=usa a saudacao padrao do codigo | texto custom (ex.: evento/feriado)
     "copiloto_financeiro": False,  # Copiloto: entrega fatura na fila do Financeiro (horario humano),
                                    # assinado "*Financeiro WebFiber*", cala quando um humano DIGITA
+    "so_copiloto": False,     # CANAL "ATENDIMENTO + ULTRA PEDRAO": o chatbot normal atende tudo e o
+                              # Pedrao NAO pode aparecer -- so o Copiloto do Financeiro fala. Ligado
+                              # em 25/07 depois do dono ver o Pedrao se APRESENTAR ("Eu sou o Pedrao...")
+                              # e oferecer PLANOS logo apos o cliente clicar FINANCEIRO. Desligar so
+                              # quando o canal voltar pro fluxo vazio "Ultra Pedrao".
     "nativo_ts": 0.0,         # sentinela anti-duplo-bot: quando o menu NATIVO da FlowSeller foi visto
     "sentinela_nativo": False, # DESLIGADA (23/07: dono CANCELOU o Pedrao nativo da FlowSeller ->
                                # nao ha mais outro bot; a espera de 10-30min virou so atraso inutil).
@@ -101,6 +106,11 @@ def bot_nativo_ativo(janela_s: int = None) -> bool:
         return (time.time() - float(p.get("nativo_ts") or 0)) < (janela_s or SENTINELA_JANELA_S)
     except Exception:
         return False
+
+def so_copiloto() -> bool:
+    """True = SÓ o Copiloto do Financeiro fala; o Pedrão nunca se apresenta nem responde sozinho.
+    É o modo do canal "ATENDIMENTO + ULTRA PEDRÃO", onde o chatbot normal já atende o cliente."""
+    return bool(ler().get("so_copiloto", False))
 
 def copiloto_ativo() -> bool:
     """Copiloto Financeiro: entrega fatura na fila do Financeiro durante o horario humano."""
