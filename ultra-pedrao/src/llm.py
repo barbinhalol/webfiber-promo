@@ -34,8 +34,46 @@ def _anthropic_key():
         pass
     return C.ANTHROPIC_API_KEY
 
+# PERF (25/07): cada chamada ao modelo abria uma conexão TLS NOVA (~250ms de handshake só pra
+# começar a falar). Com httpx o pool mantém a conexão viva entre mensagens. Se a lib não estiver
+# no ambiente, cai no urllib de sempre -- nada quebra, só fica mais lento.
+_CLIENTE = None
+try:
+    import httpx as _httpx
+except Exception:
+    _httpx = None
+
+def _cliente_http(timeout):
+    global _CLIENTE
+    if _httpx is None:
+        return None
+    if _CLIENTE is None:
+        _CLIENTE = _httpx.Client(
+            timeout=timeout,
+            limits=_httpx.Limits(max_keepalive_connections=6, max_connections=12,
+                                 keepalive_expiry=300.0),
+            http2=False)
+    return _CLIENTE
+
 def _post_json(url, headers, payload, timeout):
     data = json.dumps(payload).encode("utf-8")
+    cli = _cliente_http(timeout)
+    if cli is not None:
+        try:
+            r = cli.post(url, content=data, headers=headers, timeout=timeout)
+            if r.status_code >= 400:
+                raise LLMError(f"HTTP {r.status_code}: {r.text[:300]}")
+            return r.json()
+        except LLMError:
+            raise
+        except Exception as e:
+            # conexão do pool pode ter morrido do outro lado: derruba o cliente e tenta
+            # uma vez pelo caminho antigo, em vez de perder a resposta do cliente.
+            globals()["_CLIENTE"] = None
+            try:
+                cli.close()
+            except Exception:
+                pass
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:

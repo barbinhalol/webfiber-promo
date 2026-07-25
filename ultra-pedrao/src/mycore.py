@@ -14,7 +14,7 @@ consciente do dono, por simplicidade.
 
 Token: NUNCA no código. Lido de data/mycore_token.txt (chmod 600) ou da env MYCORE_TOKEN.
 """
-import json, os, re, urllib.request, urllib.error, urllib.parse
+import json, os, re, time, urllib.request, urllib.error, urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 _TOKEN_FILE = os.path.join(HERE, "..", "data", "mycore_token.txt")
@@ -154,8 +154,25 @@ def _post(path: str, **fields):
         return {"raw": raw}
 
 
+# PERF (25/07): a MESMA busca de cadastro era feita DUAS vezes por fatura -- uma em
+# cadastros_por_cpf (pra ver se tem multi-endereço) e outra dentro de resolver_fatura. Cache de
+# 30s por CPF: some com a requisição repetida sem mudar nada do comportamento (30s é curto
+# demais pra servir cadastro desatualizado, e é tudo dentro do mesmo atendimento).
+_CLI_CACHE = {}
+_CLI_TTL = 30.0
+
 def clientes_por_cpf(cpf: str):
-    return _get("cliente/list", cpfcnpj=digitos(cpf))
+    d = digitos(cpf)
+    agora = time.time()
+    hit = _CLI_CACHE.get(d)
+    if hit and (agora - hit[0]) < _CLI_TTL:
+        return hit[1]
+    r = _get("cliente/list", cpfcnpj=d)
+    _CLI_CACHE[d] = (agora, r)
+    if len(_CLI_CACHE) > 400:      # teto de memória: limpa o que já venceu
+        for k in [k for k, v in _CLI_CACHE.items() if agora - v[0] > _CLI_TTL]:
+            _CLI_CACHE.pop(k, None)
+    return r
 
 
 def dados_cliente_por_cpf(cpf: str):
@@ -268,15 +285,26 @@ def resolver_fatura(cpf: str, contato: str = None, client_id=None) -> dict:
 
     nome = clientes[0].get("name") or ""
     atrasadas, abertas, erro_fatura = [], [], False
-    for c in clientes:
-        cid = c.get("id")
-        if not cid:
-            continue
+    ids = [c.get("id") for c in clientes if c.get("id")]
+    # PERF (25/07): estas buscas eram SEQUENCIAIS -- um CPF com 4 cadastros (Airbnb, filiais)
+    # fazia 8 requisições em fila, ~3,6s só esperando rede. Agora saem juntas. A ORDEM do
+    # resultado é preservada (executor.map devolve na ordem da entrada), então a fatura escolhida
+    # é EXATAMENTE a mesma de antes -- só chega mais rápido.
+    def _busca(cid):
         try:
-            atrasadas += [(f, True) for f in faturas_atrasadas(cid)]
-            abertas += [(f, False) for f in faturas_abertas(cid)]
+            return (cid, faturas_atrasadas(cid), faturas_abertas(cid), False)
         except MyCoreErro:
-            erro_fatura = True   # endpoint de fatura caiu -> não afirmar "tudo em dia"
+            return (cid, [], [], True)   # endpoint de fatura caiu -> não afirmar "tudo em dia"
+    if len(ids) > 1:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(8, len(ids))) as ex:
+            resultados = list(ex.map(_busca, ids))
+    else:
+        resultados = [_busca(cid) for cid in ids]
+    for _cid, _atr, _abe, _err in resultados:
+        atrasadas += [(f, True) for f in _atr]
+        abertas += [(f, False) for f in _abe]
+        erro_fatura = erro_fatura or _err
     todas = atrasadas + abertas  # prioriza vencidas
     todas = [t for t in todas if (t[0].get("pixccola") or t[0].get("linhadigitavel") or t[0].get("gurl") or t[0].get("url"))]
     if not todas:

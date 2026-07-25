@@ -77,7 +77,10 @@ async def _vigia_notas():
     não devolve id, então NÃO dá pra confiar no 'enviado' — sem isso, ficava repetindo a cada 2 min)."""
     while True:
         try:
-            for contato, fatos in M.contatos_nota_pendente(NOTA_APOS_S):
+            # a varredura dos fatos é disco + json.loads de cada linha: em thread, pra não
+            # congelar o event loop (e com ele todos os webhooks) a cada tick.
+            _pend = await asyncio.to_thread(M.contatos_nota_pendente, NOTA_APOS_S)
+            for contato, fatos in _pend:
                 ext = M.ultimo_external_key(contato)
                 if not ext:
                     continue
@@ -126,9 +129,15 @@ def _registra_txt(contato, texto):
     t = (texto or "").strip()
     if not t:
         return
+    agora = time.time()
     l = _BOT_TXT.setdefault(contato, [])
-    l.append((time.time(), t))
+    l.append((agora, t))
     del l[:-20]
+    # o dicionário nunca soltava contato nenhum: crescia o dia inteiro e _txt_do_bot itera nele.
+    # As entradas só valem 1h (janela do próprio _txt_do_bot), então some com o que já venceu.
+    if len(_BOT_TXT) > 500:
+        for k in [k for k, v in _BOT_TXT.items() if not v or agora - v[-1][0] > 3600]:
+            _BOT_TXT.pop(k, None)
 
 def _txt_do_bot(contato, texto) -> bool:
     """True se a mensagem fromMe foi gerada por BOT (nosso ou fluxo nativo) — não por um humano.
@@ -535,7 +544,40 @@ _DEB = Debouncer(on_flush=_processar)
 @app.get("/health")
 def health():
     return {"ok": True, "uptime_s": int(time.time() - _START_TS), "config": C.resumo_seguro(),
-            "atuaria_agora": S.deve_atuar()}
+            "atuaria_agora": S.deve_atuar(), "modo_efetivo": PAINEL.modo_efetivo(C.BOT_MODE),
+            "proximo_atendimento": S.proximo_atendimento(), "desempenho": _desempenho()}
+
+def _desempenho(n=200):
+    """Velocidade real das últimas respostas + acerto do cache do prompt. Serve pra responder
+    'está mais rápido?' com número, não com opinião."""
+    try:
+        with M._db() as c:
+            rows = c.execute("SELECT payload FROM eventos WHERE tipo='decisao' "
+                             "ORDER BY id DESC LIMIT ?", (n,)).fetchall()
+        tot, ceb, rap, cq, ct = [], [], 0, 0, 0
+        for (p,) in rows:
+            d = json.loads(p)
+            if d.get("ms_total") is None:
+                continue
+            tot.append(d["ms_total"])
+            if d.get("ms_cerebro") is not None:
+                ceb.append(d["ms_cerebro"])
+            if d.get("fastpath"):
+                rap += 1
+            u = d.get("uso_llm") or {}
+            if u:
+                ct += 1
+                cq += 1 if (u.get("cache_read") or 0) > 0 else 0
+        if not tot:
+            return {"amostra": 0, "aviso": "sem respostas medidas ainda"}
+        tot.sort()
+        return {"amostra": len(tot),
+                "total_ms_mediana": tot[len(tot) // 2], "total_ms_pior5pct": tot[int(len(tot) * .95)],
+                "cerebro_ms_mediana": (sorted(ceb)[len(ceb) // 2] if ceb else None),
+                "pct_sem_llm(atalho)": round(100 * rap / len(tot)),
+                "pct_cache_quente": (round(100 * cq / ct) if ct else None)}
+    except Exception as e:
+        return {"erro": str(e)[:120]}
 
 @app.post("/webhook")
 async def webhook(request: Request, x_webhook_secret: str = Header(default=""),

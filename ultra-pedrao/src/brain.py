@@ -725,7 +725,15 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
         extra = PAINEL.contexto_extra()
         if extra:
             ctx.append(extra)
-    ctx.append("\nDecida a próxima ação do Pedrão e responda SÓ o JSON no formato definido.")
+    # SAÍDA ENXUTA (25/07): cada token gerado é tempo de espera do cliente. O modelo escrevia
+    # nota_interna (50-120 tokens) em TODA resposta e o server APAGA ela em qualquer ação que não
+    # seja transferir (server.py) -- era ~1s por mensagem gerado pra ser descartado. Idem motivo/
+    # confianca, que os guards sobrescrevem.
+    ctx.append("\nResponda SÓ o JSON, no formato definido, e o mais CURTO possível:\n"
+               "• sempre: acao, texto\n"
+               "• só quando fizer sentido: intencao, fila, fastReplyId, dados_coletados\n"
+               "• nota_interna: SOMENTE quando acao=\"transferir\" (nos outros casos é descartada)\n"
+               "• não escreva motivo, confianca nem viabilidade — o sistema já calcula.")
     user = "\n\n".join(ctx)
     # REGRAS BASE entram no SYSTEM (estável entre chamadas -> aproveitam o prompt caching da
     # Anthropic: mais rápido e ~10x mais barato que ir no ctx). Os ajustes do dono ficam no ctx

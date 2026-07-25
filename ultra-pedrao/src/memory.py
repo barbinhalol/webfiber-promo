@@ -166,7 +166,14 @@ def log_evento(contato, tipo, payload):
                   (time.time(), contato, tipo, json.dumps(payload, ensure_ascii=False, default=str)))
 
 def expurgar():
+    """Retenção (LGPD) + saúde do banco. 25/07: 'fatos', 'resumo' e 'sessao' NUNCA eram limpos --
+    cresciam pra sempre, e é justamente 'fatos' que o vigia de leads varre a cada 2 min. Agora
+    tudo respeita a retenção; o VACUUM devolve o espaço ao disco."""
     corte = time.time() - C.MEM_RETENCAO_DIAS * 86400
     with _db() as c:
-        for t in ("mensagens", "eventos"):
+        for t in ("mensagens", "eventos", "fatos", "resumo", "sessao"):
             c.execute(f"DELETE FROM {t} WHERE ts < ?", (corte,))
+    try:
+        _conn().execute("VACUUM")
+    except Exception:
+        pass
