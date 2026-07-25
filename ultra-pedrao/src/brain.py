@@ -286,6 +286,23 @@ _SENHA_WIFI = re.compile(
     r"\b(senha|nome)\s+(d[oa]\s+)?(wi-?fi|rede)\b[^.!?]{0,25}\b(mudar|trocar|alterar|nova|esqueci)\b",
     re.I)
 
+# PERGUNTA SOBRE HORÁRIO/EXPEDIENTE — o dado existe (schedule), não há motivo pra gastar IA
+# nem pra devolver "me conta, é pra contratar?" a quem fez uma pergunta objetiva.
+_PERGUNTA_HORARIO = re.compile(
+    r"\b(que\s+horas?|qual\s+(o\s+)?hor[áa]rio|hor[áa]rio\s+de\s+(atendimento|funcionamento|voc[êe]s)|"
+    r"(voc[êe]s|vcs|abre[mn]?|atendem?|funciona[mn]?|trabalha[mn]?)\s+"
+    r"(no|aos|de|em|até|ate)?\s*(domingo|s[áa]bado|fim\s+de\s+semana|feriado|que\s+horas|"
+    r"\d{1,2}\s*(h|horas))|"
+    r"at[ée]\s+que\s+horas|abre[mn]?\s+que\s+horas|"
+    r"(voc[êe]s|vcs)\s+(trabalham|atendem|abrem)\s*\?)", re.I)
+
+# visita/instalação já agendada (regra 20): o Pedrão não tem a agenda e não chuta horário
+_VISITA_AGENDADA = re.compile(
+    r"\b(t[ée]cnico|instala(dor|[çc][ãa]o)|visita|equipe)\b[^.!?]{0,25}\b(chega|vem|passa|vai\s+"
+    r"(vir|passar)|marcad|agendad|hoje|amanh[ãa])|"
+    r"\b(chega|vem|passa)\b[^.!?]{0,20}\b(t[ée]cnico|instalador|equipe)\b|"
+    r"\b(to|t[ôo]|estou)\s+esperando\s+(o\s+)?(t[ée]cnico|instala|visita)", re.I)
+
 # pediu HUMANO -> atender na hora, sem insistir (regra 15)
 _QUER_HUMANO = re.compile(
     r"\b(atendente|humano|pessoa\s+de\s+verdade|falar\s+com\s+(algu[ée]m|uma\s+pessoa|gente)|"
@@ -541,6 +558,17 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     # 0) roteiro de suporte JÁ em andamento tem prioridade
     if sup in ("1", "2"):
         return _suporte_passo(msg, sup, fatos, historico)
+
+    # 0.3) PERGUNTA DE HORÁRIO: a informação existe no código (schedule) e o bot respondia
+    # "me conta, é pra contratar ou outro assunto?" — deixando sem resposta uma pergunta objetiva.
+    # "que horas o TÉCNICO chega?" é visita agendada (regra 20), não pergunta de expediente
+    if _PERGUNTA_HORARIO.search(msg) and not _VISITA_AGENDADA.search(msg):
+        _abre0 = (_abertura() + "\n\n") if sessao_nova else ""
+        return _fp(_abre0 + "Nosso *suporte técnico* atende de segunda a sexta das *9h às 20h* e "
+                   "no *sábado das 9h às 15h*. O *comercial* e o *financeiro* são de segunda a "
+                   "sexta, a partir das 9h.\n\n"
+                   "Por aqui eu te ajudo a qualquer hora 😊 O que você precisa?",
+                   intencao="horario", icone="🕐")
 
     # 0.4) SENHA/NOME DO WI-FI: regra 5 — o Pedrão não executa nem ensina a mexer no roteador.
     if _SENHA_WIFI.search(msg):
