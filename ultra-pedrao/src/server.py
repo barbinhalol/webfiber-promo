@@ -128,8 +128,13 @@ _BOT_TXT = {}  # contato -> [(ts, texto enviado por nós)] — p/ distinguir hum
 # O QUE O BOT LEMBRA DE UMA CONVERSA PRA OUTRA. Só identidade/ficha do cliente — nunca estado de
 # roteiro (sup/fin/desb/try), que TEM de zerar em atendimento novo. Assim o bot não pergunta de
 # novo o CPF que a pessoa deu ontem, mas também não continua um roteiro velho no meio.
-_FICHA_KEYS = ("nome", "cpf", "cnpj", "fin_cpf", "endereco", "sup_end", "bairro", "rua", "numero",
-               "plano", "plano_interesse", "hist_oc", "desbloqueio_mes")
+# FICHA = quem a pessoa É (sobrevive à sessão nova). "plano_interesse" SAIU daqui em 25/07: é
+# estado de funil, não identidade — sobrevivendo, o bot abria conversa nova com "vi que você tem
+# interesse em planos — é para a Rua X?" (interesse VELHO, de outra conversa; regra 23: nunca
+# afirme o que o cliente não disse NESTA conversa).
+_FICHA_KEYS = ("nome", "cpf", "cnpj", "fin_cpf", "endereco", "sup_end", "sup_nome", "bairro",
+               "rua", "numero", "complemento", "cpf_fornecido", "plano", "hist_oc",
+               "desbloqueio_mes")
 
 def _registra_txt(contato, texto):
     t = (texto or "").strip()
@@ -579,6 +584,16 @@ def _processar(contato, texto, ctx):
     # A ordem do dono é NÃO RECAPITULAR em voz alta -- não é ficar com amnésia. Antes, a sessão
     # nova zerava TODA a ficha: o bot pedia de novo o nome, o CPF e o endereço que já tinha de
     # ontem. Agora a FICHA (quem é a pessoa) sobrevive; o ESTADO DO ROTEIRO (sup/fin/desb) zera.
+    # 25/07 (ao vivo com o dono): o filtro abaixo só valia pra 1ª MENSAGEM da sessão — da 2ª em
+    # diante `fatos` voltava INTEIRO do banco, com o roteiro da conversa fechada ("fin": "feito",
+    # "sup": "fim", perfil de lead antigo...). Resultado real: o LLM viu "fin: feito" + CPF e
+    # CRAVOU "seu CPF não tem fatura pendente" sem consultar nada. Sessão nova agora APAGA do
+    # banco o que não é ficha (cop_* fica: é do copiloto, que tem ciclo próprio por ticket).
+    if _fresh:
+        _lixo = [k for k in fatos if k not in _FICHA_KEYS and not k.startswith("cop_")]
+        if _lixo:
+            M.remover_fatos(contato, _lixo)
+            fatos = {k: v for k, v in fatos.items() if k not in _lixo}
     fatos_b = {k: v for k, v in fatos.items() if k in _FICHA_KEYS} if _fresh else fatos
     _t_cerebro = time.time()
     d = B.fastpath(texto, sessao_nova, hist_b, fatos_b, sentimento=sent, contato=contato)

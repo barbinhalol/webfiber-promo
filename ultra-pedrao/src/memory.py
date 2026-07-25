@@ -113,6 +113,21 @@ def merge_fatos(contato, novos: dict):
                   (contato, json.dumps(atual, ensure_ascii=False), time.time()))
     return atual
 
+def remover_fatos(contato, chaves):
+    """Apaga chaves específicas da ficha (25/07: sessão nova limpa o roteiro velho NO BANCO —
+    antes só filtrava na 1ª mensagem e o estado morto voltava da 2ª em diante)."""
+    if not chaves: return
+    atual = get_fatos(contato)
+    mudou = False
+    for k in chaves:
+        if k in atual:
+            del atual[k]; mudou = True
+    if not mudou: return
+    with _db() as c:
+        c.execute("INSERT INTO fatos(contato,dados,ts) VALUES(?,?,?) "
+                  "ON CONFLICT(contato) DO UPDATE SET dados=excluded.dados, ts=excluded.ts",
+                  (contato, json.dumps(atual, ensure_ascii=False), time.time()))
+
 def get_ultimo_ticket(contato):
     """Ultimo ticket_id visto pra esse contato -- usado pra detectar atendimento novo/reaberto
     (a FlowSeller cria um ticket_id novo quando o atendimento anterior foi fechado)."""

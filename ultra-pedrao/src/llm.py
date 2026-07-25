@@ -121,11 +121,15 @@ def _anthropic(system, user, model=None):
         # economiza tokens e elimina a maior causa de "JSON inválido". A resposta volta SEM a
         # chave inicial, recolocada logo abaixo.
         msgs.append({"role": "assistant", "content": "{"})
-    corpo = {"model": modelo, "max_tokens": 2000,
+    # Modelos com "thinking" (Sonnet 5/Opus 5/Fable 5...) gastam o teto TAMBÉM com o pensamento
+    # invisível — 2000 neles arrisca truncar o JSON (a causa do incidente 24/07 22:16). Teto maior
+    # não custa nada a mais (paga-se o gerado, não o teto).
+    prensa = _aceita_effort(modelo)
+    corpo = {"model": modelo, "max_tokens": 4000 if prensa else 2000,
              "system": [{"type": "text", "text": system,
                          "cache_control": {"type": "ephemeral", "ttl": "1h"}}],
              "messages": msgs}
-    if _aceita_effort(modelo) and C.LLM_EFFORT_SMART:
+    if prensa and C.LLM_EFFORT_SMART:
         corpo["output_config"] = {"effort": C.LLM_EFFORT_SMART}
     out = _post_json(
         "https://api.anthropic.com/v1/messages",

@@ -38,6 +38,16 @@ _COND_COMERCIAL = re.compile(
     r"sem\s+(taxa|custo|fidelidade|multa)\s+(de\s+)?(instala|ades|nenhum)|"
     r"(gr[áa]tis|de\s+gra[çc]a|isento)\s+(a\s+)?(instala[çc][ãa]o|ades[ãa]o|taxa))\b", re.I)
 _PLACEHOLDER = re.compile(r"\[[^\]]*\]|\{\{[^}]*\}\}")
+# STATUS DE COBRANÇA cravado pelo modelo (25/07 ao vivo): "seu CPF não tem fatura pendente",
+# "não existe cobrança em aberto no seu nome". Só o fluxo de fatura (que CONSULTA o MyCore) pode
+# afirmar isso — o texto do LLM que afirme qualquer status de cobrança é trocado pelo guard.
+# O fluxo real não passa por aqui (fastpath/copiloto montam o texto por código), então não há
+# falso positivo com a entrega legítima.
+_STATUS_COBRANCA = re.compile(
+    r"(n[ãa]o\s+(tem|h[áa]|existe|consta|encontrei|localizei|achei)[^.!\n]{0,40}"
+    r"(fatura|cobran[çc]a|boleto|d[ée]bito|pend[êe]nc)|"
+    r"(fatura|cobran[çc]a|boleto|conta)[^.!\n]{0,30}(em\s+dia|quitad|zerad|sem\s+pend)|"
+    r"(cpf|cnpj|nome|cadastro)[^.!\n]{0,30}(limpo|sem\s+(d[ée]bito|pend[êe]nc|cobran[çc]a)))", re.I)
 
 # ORDEM DO DONO (25/07, pegou numa conversa real): duas coisas que o bot NÃO pode dizer em suporte.
 # A regra escrita entra no prompt, mas hoje eu aprendi que regra sozinha nem sempre vence o
@@ -1044,6 +1054,15 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     if texto and _PLACEHOLDER.search(texto):
         alertas.append("GUARD: placeholder removido")
         texto = _PLACEHOLDER.sub("", texto).strip()
+    # ⛔ STATUS DE COBRANÇA É DO SISTEMA, NUNCA DO MODELO (25/07, ao vivo com o dono): o LLM viu
+    # "fin: feito" + CPF na memória e CRAVOU "seu CPF não tem fatura pendente — não existe
+    # cobrança em aberto" SEM consulta nenhuma ao MyCore (e errado: havia 1 fatura). Quem afirma
+    # se tem ou não tem fatura é só o fluxo de fatura real (fastpath/copiloto, que consulta).
+    # O LLM no máximo se oferece pra verificar.
+    if texto and _STATUS_COBRANCA.search(texto):
+        alertas.append("GUARD: status de cobranca inventado removido")
+        texto = ("Deixa eu conferir isso certinho no sistema pra você 😊 "
+                 "Me confirma o CPF ou CNPJ do titular?")
     if texto and _CONTAGEM.search(texto):
         alertas.append("GUARD: quantidade de clientes/vizinhos suavizada")
         texto = _CONTAGEM.sub(r"vários \1", texto)
