@@ -106,6 +106,25 @@ def extrair_cpf_cnpj(texto: str):
 
 # ---------------- HTTP (Bearer) ----------------
 
+# PERF (25/07): keep-alive também aqui. Numa fatura são 3+ requisições (cadastro, vencidas,
+# a vencer) e cada uma abria um TLS novo. Com o pool, só a primeira paga o handshake.
+# Sem httpx no ambiente, continua tudo pelo urllib (o comportamento é o mesmo, só mais lento).
+_HTTP = None
+try:
+    import httpx as _httpx
+except Exception:
+    _httpx = None
+
+def _pool():
+    global _HTTP
+    if _httpx is None:
+        return None
+    if _HTTP is None:
+        _HTTP = _httpx.Client(timeout=TIMEOUT_S,
+                              limits=_httpx.Limits(max_keepalive_connections=8,
+                                                   max_connections=16, keepalive_expiry=120.0))
+    return _HTTP
+
 def _get(path: str, **query):
     tok = _token()
     if not tok:
@@ -113,6 +132,24 @@ def _get(path: str, **query):
     url = BASE_URL.rstrip("/") + "/" + path.lstrip("/")
     if query:
         url += "?" + urllib.parse.urlencode(query)
+    cli = _pool()
+    if cli is not None:
+        try:
+            r = cli.get(url, headers={"Authorization": f"Bearer {tok}", "Accept": "application/json"})
+            if r.status_code >= 400:
+                raise MyCoreErro(f"HTTP {r.status_code} em {path}",
+                                 "auth" if r.status_code in (401, 403) else "http")
+            try:
+                d = r.json()
+            except Exception:
+                raise MyCoreErro(f"resposta não-JSON em {path}", "parse")
+            return d if isinstance(d, list) else ([d] if d else [])
+        except MyCoreErro:
+            raise
+        except Exception:
+            globals()["_HTTP"] = None          # conexão do pool morreu -> refaz pelo urllib
+            try: cli.close()
+            except Exception: pass
     req = urllib.request.Request(url, headers={
         "Authorization": f"Bearer {tok}", "Accept": "application/json",
     })

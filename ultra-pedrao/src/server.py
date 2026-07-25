@@ -497,6 +497,8 @@ def _processar(contato, texto, ctx):
         # se havia roteiro de suporte em andamento e o LLM assumiu, encerra o roteiro (evita ficar preso)
         if fatos.get("sup") in ("1", "2"):
             d.setdefault("dados_coletados", {})["sup"] = "fim"
+    _dur_cerebro = int((time.time() - _t_cerebro) * 1000)
+    _dur_antes = int((_t_cerebro - _t_ini) * 1000)   # leituras de memória antes de decidir
 
     # ANTI-DUPLICATA DE PLANOS: se ja mandou o pacote de planos+imagens ha < 3 min, NAO repete
     # (o cliente mandava o endereco em 2 msgs e recebia os planos 2x). So referencia o que ja foi enviado.
@@ -533,6 +535,7 @@ def _processar(contato, texto, ctx):
     # >>> A RESPOSTA VAI PRIMEIRO. <<<
     _t_envio = time.time()
     resultado = FS.executar_decisao(ext, d, contato) if ext else {"erro": "sem external_key"}
+    _dur_envio = int((time.time() - _t_envio) * 1000)
 
     # memória nível 2 (resumo da conversa): é uma 2ª chamada de LLM, ~2s. Até 25/07 ela rodava
     # ANTES do envio -- ou seja, TODO cliente em conversa longa esperava o bot "tomar nota" antes
@@ -552,9 +555,12 @@ def _processar(contato, texto, ctx):
         "humor": sent.get("humor"), "cor": sent.get("cor"),
         "viab": d.get("_viabilidade_sistema", {}).get("status"),
         "alertas": d.get("_alertas"), "render": d.get("_render"), "envio": resultado,
-        # CRONÔMETRO (25/07): quanto o cliente esperou, em partes. Sem isso, "está mais rápido"
-        # é opinião. ms_cerebro = decidir (inclui LLM); ms_envio = FlowSeller; ms_total = tudo.
-        "ms_cerebro": _ms(_t_cerebro), "ms_envio": _ms(_t_envio), "ms_total": _ms(_t_ini),
+        # CRONÔMETRO (25/07): DURAÇÃO de cada fase (não acumulado — a 1ª versão media do início
+        # da fase até o log, o que somava tudo o que vinha depois e mascarava o gargalo real).
+        # antes = leituras de memória; cerebro = fastpath/LLM (inclui MyCore na fatura);
+        # envio = FlowSeller (inclui a pausa de naturalidade); total = o que o cliente esperou.
+        "ms_antes": _dur_antes, "ms_cerebro": _dur_cerebro, "ms_envio": _dur_envio,
+        "ms_total": _ms(_t_ini),
         "uso_llm": dict(L.ULTIMO_USO) if not d.get("_fastpath") else None,
     })
 
