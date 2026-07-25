@@ -941,11 +941,22 @@ async def admin_teste_botoes(request: Request, x_admin_token: str = Header(defau
 
 @app.post("/admin/simular")
 async def admin_simular(request: Request, x_admin_token: str = Header(default="")):
-    """Testa uma mensagem sem passar pela FlowSeller: retorna a decisão do cérebro."""
-    _admin(x_admin_token)
+    """Testa uma mensagem sem passar pela FlowSeller: retorna a decisão do cérebro (e quanto
+    tempo ela levou -- é a forma de medir o cérebro puro, sem mandar nada pra ninguém)."""
+    _auth_painel(x_admin_token)   # mesma trava dos outros /admin (aceita a senha do painel)
     body = await request.json()
-    d = B.decidir(body.get("texto", ""), historico=body.get("historico", []),
-                  memoria_cliente=body.get("memoria", {}), sessao_nova=bool(body.get("sessao_nova", False)))
+    texto = body.get("texto", "")
+    hist = body.get("historico", [])
+    mem = body.get("memoria", {})
+    nova = bool(body.get("sessao_nova", False))
+    sent = SENT.classificar(texto, " ".join(h.get("texto", "") for h in hist[-4:]))
+    t0 = time.time()
+    # passa pelo MESMO caminho de produção: atalho primeiro, LLM só se o atalho não resolver
+    d = await asyncio.to_thread(B.fastpath, texto, nova, hist, mem, sent, None)
+    if d is None:
+        d = await asyncio.to_thread(B.decidir, texto, hist, mem, nova, "", sent)
     return {"decisao": {k: v for k, v in d.items() if not k.startswith("_")},
+            "ms": int((time.time() - t0) * 1000), "atalho_sem_llm": bool(d.get("_fastpath")),
+            "humor": sent.get("humor"), "uso_llm": (None if d.get("_fastpath") else dict(L.ULTIMO_USO)),
             "viabilidade_sistema": d.get("_viabilidade_sistema"),
             "alertas": d.get("_alertas"), "render": d.get("_render")}
