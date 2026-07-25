@@ -38,6 +38,47 @@ _COND_COMERCIAL = re.compile(
     r"sem\s+(taxa|custo|fidelidade|multa)\s+(de\s+)?(instala|ades|nenhum)|"
     r"(gr[áa]tis|de\s+gra[çc]a|isento)\s+(a\s+)?(instala[çc][ãa]o|ades[ãa]o|taxa))\b", re.I)
 _PLACEHOLDER = re.compile(r"\[[^\]]*\]|\{\{[^}]*\}\}")
+
+# ORDEM DO DONO (25/07, pegou numa conversa real): duas coisas que o bot NÃO pode dizer em suporte.
+# A regra escrita entra no prompt, mas hoje eu aprendi que regra sozinha nem sempre vence o
+# modelo — então isto aqui é a trava de código, que não depende dele obedecer.
+#
+# 1) "o BÁSICO": diminui o que a pessoa fez. Ela fez o NECESSÁRIO. E o certo é EXPLICAR por que
+#    não resolveu, não rotular o esforço dela.
+# troca só a EXPRESSÃO, sem comer o resto da frase (a 1ª versão engolia "…agora é com a equipe")
+# "básico" tem dois usos e cada um pede um conserto diferente:
+# ADJETIVO ("procedimento básico", "testes básicos") -> o adjetivo simplesmente sai;
+# SUBSTANTIVO ("você já fez o básico")               -> vira "o que era necessário".
+_BASICO_ADJ = re.compile(
+    r"\b(procedimentos?|testes?|passos?|checagens?|verifica[çc][ãõ][eo]s?|an[áa]lises?|"
+    r"orienta[çc][ãõ][eo]s?|coisas?)\s+b[áa]sic[oa]s?\b", re.I)
+_BASICO = re.compile(r"\b(os?\s+)?b[áa]sic[oa]s?\b(\s+ent[ãa]o)?", re.I)
+# 2) DESCONTRAÇÃO em suporte: quem está há 2 dias sem internet não quer ouvir "relaxa".
+#    Só é permitido quando o cliente teve uma VITÓRIA (voltou/resolveu) — aí pode comemorar.
+_DESCONTRAI = re.compile(
+    r"\b(relaxa(\s+que)?|relaxe|fica\s+(tranquil[oa]|frio|de\s+boa|suave)|"
+    r"n[ãa]o\s+esquenta|t[áa]\s+suave|tranquil[ãa]o|de\s+boa|calma\s+a[íi]|sem\s+estresse)\b[,!.]?\s*",
+    re.I)
+
+def _tom_suporte(texto, sentimento=None):
+    """Tira 'o básico' e as expressões de descontração das respostas de suporte."""
+    t = texto or ""
+    if not t:
+        return t, []
+    alertas = []
+    if _BASICO_ADJ.search(t) or _BASICO.search(t):
+        alertas.append("GUARD: 'o básico' trocado (diminui o cliente)")
+        t = _BASICO_ADJ.sub(lambda m: m.group(1), t)   # adjetivo sai, substantivo fica intacto
+        t = _BASICO.sub("o que era necessário", t)
+    # cliente comemorando (internet voltou etc.) pode receber tom leve; em suporte, não.
+    if (sentimento or {}).get("humor") != "animado" and _DESCONTRAI.search(t):
+        alertas.append("GUARD: expressão de descontração removida (suporte)")
+        t = _DESCONTRAI.sub("", t)
+        t = re.sub(r"^\s*[,;]\s*", "", t)
+    t = re.sub(r"\s{2,}", " ", t).strip()
+    if alertas and t:                       # frase não pode começar em minúscula depois do corte
+        t = t[0].upper() + t[1:]
+    return t, alertas
 # não expor quantidade de clientes/vizinhos ("mais de 80 vizinhos", "500 na rua") — soa exagero
 _CONTAGEM = re.compile(r"\b(?:mais de\s*|cerca de\s*|uns?\s*)?\d{1,4}\s*(clientes?|vizinhos?|atendidos?|casas?|apto?s?|apartamentos?|moradores?|fam[íi]lias?)\b", re.I)
 # NUNCA cravar dia/horário de visita ou conserto (ordem do dono). O único compromisso permitido é o
@@ -989,6 +1030,9 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     if texto and _PRECO.search(texto):
         alertas.append("GUARD: preço em texto bloqueado")
         texto = "Já te mostro os valores certinhos na tabela oficial 🙂"
+    if texto:
+        texto, _al_tom = _tom_suporte(texto, sentimento)
+        alertas += _al_tom
     if texto and _COND_COMERCIAL.search(texto):
         # taxa de instalação, parcelamento, fidelidade, "é grátis": nada disso está definido
         # aqui — quem informa é o Comercial. Remove só a frase que inventou.
