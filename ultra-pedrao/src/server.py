@@ -153,7 +153,16 @@ def _txt_do_bot(contato, texto) -> bool:
     t = (texto or "").strip()
     if not t:
         return True
-    if t.startswith("*Pedrão") or t.startswith("*Financeiro"):
+    # 25/07 (ao vivo, ticket 780431): a saudação do copiloto saiu 08:51:56 e 2s depois o ECO dela
+    # voltou pelo webhook e foi classificado como HUMANO -> mutou o próprio atendimento; o clique
+    # FINANCEIRO seguinte morreu no silêncio. Causa: o eco volta SEM os asteriscos da assinatura
+    # ("Financeiro WebFiber" em vez de "*Financeiro WebFiber*"), então nem o startswith nem o cache
+    # de texto enviado casavam. Agora a comparação ignora a formatação (* _ ~ `) em vez de exigi-la.
+    _t = re.sub(r"[*_~`]", "", t).strip()
+    if _t.startswith("Pedrão") or _t.startswith("Financeiro WebFiber"):
+        return True
+    # saudação de setor do copiloto (sai sem assinatura em alguns caminhos)
+    if re.match(r"^ol[áa]!?\s+aqui\s+[ée]\s+do\s+setor", _t, re.I):
         return True
     if t.startswith("Olá! Eu sou o Pedrão"):   # nossa saudação sai SEM assinatura
         return True
@@ -176,7 +185,8 @@ def _txt_do_bot(contato, texto) -> bool:
         return True
     now = time.time()
     for ts, txt in _BOT_TXT.get(contato, []):
-        if now - ts < 3600 and (txt == t or t.startswith(txt[:60])):
+        _x = re.sub(r"[*_~`]", "", txt or "").strip()
+        if now - ts < 3600 and (_x == _t or (_x and _t.startswith(_x[:60]))):
             return True
     return False
 
