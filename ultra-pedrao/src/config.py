@@ -62,6 +62,9 @@ PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
 
 # ---------------- DEBOUNCE / AGRUPAMENTO ----------------
 DEBOUNCE_SECONDS = _i("DEBOUNCE_SECONDS", 6)   # janela p/ agrupar msgs picadas (3–8s)
+# janela curta: quando a mensagem já parece uma frase TERMINADA (pontuação final, CPF, escolha
+# de menu), não faz sentido cobrar a janela inteira de quem não vai digitar mais nada.
+DEBOUNCE_CURTA_S = float(os.environ.get("DEBOUNCE_CURTA_S", "0.8"))
 DEBOUNCE_MAX = _i("DEBOUNCE_MAX", 20)          # teto de msgs agrupadas
 
 # ---------------- HORÁRIO (America/Sao_Paulo) ----------------
