@@ -8,14 +8,18 @@ import re
 # fúria / risco (vermelho) — jurídico, ameaça, xingamento, desistência.
 # Sinais REAIS minerados de 16 mil msgs de cliente (conhecimento_conversas.md, seção 4).
 _FURIA = re.compile(
-    r"\b(procon|advogad|process(o|ar|ei)|justi[çc]a|c[oó]digo de defesa|absurdo|desca(so|rado)|"
+    # 24/07: stems tipo "irritad\b" NUNCA batiam — em português o adjetivo sempre continua com
+    # a vogal de gênero (irritad+a/o), e o \b logo depois do stem exige que a palavra TERMINE ali.
+    # Resultado: quem escrevesse literalmente "estou irritada"/"o advogado vai ver isso" passava
+    # batido pelo detector. Trocado \b final por \w* nesses stems (cobre a/o/as/os/inha etc.).
+    r"\b(procon|advogad\w*|process(o|ar|ei)|justi[çc]a|c[oó]digo de defesa|absurdo|desca(so|rado)|"
     r"verg(onha|onhoso)|palha[çc]ada|cansei|enchei o saco|p[ée]ssimo|horr[íi]vel|lixo|merda|"
-    r"porcaria|revoltad|indignad|nunca mais|cancel(ar|amento|a minha)|reclama[çc]|[óo]dio|"
-    r"irritad|puto|inadmiss[íi]vel|rid[íi]cul|descaso|golpe|enrola[çr]|palha[çc]o|"
-    r"n[ãa]o aguento|t[oô] cansad|me engana|"
+    r"porcaria|revoltad\w*|indignad\w*|nunca mais|cancel(ar|amento|a minha)|reclama[çc]|[óo]dio|"
+    r"irritad\w*|puto|inadmiss[íi]vel|rid[íi]cul\w*|descaso|golpe|enrola[çr]|palha[çc]o|"
+    r"n[ãa]o aguento|t[oô]\s+cansad\w*|me engana|"
     # ameaça de trocar de operadora (mata-lead / churn real)
     r"vou (pra|para|fazer com|assinar|mudar pra|contratar) (a |o )?(claro|vivo|oi|tim|desktop|net|concorr)|"
-    r"vou encerrar (meu|o|a)|vou informar (aos|os) (outros|interessad)|"
+    r"vou encerrar (meu|o|a)|vou informar (aos|os) (outros|interessad\w*)|"
     # cliente abandonado no loop do bot (grande fonte de atrito real)
     r"algu[ée]m (pode|vai|consegue)?\s*(responder|atender|me atender|me ajudar|a[íi])|"
     r"tem algu[ée]m (a[íi]|ai)|(oi\?|ol[áa]\?)\s*$|"
@@ -25,8 +29,8 @@ _FURIA = re.compile(
 _CAPS = re.compile(r"[A-ZÀ-Ú]{5,}")
 # positivo / caloroso (verde) — satisfação, intenção de fechar
 _POSITIVO = re.compile(
-    r"\b(obrigad|valeu|agrade[çc]|show|top|maravilh|ador(ei|o)|amei|excelente|perfeito|"
-    r"[óo]timo|muito bom|gratid|abra[çc]o|parab[ée]ns|quero sim|fech(ar|ado|a comigo)|"
+    r"\b(obrigad\w*|valeu|agrade[çc]|show|top|maravilh|ador(ei|o)|amei|excelente|perfeito|"
+    r"[óo]timo|muito bom|gratid\w*|abra[çc]o|parab[ée]ns|quero sim|fech(ar|ado|a comigo)|"
     r"bora|massa|joia|adorei|que bom|voc[êe]s s[ãa]o [óo]timos|salvou|top demais)\b", re.I)
 
 def _grita(texto):

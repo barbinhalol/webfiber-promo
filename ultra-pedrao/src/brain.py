@@ -124,20 +124,34 @@ _SINAIS_COMPLEXOS = re.compile(
 #      Só o básico -- NUNCA diagnostica rede (seção 7 do prompt). Financeiro tem prioridade e sai daqui.
 _SUP_INTENCAO = re.compile(
     r"\b(sem\s+(internet|sinal|conex|net|rede|wi-?fi)|"
-    r"(internet|net|wi-?fi|conex[ãa]o|sinal|rede)\s+(caiu|parou|ruim|lenta|oscil|caindo|p[ée]ssim)|"
+    r"(internet|net|wi-?fi|conex[ãa]o|sinal|rede)\s+(caiu|parou|ruim|lenta|oscil|caindo|p[ée]ssim|frac[ao])|"
     r"problema\s+(no|na|com)\b.{0,20}?(internet|net|sinal|conex|wi-?fi|rede)|"
     r"caiu\s+a\s+(internet|net)|"
     r"n[ãa]o\s+(navega|pega|funciona|conecta|t[áa]\s+(pegando|funcionando|dando|conectando))|"
-    r"parou\s+de\s+funcionar|t[áa]\s+(lenta|lento|oscilando|caindo|ruim)|internet\s+n[ãa]o)\b", re.I)
+    r"parou\s+de\s+funcionar|t[áa]\s+(lenta|lento|oscilando|caindo|ruim|frac[ao])|internet\s+n[ãa]o)\b", re.I)
+# indica queda TOTAL (sem sinal nenhum) -> só esse caso justifica dizer "sem internet" na abertura;
+# "fraca/lenta/oscilando" é queixa de qualidade, não de ausência (achado 24/07: Pedrão abriu com
+# "sinto muito que esteja SEM internet" pra uma cliente que só reclamou de sinal fraco).
+_SUP_TOTAL = re.compile(r"\bsem\s+(internet|sinal|conex|net|rede|wi-?fi)\b|\bcaiu\b|parou\s+de\s+funcionar", re.I)
 _FINANCEIRO_KW = re.compile(
-    r"\b(atras|fatura|boleto|cobran|cortaram|cortada|cortou|bloque|esqueci\s+de\s+pagar|"
-    r"pagamento|vencid|d[ée]bito|negativ|2[ªa]?\s*via|segunda\s+via|desbloque|financeiro)\b", re.I)
+    # 24/07: mesmo bug do sentimento.py -- stem sem \w* nunca batia a forma real da palavra
+    # ("atras\b" não pega "atrasada", "cobran\b" não pega "cobrança/cobrando", etc.). Testado:
+    # "minha conta tá atrasada", "tô sendo cobrada", "fui bloqueado", "nome foi negativado" e
+    # "quero o desbloqueio" caíam TODOS fora do atalho (iam pro LLM, mais lento) antes do \w*.
+    # "cobran\w*" pega cobrança/cobrando; "cobrada/cobrado" é outro radical (particípio) -- cobrad\w*
+    r"\b(atras\w*|fatura|boleto|cobran\w*|cobrad\w*|cortaram|cortada|cortou|bloque\w*|esqueci\s+de\s+pagar|"
+    r"pagamento|vencid\w*|d[ée]bito|negativ\w*|2[ªa]?\s*via|segunda\s+via|desbloque\w*|financeiro)\b", re.I)
 _SUP_RESOLVIDO = re.compile(
     r"\b(voltou|volto[uw]?|funcion(ou|a)|resolv(eu|ido)|deu\s+certo|normaliz|t[áa]\s+(funcionando|de\s+boa|normal)|"
     r"pegou|conectou|voltei\s+a\s+navegar|ok\s+agora|consegui|j[áa]\s+voltou)\b", re.I)
 _SUP_NAO_RESOLVIDO = re.compile(
     r"\b(n[ãa]o\s+(voltou|volto|funcion|resolv|pegou|conectou|adiantou)|continua|mesma\s+coisa|"
     r"nada|ainda\s+(sem|n[ãa]o)|persist|vermelh|loss|piscando|apagad|sem\s+luz|do\s+mesmo\s+jeito|nao\s+deu)\b", re.I)
+# sinal ESPECÍFICO de que o cliente de fato relatou a luz/o problema técnico -> só ESSE caso pode
+# fechar afirmando "luz vermelha" pro cliente e pra equipe. Achado 24/07: cliente só respondeu
+# "não mudou nada" (sem citar cor nenhuma) e o roteiro fechou dizendo "a luz continuou vermelha" —
+# dado inventado, foi pro cliente E pra nota interna que a equipe técnica usa pra agir.
+_SUP_LUZ_VERMELHA = re.compile(r"\b(vermelh\w*|loss|piscando|apagad\w*|sem\s+luz)\b", re.I)
 
 # dicas rápidas de internet (só enviadas se o cliente ACEITAR) — texto do dono, curto
 _DICAS_TEXTO = (
@@ -169,7 +183,7 @@ def refere_anterior(texto):
 
 # ---- DESBLOQUEIO EM CONFIANÇA (só age com o recurso LIGADO no painel) ----
 _DESBLOQ_KW = re.compile(
-    r"\b(desbloque|desbloqui|em\s*confian[çc]a|na\s*confian[çc]a|me\s*(libera|libere|desbloqueia)|"
+    r"\b(desbloque\w*|desbloqui\w*|em\s*confian[çc]a|na\s*confian[çc]a|me\s*(libera|libere|desbloqueia)|"
     r"religa(r|\s*a)?|reativa(r|\s*a)?|me\s*d[áa]\s*(uns|mais|alguns)\s*dias|"
     r"pag(o|ar)\s*(depois|semana|dia|amanh[ãa])|s[óo]\s*(consigo\s*)?pag(ar|o))\b", re.I)
 _SIM = re.compile(r"\b(sim|quero|pode|isso|claro|com\s*certeza|aceito|fa[çz]a?|pode\s*ser|bora|"
@@ -296,7 +310,7 @@ def _suporte_passo(msg, sup, fatos):
         texto = (f"Que ótimo que voltou{', ' + prim if prim else ''}! 😊 Fico à disposição — qualquer coisa é só me "
                  "chamar. Posso te ajudar em mais alguma coisa?")
         return _fp(texto, intencao="suporte", sup="fim")
-    if _SUP_NAO_RESOLVIDO.search(msg):   # luz vermelha / LOSS / não voltou -> falha na fibra, equipe técnica
+    if _SUP_LUZ_VERMELHA.search(msg):   # cliente CITOU a luz/o sinal de verdade -> fecha com o roteiro
         end = (fatos.get("sup_end") or "").strip()
         dados_linha = (nome if nome else "(nome a confirmar)") + (f", {end}" if end else " — endereço a confirmar")
         texto = (f"Obrigado por realizar os testes{', ' + prim if prim else ''}. 🙏\n\n"
@@ -315,6 +329,12 @@ def _suporte_passo(msg, sup, fatos):
                 "Encaminhar equipe técnica pra agendar o reparo.")
         return _fp(texto, acao="transferir", intencao="suporte", fila=24, nota=nota, sup="fim",
                    dados={"nota_ok": 1}, icone="⚡➡️")  # já tem nota rica na transferência -> não repetir no vigia
+    if _SUP_NAO_RESOLVIDO.search(msg):
+        # "não mudou nada" / "continua" sem citar cor nenhuma: NÃO fechar aqui (inventaria a causa
+        # técnica pro cliente e pra nota da equipe). Cai pro LLM — Sonnet (decidir() escala pelo
+        # sup=="2") pra conversar de verdade, perguntar o que ela está vendo e/ou registrar sem
+        # afirmar o que ela não disse.
+        return None
     # ainda não falou da luz -> pode ter respondido sobre as DICAS (oferece uma vez só)
     if not fatos.get("sup_dicas"):
         if _SIM.search(msg) and not _NAO.search(msg):
@@ -479,7 +499,11 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     # 3) início de suporte (só o básico; financeiro tem prioridade e sai pro LLM)
     if _SUP_INTENCAO.search(msg) and not _FINANCEIRO_KW.search(msg):
         abre = (_abertura() + " ") if sessao_nova else ""
-        texto = (abre + "Sinto muito que esteja sem internet 😕 Vou te ajudar a resolver o quanto antes. "
+        # "sem internet" só quando é queda TOTAL de verdade; "fraca/lenta/oscilando" é queixa de
+        # qualidade -- dizer "sinto muito que esteja SEM internet" pra quem só falou de sinal fraco
+        # soa como se o Pedrão não tivesse lido a mensagem (achado 24/07).
+        queixa = "esteja sem internet" if _SUP_TOTAL.search(msg) else "a internet esteja fraca/instável"
+        texto = (abre + f"Sinto muito que {queixa} 😕 Vou te ajudar a resolver o quanto antes. "
                  "Pra registrar seu caso e começar o diagnóstico, me passa por favor o seu *nome completo* "
                  "e o *CPF (ou CNPJ)* cadastrado na conta?")
         return _fp(texto, intencao="suporte", sup="1")
@@ -543,9 +567,13 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
 
     # ESCALADA DE MODELO (ordem do dono 23/07): casos complexos vão pro Sonnet 5 (pensa melhor);
     # o resto fica no Haiku (mais rápido/barato). Complexo = cliente irritado, empresa/PJ,
-    # conversa longa ou mensagem grande (negociação/multiassunto).
+    # conversa longa, mensagem grande (negociação/multiassunto), OU roteiro de suporte que já
+    # reiniciou e não resolveu (achado 24/07: cliente frustrada nesse ponto raramente xinga ou
+    # grita — o detector de humor por palavra-chave não pega —, mas é exatamente o momento que
+    # precisa de mais conversa de verdade em vez de fechar sozinho com dado inventado).
     _complexo = ((sentimento or {}).get("humor") == "irritado" or _EMPRESA.search(texto_todo)
-                 or len(historico) >= 10 or len(mensagem) > 280)
+                 or len(historico) >= 10 or len(mensagem) > 280
+                 or str((memoria_cliente or {}).get("sup")) == "2")
     _model = getattr(C, "LLM_MODEL_SMART", None) if _complexo else None
 
     try:
