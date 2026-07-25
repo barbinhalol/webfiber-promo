@@ -103,8 +103,12 @@ def _anthropic(system, user, model=None):
         # max_tokens 1024 -> 2000: em 24/07 22:16 (ao vivo) a resposta do Sonnet bateu no teto,
         # o JSON veio truncado e o cliente levou balão de erro. Teto maior NÃO deixa mais lento
         # (a latência depende dos tokens realmente gerados), só evita o corte.
-        # temperature baixa: o formato pedido é JSON — criatividade aqui só gera desvio de forma.
-        {"model": model or C.LLM_MODEL, "max_tokens": 2000, "temperature": 0.4,
+        # SEM temperature: o Sonnet 5 rejeita o parâmetro ("`temperature` is deprecated for this
+        # model", HTTP 400) -- pego nos logs 25/07: TODA escalada pro modelo esperto falhava na
+        # 1ª tentativa e só respondia porque o retry caía no Haiku. Ou seja, os casos complexos
+        # (cliente irritado, PJ, suporte travado) estavam perdendo o modelo melhor em silêncio.
+        # O prefill "{" abaixo já garante o formato JSON, que era o motivo do temperature baixo.
+        {"model": model or C.LLM_MODEL, "max_tokens": 2000,
          "system": [{"type": "text", "text": system,
                      "cache_control": {"type": "ephemeral", "ttl": "1h"}}],
          "messages": [{"role": "user", "content": user},

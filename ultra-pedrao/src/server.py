@@ -650,7 +650,23 @@ _DEB = Debouncer(on_flush=_processar)
 def health():
     return {"ok": True, "uptime_s": int(time.time() - _START_TS), "config": C.resumo_seguro(),
             "atuaria_agora": S.deve_atuar(), "modo_efetivo": PAINEL.modo_efetivo(C.BOT_MODE),
-            "proximo_atendimento": S.proximo_atendimento(), "desempenho": _desempenho()}
+            "proximo_atendimento": S.proximo_atendimento(), "desempenho": _desempenho(),
+            # "o Pedrão está esperando alguma coisa pra começar?" — resposta direta
+            "espera_ativa": _espera_ativa()}
+
+def _espera_ativa():
+    """Diz, em português, se existe alguma coisa segurando o Pedrão agora. O dono perguntou
+    (25/07) por que às vezes demorava ~10 min pra 'começar' depois de trocar o canal: era a
+    sentinela anti-duplo-bot, que existia porque HAVIA outro bot. Não há mais."""
+    p = PAINEL.ler()
+    if not p.get("ativo", True):
+        return "DESLIGADO no painel"
+    if p.get("sentinela_nativo"):
+        falta = PAINEL.SENTINELA_JANELA_S - (time.time() - float(p.get("nativo_ts") or 0))
+        if falta > 0:
+            return f"sentinela ligada: aguardando {int(falta)}s (desligue no painel p/ resposta imediata)"
+        return "sentinela ligada, mas sem menu recente — responde na hora"
+    return "nenhuma — responde na hora"
 
 def _desempenho(n=200):
     """Velocidade real das últimas respostas + acerto do cache do prompt. Serve pra responder

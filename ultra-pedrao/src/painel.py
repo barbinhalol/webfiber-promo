@@ -70,13 +70,23 @@ def desbloqueio_ativo() -> bool:
     """Desbloqueio em confiança só age quando o dono liga isto no painel."""
     return bool(ler().get("desbloqueio_confianca", False))
 
+# 25/07 (pergunta do dono "esse delay de 10 min pode ser bem menor?"): a espera existia porque
+# HAVIA outro bot no canal e era preciso dar tempo do menu dele sair antes do Pedrão falar. O
+# agente nativo foi CANCELADO -- não há mais o que esperar. A sentinela já nasce DESLIGADA (o
+# Pedrão responde na hora); e se um dia for religada, a espera agora é de 2 min, não 30.
+SENTINELA_JANELA_S = int(os.environ.get("SENTINELA_JANELA_S", "120"))
+
 def marcar_bot_nativo():
     """SENTINELA ANTI-DUPLO-BOT: registra que o chatbot NATIVO da FlowSeller acabou de mandar
     um menu (detectado no webhook como mensagem do nosso proprio numero). Enquanto isso estiver
-    'fresco', o Pedrao se cala sozinho -- nunca mais dois bots na mesma conversa."""
+    'fresco', o Pedrao se cala sozinho -- nunca mais dois bots na mesma conversa.
+    Com a sentinela DESLIGADA (padrao), nao grava nada: no canal novo o chatbot manda menu o
+    tempo todo, e isso virava escrita em disco a cada mensagem, sem servir pra nada."""
+    if not ler().get("sentinela_nativo", False):
+        return
     salvar({"nativo_ts": time.time()})
 
-def bot_nativo_ativo(janela_s: int = 1800) -> bool:
+def bot_nativo_ativo(janela_s: int = None) -> bool:
     """True se o menu nativo foi visto nos ultimos janela_s segundos (30 min por padrao -- subiu de
     10 pra 30 porque um VALE de movimento > janela reabria a brecha da 1a mensagem: a janela
     expirava e a 1a msg de uma conversa nova passava antes do menu nativo daquela conversa sair).
@@ -88,7 +98,7 @@ def bot_nativo_ativo(janela_s: int = 1800) -> bool:
         p = ler()
         if not p.get("sentinela_nativo", False):
             return False
-        return (time.time() - float(p.get("nativo_ts") or 0)) < janela_s
+        return (time.time() - float(p.get("nativo_ts") or 0)) < (janela_s or SENTINELA_JANELA_S)
     except Exception:
         return False
 
