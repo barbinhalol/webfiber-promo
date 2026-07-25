@@ -7,10 +7,11 @@ services:
     ports: ["127.0.0.1:8080:8080"]
     volumes: ["./data:/app/data"]
     logging: { driver: json-file, options: { max-size: "10m", max-file: "5" } }
-  caddy:
-    image: caddy:2
-    restart: unless-stopped
-    ports: ["80:80", "443:443"]
-    volumes: ["./docker/Caddyfile:/etc/caddy/Caddyfile", "caddy_data:/data"]
-    depends_on: [ultra-pedrao]
-volumes: { caddy_data: {} }
+
+# CADDY REMOVIDO (25/07). Quem publica o domínio nesta VPS é o NGINX DO HOST
+# (/etc/nginx/sites-available/ultra-pedrao.conf -> proxy_pass 127.0.0.1:8080), que também
+# serve agenda, em-rota e os outros projetos. O Caddy daqui disputava as portas 80/443 com
+# ele e por isso NUNCA subiu uma única vez (docker inspect: status "created", StartedAt
+# 0001-01-01). O efeito prático era só um erro vermelho no fim de todo deploy:
+#   "failed to bind host port 0.0.0.0:80: address already in use"
+# O Caddyfile continua em docker/ caso um dia a VPS deixe de usar nginx.
