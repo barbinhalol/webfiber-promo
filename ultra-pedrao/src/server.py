@@ -2,7 +2,7 @@
 """Servidor webhook do Ultra Pedrão (FastAPI).
 Fluxo: FlowSeller -> POST /webhook -> filtros -> dedup -> debounce -> brain -> flowseller(shadow/live).
 Modo sombra (BOT_MODE=shadow): decide e REGISTRA o que faria, sem enviar."""
-import time, hashlib, json, asyncio, re, threading
+import os, time, hashlib, json, asyncio, re, threading
 from fastapi import FastAPI, Request, Header, HTTPException
 from fastapi.responses import JSONResponse
 
