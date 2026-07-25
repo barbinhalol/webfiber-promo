@@ -208,6 +208,22 @@ def _cop_entregar(ev, res):
                                        "erros": erros[:3], "envio": r})
     return {"status": "copiloto_fatura_falhou" if erros else "copiloto_fatura_entregue"}
 
+COP_MUTE_JANELA_S = 3600   # atendente digitou -> Pedrão morre nessa conversa por 1h
+
+def _cop_mudo(ev, fatos=None):
+    """A atendente humana assumiu esta conversa? Então o Pedrão NÃO fala. Duas travas:
+    (1) por TICKET — exata, quando a FlowSeller manda o ticket_id;
+    (2) por CONTATO + TEMPO — rede de segurança pra quando o ticket não vem no payload
+        (sem ela, um webhook sem ticket_id passava direto por cima da atendente).
+    Ordem do dono 25/07: a trava tem que ser FORTE."""
+    f = fatos if fatos is not None else M.get_fatos(ev["contato"])
+    if str(f.get("cop_mute_ticket") or "") == str(ev.get("ticket_id") or "\x00"):
+        return True
+    try:
+        return (time.time() - float(f.get("cop_mute_ts") or 0)) < COP_MUTE_JANELA_S
+    except Exception:
+        return False
+
 def _cop_ja_fez(fatos, ev, key_tid, key_ts, janela_s):
     """Anti-repetição do copiloto POR CONVERSA (24/07: a janela por tempo silenciava o cliente
     que abria um ticket NOVO em menos de 30min — visto no teste do dono às 14:18). Regra:
@@ -234,6 +250,12 @@ def _copiloto(ev):
     contato, ext = ev["contato"], ev["external_key"]
     texto = str(ev["texto"])
     fatos = M.get_fatos(contato)
+    # 2ª checagem da trava, JÁ DENTRO do copiloto: entre o gate do webhook e este ponto pode ter
+    # chegado uma mensagem da atendente (ela digita enquanto o bot processa). Aqui os fatos são
+    # relidos do banco, então pega o que acabou de ser marcado.
+    if _cop_mudo(ev, fatos):
+        M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "mudo_humano_assumiu"})
+        return {"status": "copiloto_mudo_humano"}
 
     # (0) ESCOLHA DE ENDEREÇO pendente (CPF/CNPJ com mais de um cadastro — ex.: Airbnb com
     #     várias locações): aceita o NÚMERO ("1", "2"...) ou o nome da rua escrito.
@@ -361,8 +383,50 @@ def _copiloto(ev):
         _cop_marca(contato, ev, "cop_greet_tid", "cop_greet_ts")
         M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "saudacao_setor"})
         return {"status": "copiloto_saudacao_setor"}
-    # já saudado e o assunto não é fatura -> silêncio absoluto (humano cuida)
-    return {"status": "copiloto_silencio"}
+    # ASSUNTO QUE O PEDRÃO NÃO RESOLVE (negociação, prazo, contestação, dúvida) — ordem do dono
+    # 25/07: antes era SILÊNCIO ABSOLUTO, e o cliente ficava no vácuo esperando alguém aparecer.
+    # Agora ele SEGURA a pessoa com naturalidade ("aguarde um instante enquanto verifico") e
+    # deixa uma NOTA INTERNA dizendo ao atendente o que a pessoa quer e como continuar.
+    # NUNCA diz que vai transferir nem que é um robô — o cliente acha que é o Financeiro mesmo.
+    return _cop_segurar(ev, fatos)
+
+# frases de espera — variam pra não parecer resposta automática se a pessoa escrever 2x
+_ESPERAS = (
+    "{trat}, só um instante que eu vou verificar isso aqui pra você 😊",
+    "{trat}, me dá um minutinho que eu já confiro essa informação pra você.",
+    "{trat}, um momento por favor — estou verificando isso aqui.",
+)
+
+def _cop_tratamento(contato, fatos, ev):
+    """'Sra. Juliana' / 'Sr. Carlos' quando dá pra saber; senão, algo neutro e educado."""
+    nome = (fatos.get("nome") or fatos.get("sup_nome") or ev.get("nome") or "").strip()
+    prim = nome.split(" ")[0].strip().title() if nome else ""
+    if not prim or len(prim) < 3 or not prim.isalpha():
+        return "Perfeito"
+    return prim
+
+def _cop_segurar(ev, fatos):
+    """Segura o cliente com naturalidade + nota interna pro humano assumir. Instantâneo."""
+    contato, ext = ev["contato"], ev["external_key"]
+    texto = str(ev.get("texto") or "").strip()
+    # só uma vez por conversa: se ele escrever de novo, não repete (o humano já foi avisado)
+    if _cop_ja_fez(fatos, ev, "cop_hold_tid", "cop_hold_ts", 900):
+        M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "ja_segurou_silencio"})
+        return {"status": "copiloto_ja_segurou"}
+    trat = _cop_tratamento(contato, fatos, ev)
+    idx = int(time.time()) % len(_ESPERAS)
+    t = _ESPERAS[idx].format(trat=trat)
+    nota = ("🟡 *ATENDIMENTO PARA CONTINUAR — o cliente está aguardando*\n"
+            f"O que ele pediu: \"{texto[:180]}\"\n"
+            "Isto está FORA do que o assistente do Financeiro resolve sozinho (ele só envia "
+            "Pix/boleto/2ª via pelo CPF). Já respondi pedindo pra aguardar um instante — "
+            "é só continuar a conversa normalmente daqui.")
+    FS.responder_texto(ext, t, number=contato, delay=False, marca=FS.ASSIN_FINANCEIRO, nota=nota)
+    _registra_txt(contato, t)
+    _cop_marca(contato, ev, "cop_hold_tid", "cop_hold_ts")
+    M.log_evento(contato, "copiloto", {"mask": _mask(contato), "acao": "segurou_p_humano",
+                                       "pedido": texto[:120]})
+    return {"status": "copiloto_segurou_para_humano"}
 
 def _dedup(key: str) -> bool:
     now = time.time()
@@ -651,10 +715,17 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     # HUMANO DIGITOU nesta conversa? (fromMe que não é nosso nem menu de bot) -> o copiloto
     # silencia NAQUELE ticket na hora (ordem do dono: aceitar não para; digitar para).
     if ev["from_me"] and ev["texto"] and not _txt_do_bot(ev["contato"], str(ev["texto"])):
+        # TRAVA FORTE (ordem do dono 25/07: "se a atendente humana começar a digitar, o Pedrão
+        # MORRE naquela conversa"). Antes só marcava quando vinha ticket_id -- sem ele, a trava
+        # simplesmente não era aplicada e o bot podia responder por cima da atendente. Agora
+        # marca SEMPRE: por ticket (quando há) E por contato+tempo (rede de segurança).
+        _mute = {"cop_mute_ts": time.time()}
         if ev.get("ticket_id") is not None:
-            M.merge_fatos(ev["contato"], {"cop_mute_ticket": str(ev["ticket_id"])})
-            M.log_evento(ev["contato"], "copiloto",
-                         {"mask": _mask(ev["contato"]), "acao": "humano_digitou_silenciei"})
+            _mute["cop_mute_ticket"] = str(ev["ticket_id"])
+        M.merge_fatos(ev["contato"], _mute)
+        M.log_evento(ev["contato"], "copiloto",
+                     {"mask": _mask(ev["contato"]), "acao": "humano_digitou_silenciei",
+                      "ticket": ev.get("ticket_id"), "por_tempo": ev.get("ticket_id") is None})
 
     # idempotência (webhook repetido) — SEM o ts: a FlowSeller às vezes reenvia a MESMA mensagem
     # com timestamp diferente, o que gerava resposta duplicada. Dedup por contato+TICKET+texto
@@ -678,7 +749,7 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
         # e demoram; quem manda parar é o humano DIGITAR, tratado no marcador cop_mute_ticket).
         if (str(ev.get("queue_id") or "") == str(FILA_FINANCEIRO)
                 and PAINEL.ativo() and PAINEL.copiloto_ativo() and ev["texto"]
-                and str(M.get_fatos(ev["contato"]).get("cop_mute_ticket") or "") != str(ev.get("ticket_id"))):
+                and not _cop_mudo(ev)):
             return await asyncio.to_thread(_copiloto, ev)
         M.log_evento(ev["contato"], "ignorado_humano_assumiu",
                      {"mask": _mask(ev["contato"]), "status": ev.get("status"),
@@ -691,7 +762,7 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     # vivo 24/07 13:34: saudação não disparava e o cliente ficava no vácuo). Com o copiloto ligado,
     # o clique dispara a saudação de setor NA HORA — o ticket entra na fila 25 logo em seguida.
     if (PAINEL.copiloto_ativo() and ev["texto"] and _BTN_FIN.match(str(ev["texto"]))
-            and str(M.get_fatos(ev["contato"]).get("cop_mute_ticket") or "") != str(ev.get("ticket_id"))):
+            and not _cop_mudo(ev)):
         return await asyncio.to_thread(_copiloto, ev)
     # chatbot NATIVO da FlowSeller atendendo o canal? -> o Pedrão se cala sozinho (anti-duplo-bot).
     # Some o menu nativo (canal voltou pro fluxo vazio) -> retoma automático em ~10 min.
