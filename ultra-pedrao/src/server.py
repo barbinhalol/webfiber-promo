@@ -239,6 +239,13 @@ def _cop_mudo(ev, fatos=None):
     f = fatos if fatos is not None else M.get_fatos(ev["contato"])
     if str(f.get("cop_mute_ticket") or "") == str(ev.get("ticket_id") or "\x00"):
         return True
+    # 25/07 09:45 (ao vivo): a janela por TEMPO valia SEMPRE — um mute falso às 09:36 calou o
+    # copiloto por 1h até pra TICKETS NOVOS, e o clique FINANCEIRO caía no Pedrão. A regra do
+    # dono é por CONVERSA ("a atendente digitou -> morre NAQUELA conversa"); a janela de tempo
+    # é só a rede de segurança pra webhook SEM ticket_id (o propósito original dela). Evento com
+    # ticket_id diferente do mutado = conversa nova = copiloto fala.
+    if ev.get("ticket_id") is not None:
+        return False
     try:
         return (time.time() - float(f.get("cop_mute_ts") or 0)) < COP_MUTE_JANELA_S
     except Exception:
