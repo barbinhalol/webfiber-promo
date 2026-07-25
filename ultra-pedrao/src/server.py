@@ -125,6 +125,12 @@ _BTN_FATURA = re.compile(r"^\s*(baixar\s+boleto|2\s*[ªº°]?\s*via(\s+da\s+fatu
 
 _BOT_TXT = {}  # contato -> [(ts, texto enviado por nós)] — p/ distinguir humano de bot no fromMe
 
+# O QUE O BOT LEMBRA DE UMA CONVERSA PRA OUTRA. Só identidade/ficha do cliente — nunca estado de
+# roteiro (sup/fin/desb/try), que TEM de zerar em atendimento novo. Assim o bot não pergunta de
+# novo o CPF que a pessoa deu ontem, mas também não continua um roteiro velho no meio.
+_FICHA_KEYS = ("nome", "cpf", "cnpj", "fin_cpf", "endereco", "sup_end", "bairro", "rua", "numero",
+               "plano", "plano_interesse", "hist_oc", "desbloqueio_mes")
+
 def _registra_txt(contato, texto):
     t = (texto or "").strip()
     if not t:
@@ -480,7 +486,10 @@ def _processar(contato, texto, ctx):
     _fresh = sessao_nova and not B.refere_anterior(texto)
     hist_b = [] if _fresh else hist
     resumo_b = "" if _fresh else resumo
-    fatos_b = {} if _fresh else fatos
+    # A ordem do dono é NÃO RECAPITULAR em voz alta -- não é ficar com amnésia. Antes, a sessão
+    # nova zerava TODA a ficha: o bot pedia de novo o nome, o CPF e o endereço que já tinha de
+    # ontem. Agora a FICHA (quem é a pessoa) sobrevive; o ESTADO DO ROTEIRO (sup/fin/desb) zera.
+    fatos_b = {k: v for k, v in fatos.items() if k in _FICHA_KEYS} if _fresh else fatos
     _t_cerebro = time.time()
     d = B.fastpath(texto, sessao_nova, hist_b, fatos_b, sentimento=sent, contato=contato)
     if d is None:
@@ -510,6 +519,16 @@ def _processar(contato, texto, ctx):
     M.add_mensagem(contato, ext, "cliente", texto)
     if d.get("dados_coletados"):
         M.merge_fatos(contato, d["dados_coletados"])
+
+    # linha do tempo do cliente: o que ele já trouxe. Registra 1x por assunto por atendimento
+    # (a chave marca o ticket) -- é o que alimenta o aviso de REINCIDÊNCIA na próxima vez.
+    _int = d.get("intencao")
+    if _int in ("suporte", "financeiro") and str(fatos.get("oc_ticket") or "") != str(ctx.get("ticket_id")):
+        try:
+            M.registrar_ocorrencia(contato, _int, texto[:80])
+            M.merge_fatos(contato, {"oc_ticket": str(ctx.get("ticket_id") or "")})
+        except Exception:
+            pass
 
     # >>> A RESPOSTA VAI PRIMEIRO. <<<
     _t_envio = time.time()

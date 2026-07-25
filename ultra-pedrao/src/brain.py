@@ -281,7 +281,7 @@ def _fastpath_desbloqueio(msg, fatos, contato, sessao_nova):
             prazo = MC.prazo_desbloqueio(3)
             txt = (f"Prontinho, liberei o seu acesso em confiança! ✅\n\n"
                    f"A fatura de *{mes}* precisa ser paga até *dia {prazo}, às 19h*.\n\n"
-                   f"Só um lembrete com carinho: o *desbloqueio em confiança* pode ser feito *uma vez por mês* — "
+                   f"Só pra você já saber: o *desbloqueio em confiança* pode ser feito *uma vez por mês* — "
                    f"depois disso, o sistema só reativa com o pagamento. Combinado? 😊")
             return _fp(txt, intencao="financeiro", dados={"desb": "feito", "desbloqueio_mes": mes_atual, "nota_ok": 1})
         return None  # resposta ambígua -> deixa o LLM conduzir
@@ -366,8 +366,8 @@ def _suporte_passo(msg, sup, fatos, historico=None):
             return None
         prim = nome_real.split(" ")[0].title() if nome_real else ""
         texto = (f"Obrigado{', ' + prim if prim else ''}! Vamos tentar restabelecer a conexão 🙌\n\n"
-                 "Por favor: retire o *roteador* da tomada, aguarde *1 minuto completo*, reconecte e espere as luzes "
-                 "se estabilizarem.\n\n"
+                 "Faz o seguinte: tira o *roteador* da tomada, conta *1 minutinho* e liga de novo — "
+                 "depois espera as luzes estabilizarem.\n\n"
                  "Enquanto reinicia, quer que eu te passe umas *dicas rápidas* pra melhorar a internet no dia a dia? 😊\n\n"
                  "E me avisa qual a *cor da luz* que acendeu (verde, vermelha…) e se a internet voltou?")
         return _fp(texto, intencao="suporte", sup="2", dados=dados)
@@ -379,8 +379,8 @@ def _suporte_passo(msg, sup, fatos, historico=None):
         if _SUP_RESSALVA.search(msg):
             return None   # "voltou MAS tá lenta" / "voltou e caiu de novo" -> não é resolvido:
                           # conversa de verdade (LLM). Queda intermitente é prioridade (regra 5).
-        texto = (f"Que ótimo que voltou{', ' + prim if prim else ''}! 😊 Qualquer coisa é só me "
-                 "chamar. Posso te ajudar em mais alguma coisa?")
+        texto = (f"Que bom que voltou{', ' + prim if prim else ''}! 😊 Qualquer coisa me chama aqui. "
+                 "Posso ajudar em mais alguma coisa?")
         return _fp(texto, intencao="suporte", sup="fim")
     if _NAO_SABE.search(msg):
         return None       # "não tô em casa" / "não consigo ver" -> parar de pedir a cor da luz
@@ -604,9 +604,9 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
         # "sem internet" só quando é queda TOTAL de verdade; "fraca/lenta/oscilando" é queixa de
         # qualidade -- dizer "sinto muito que esteja SEM internet" pra quem só falou de sinal fraco
         # soa como se o Pedrão não tivesse lido a mensagem (achado 24/07).
-        queixa = "esteja sem internet" if _SUP_TOTAL.search(msg) else "a internet esteja fraca/instável"
+        queixa = ("esteja sem internet" if _SUP_TOTAL.search(msg) else "a internet esteja ruim")
         texto = (abre + f"Sinto muito que {queixa} 😕 Vou te ajudar a resolver o quanto antes. "
-                 "Pra registrar seu caso e começar o diagnóstico, me passa por favor o seu *nome completo* "
+                 "Pra eu achar seu cadastro e agilizar, me passa por favor o seu *nome completo* "
                  "e o *CPF (ou CNPJ)* cadastrado na conta?")
         return _fp(texto, intencao="suporte", sup="1")
 
@@ -718,6 +718,20 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
         ctx.append("MEMÓRIA DO CLIENTE (fatos já sabidos — não pergunte de novo): " + json.dumps(memoria_cliente, ensure_ascii=False))
     ctx.append("CONVERSA ATÉ AGORA:\n" + "\n".join(linhas))
     ctx.append(V.hint_para_prompt(viab))
+    # REINCIDÊNCIA: o cliente que já trouxe o mesmo problema semana passada não pode ser tratado
+    # como chamado novo -- é a coisa mais humana que existe ("vi que você já falou disso") e a
+    # que mais muda a percepção de quem está do outro lado.
+    try:
+        import memory as _M
+        _rec = _M.ocorrencias(memoria_cliente, tipo="suporte", dias=7)
+        if len(_rec) >= 2:
+            ctx.append(f"[REINCIDÊNCIA — este cliente já trouxe problema técnico {len(_rec)}x nos "
+                       "últimos 7 dias. RECONHEÇA isso com naturalidade ('vi aqui que você já tinha "
+                       "falado com a gente sobre isso'), é PROIBIDO pedir reinício de novo, e marque "
+                       "a nota interna como REINCIDENTE — a equipe precisa tratar como caso crônico, "
+                       "não como chamado novo.]")
+    except Exception:
+        pass
     _tom = SENT.hint_tom(sentimento)
     if _tom:
         ctx.append(_tom)

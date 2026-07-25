@@ -160,6 +160,27 @@ def contatos_nota_pendente(min_seg):
             continue
     return pend
 
+def registrar_ocorrencia(contato, tipo, resumo=""):
+    """Linha do tempo curta por contato: o que a pessoa já trouxe (suporte/financeiro/venda).
+    É o que permite o bot dizer "vi aqui que você já tinha falado disso com a gente" e marcar
+    REINCIDENTE pra equipe -- hoje cada conversa começava como se fosse a primeira da vida."""
+    f = get_fatos(contato)
+    try:
+        hist = json.loads(f.get("hist_oc") or "[]")
+    except Exception:
+        hist = []
+    hist = (hist + [{"ts": time.time(), "tipo": tipo, "r": (resumo or "")[:80]}])[-6:]
+    merge_fatos(contato, {"hist_oc": json.dumps(hist, ensure_ascii=False)})
+
+def ocorrencias(fatos, tipo=None, dias=7):
+    """Quantas vezes esse contato já trouxe esse assunto nos últimos N dias."""
+    try:
+        hist = json.loads((fatos or {}).get("hist_oc") or "[]")
+    except Exception:
+        return []
+    corte = time.time() - dias * 86400
+    return [o for o in hist if o.get("ts", 0) >= corte and (tipo is None or o.get("tipo") == tipo)]
+
 def log_evento(contato, tipo, payload):
     with _db() as c:
         c.execute("INSERT INTO eventos(ts,contato,tipo,payload) VALUES(?,?,?,?)",
