@@ -1,6 +1,6 @@
 # Vistoria completa — Ultra Pedrão (madrugada 24→25/07)
 
-**Tudo já está NO AR.** Deploy feito por mim via terminal, container saudável, bateria **242/242**.
+**Tudo já está NO AR.** Deploy feito por mim via terminal, container saudável, bateria **290/290**.
 Você não precisa colar nada. Este documento é só pra você conferir o que mudou.
 
 ---
@@ -224,10 +224,44 @@ Deixei um monitor rodando: assim que houver movimento suficiente, eu te trago os
 
 ---
 
-## ✅ Bateria de testes: 242/242
+## ✅ Bateria de testes: 290/290
 
-De 145 para **242 verificações**. As novas cobrem **cada frase real** que produzia resposta errada —
+De 145 para **290 verificações**. As novas cobrem **cada frase real** que produzia resposta errada —
 então esses erros não voltam sem o teste apitar.
+
+---
+
+## 🎯 Mais duas rodadas de caça (e mais 6 erros)
+
+Continuei jogando mensagens difíceis contra o bot no ar. Cada rodada achou coisa nova:
+
+**2ª rodada — 10 mensagens:**
+
+| Cliente escreveu | O bot respondia (errado) |
+|---|---|
+| 🔴 "vocês fazem instalação em qual bairro? moro na tijuca" | *"**A gente atende na Tijuca sim!**"* — afirmou cobertura |
+| 🔴 "quero o valor dos planos **e também** me manda minha fatura" | respondia só sobre planos, **ignorando metade da mensagem** |
+| 🔴 "posso pagar semana que vem? tô sem grana" | *"me passa teu endereço que eu já adiantar teu atendimento"* — incoerente |
+
+**3ª rodada — mais 10 mensagens:**
+
+| Cliente escreveu | O bot respondia (errado) |
+|---|---|
+| 🔴 "quero mudar a **senha** do meu wifi" | *"me passa o **endereço novo**"* — caiu no fluxo de mudança de casa (regressão minha) |
+| 🔴 "vocês cobram taxa de instalação?" | *"Sim, cobramos — mas **dá pra parcelar em até 3x no cartão**"* — **inventou** condição comercial |
+| 🟡 "vocês trabalham no domingo?" | *"É pra contratar ou outro assunto?"* — não respondeu, e a informação existe no sistema |
+
+Todos corrigidos e virados teste. Destaques:
+
+- O **guard de cobertura** só pegava "atende na *rua*" — afirmação com **nome de bairro** passava.
+  Ampliei, tomando o cuidado de **não apagar a frase certa** ("quem confirma *se* a gente atende é
+  a equipe"), que casava no mesmo padrão.
+- Criei um **guard novo** para condição comercial inventada (taxa, parcelamento, fidelidade,
+  "é grátis") — o guard de preço não pegava, porque não tem "R$" na frase.
+- "Senha do Wi-Fi" agora **registra e encaminha**. O bot chegou a ensinar o cliente a *"acessar o
+  roteador direto"* — pior que executar: se a pessoa erra, perde a conexão inteira.
+- "Horário de atendimento" virou resposta instantânea, com a fronteira certa: *"que horas o
+  **técnico** chega"* continua sendo tratado como visita agendada, sem chutar horário.
 
 ---
 
