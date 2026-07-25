@@ -166,6 +166,11 @@ def _txt_do_bot(contato, texto) -> bool:
     _t = re.sub(r"[*_~`]", "", t).strip()
     if _t.startswith("Pedrão") or _t.startswith("Financeiro WebFiber"):
         return True
+    # a apresentação do Pedrão pode vir com prefixo variável ("Bom dia! Eu sou o Pedrão...") —
+    # 25/07 09:36: a reentrega dela foi lida como HUMANO e mutou o próprio ticket
+    if re.search(r"eu sou o pedr[ãa]o|agente virtual da webfiber|atendente virtual da webfiber",
+                 _t[:160], re.I):
+        return True
     # saudação de setor do copiloto (sai sem assinatura em alguns caminhos)
     if re.match(r"^ol[áa]!?\s+aqui\s+[ée]\s+do\s+setor", _t, re.I):
         return True
@@ -455,11 +460,45 @@ def _dedup(key: str) -> bool:
     _SEEN[key] = now
     return False
 
+# dedup pelo ID ÚNICO da mensagem (anti-reentrega). Janela LONGA de propósito: a reentrega
+# provada em 25/07 veio 29 MINUTOS depois — o dedup textual (TTL 120s) nunca a pegaria.
+_SEEN_ID = {}
+_SEEN_ID_TTL = 6 * 3600
+IGNORA_MSG_ANTIGA_S = int(os.environ.get("IGNORA_MSG_ANTIGA_S", "600"))
+
+def _dedup_id(msg_id: str) -> bool:
+    now = time.time()
+    if len(_SEEN_ID) > 5000:
+        for k, ts in list(_SEEN_ID.items()):
+            if now - ts > _SEEN_ID_TTL: _SEEN_ID.pop(k, None)
+    if msg_id in _SEEN_ID:
+        _SEEN_ID[msg_id] = now
+        return True
+    _SEEN_ID[msg_id] = now
+    return False
+
 def _mask(tel: str) -> str:
     tel = str(tel or "")
     return (tel[:4] + "***" + tel[-2:]) if len(tel) > 6 else "***"
 
 # ---- extração defensiva do payload (formato exato do webhook = a confirmar no 1º real) ----
+def _ts_epoch(v):
+    """Timestamp do webhook -> epoch em SEGUNDOS. A FlowSeller manda ora epoch (s ou ms), ora
+    ISO-8601 UTC ("2026-07-25T11:46:27.925Z"). O filtro de mensagem antiga fazia float(ts) e,
+    com ISO, estourava -> caía no except -> NUNCA filtrou. Sem parse possível, assume agora."""
+    if v in (None, ""):
+        return time.time()
+    try:
+        f = float(v)
+        return f / 1000.0 if f > 1e12 else f
+    except (TypeError, ValueError):
+        pass
+    try:
+        from datetime import datetime
+        return datetime.fromisoformat(str(v).replace("Z", "+00:00")).timestamp()
+    except Exception:
+        return time.time()
+
 def _parse_evento(p: dict):
     """Normaliza campos comuns de webhooks estilo Whaticket/FlowSeller. Tolerante a variações."""
     def g(*ks, default=None):
@@ -490,7 +529,13 @@ def _parse_evento(p: dict):
         "is_group": bool(g("message.ticket.isGroup", "message.isGroup", "ticket.isGroup", "isGroup", default=False)),
         "tipo": g("message.mediaType", "event", "type", "mediaType", "message.type", default="chat"),
         "media_url": g("message.mediaUrl", "mediaUrl", default=None),
-        "ts": g("message.timestamp", "message.msgCreatedAt", "timestamp", "ts", default=time.time()),
+        # ID ÚNICO da mensagem na FlowSeller (UUID). É a chave anti-REENTREGA: quando um ticket
+        # novo nasce, a FlowSeller REENTREGA mensagens antigas do contato com ticket_id NOVO —
+        # o dedup por contato+ticket+texto via chave nova e deixava passar (25/07 09:36, provado:
+        # o cérebro respondeu "Ola bom diaaaaa" de 29 MINUTOS antes e o Pedrão se apresentou em
+        # cima do copiloto). Reentrega vem com o MESMO id -> dedup pega, ticket novo ou não.
+        "msg_id": g("message.id", "message.messageId", "messageId", "id", default=None),
+        "ts": _ts_epoch(g("message.timestamp", "message.msgCreatedAt", "timestamp", "ts", default=None)),
         # sinais de que um HUMANO/departamento já assumiu (pra o bot NÃO atropelar o atendimento):
         "status": str(g("message.ticket.status", "ticket.status", "status", default="")).lower(),
         "user_id": g("message.ticket.userId", "ticket.userId", "message.userId", "userId", default=None),
@@ -749,6 +794,24 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
                            "from_me": ev["from_me"], "is_group": ev["is_group"],
                            "contato_mask": _mask(ev["contato"])},
         })
+
+    # ⛔ ANTI-REENTREGA (25/07 09:36, provado no banco): ao criar ticket NOVO, a FlowSeller
+    # REENTREGA mensagens antigas do contato — com ticket_id novo, o dedup textual via chave
+    # inédita e deixava passar; o cérebro respondeu "Ola bom diaaaaa" de 29 min antes e o Pedrão
+    # se APRESENTOU em cima do copiloto. Duas defesas, AQUI NO TOPO (valem pra todos os cérebros):
+    # (1) dedup pelo ID ÚNICO da mensagem (UUID da FlowSeller) — reentrega repete o id;
+    if ev.get("msg_id") and _dedup_id(str(ev["msg_id"])):
+        return {"status": "duplicado_msg_id"}
+    # (2) mensagem velha NUNCA inicia resposta — nem do Pedrão, nem do copiloto, nem muta ticket.
+    # (o filtro antigo exigia >1h E anterior ao boot; a reentrega tinha 29 min e passou)
+    try:
+        if ev["texto"] and (time.time() - float(ev["ts"])) > IGNORA_MSG_ANTIGA_S:
+            M.log_evento(ev["contato"], "ignorado_msg_velha",
+                         {"mask": _mask(ev["contato"]), "idade_s": int(time.time() - float(ev["ts"])),
+                          "texto": str(ev["texto"])[:60]})
+            return {"status": "ignorado_msg_velha"}
+    except Exception:
+        pass
 
     # SENTINELA: menu do chatbot NATIVO saindo do nosso número -> registra e pausa o Pedrão
     # (ANTES do dedup, pra renovar a janela a cada menu visto)
