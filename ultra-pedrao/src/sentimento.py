@@ -14,7 +14,7 @@ _FURIA = re.compile(
     # batido pelo detector. Trocado \b final por \w* nesses stems (cobre a/o/as/os/inha etc.).
     r"\b(procon|advogad\w*|process(o|ar|ei)|justi[çc]a|c[oó]digo de defesa|absurdo|desca(so|rado)|"
     r"verg(onha|onhoso)|palha[çc]ada|cansei|enchei o saco|p[ée]ssimo|horr[íi]vel|lixo|merda|"
-    r"porcaria|revoltad\w*|indignad\w*|nunca mais|cancel(ar|amento|a minha)|reclama[çc]|[óo]dio|"
+    r"porcaria|revoltad\w*|indignad\w*|nunca mais|reclama[çc]|[óo]dio|"
     r"irritad\w*|puto|inadmiss[íi]vel|rid[íi]cul\w*|descaso|golpe|enrola[çr]|palha[çc]o|"
     r"n[ãa]o aguento|t[oô]\s+cansad\w*|me engana|"
     # ameaça de trocar de operadora (mata-lead / churn real)
@@ -41,11 +41,19 @@ def _grita(texto):
     letras = [c for c in t if c.isalpha()]
     return len(letras) >= 8 and sum(1 for c in letras if c.isupper()) / len(letras) > 0.7
 
+# CANCELAMENTO não é fúria — é RISCO DE PERDA, e pede tom próprio (calmo, sem sermão, sem
+# retenção agressiva). Estava dentro de _FURIA: "boa noite, gostaria de cancelar pois estou me
+# mudando" virava "irritado" e o modelo recebia "seja mais seco" pra um cliente educado.
+_CHURN = re.compile(r"\b(cancel(ar|amento|a\s+minha)|rescis\w*|desist\w*|quero\s+sair|"
+                    r"encerrar\s+(o\s+)?(contrato|plano|servi[çc]o)|n[ãa]o\s+quero\s+mais)\b", re.I)
+
 def classificar(texto, contexto=""):
     """Retorna {'humor','temp'(0-3),'cor'}. temp>=3 = quente/vermelho (priorizar humano)."""
     t = (texto or "") + " " + (contexto or "")
     if _FURIA.search(t) or _grita(texto or ""):
         return {"humor": "irritado", "temp": 3, "cor": "🔴"}
+    if _CHURN.search(t):
+        return {"humor": "churn", "temp": 2, "cor": "🟠"}
     if _POSITIVO.search(t):
         return {"humor": "animado", "temp": 0, "cor": "🟢"}
     return {"humor": "neutro", "temp": 1, "cor": "🟡"}
@@ -57,6 +65,11 @@ def hint_tom(s):
         return ("[HUMOR DO CLIENTE: IRRITADO/TENSO — acolha a frustração de forma genuína, seja mais "
                 "seco, direto e RESOLUTIVO, foque em resolver, corte emoji em excesso e enrolação. "
                 "Se não der pra resolver na hora, encaminhe pro time com prioridade e tranquilize.]")
+    if h == "churn":
+        return ("[CLIENTE FALANDO EM CANCELAR — trate com calma e SEM sermão: nada de discurso de "
+                "retenção, nada de 'mas você sabia que...', nada de insistir. Faça UMA pergunta pelo "
+                "motivo só pra registrar, e siga o que a pessoa pedir. NUNCA fale de multa, "
+                "fidelidade, valor de rescisão ou prazo de desligamento — isso é da equipe.]")
     if h == "animado":
         return ("[HUMOR DO CLIENTE: ANIMADO/POSITIVO — pode ser caloroso e, se fizer sentido, conduza "
                 "pro próximo passo (fechar plano, agendar), aproveitando a boa energia sem forçar.]")

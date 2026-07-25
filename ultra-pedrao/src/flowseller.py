@@ -2,13 +2,27 @@
 """Cliente da API EXTERNA da FlowSeller (mapa em docs/API_EXTERNA.md).
 Respeita BOT_MODE: em 'shadow' NUNCA chama a API (só devolve o que faria).
 Endpoint central: POST /v1/api/external/{apiId} com corpo SendMessageBase."""
-import json, os, random, time, urllib.request, urllib.error
+import json, os, random, threading, time, urllib.request, urllib.error
 import config as C
 
-# "tempo de digitação" simulado antes de cada envio real. 24/07 (pedido de velocidade do dono):
-# caiu de 2-4s pra 1-2s; ajustável por env sem mexer no código.
-DELAY_MIN_S = float(os.environ.get("FS_DELAY_MIN_S", "1"))
-DELAY_MAX_S = float(os.environ.get("FS_DELAY_MAX_S", "2"))
+# marca de quando ESTA mensagem do cliente começou a ser processada (por thread -- o
+# processamento roda numa thread por conversa). Usada pelo orçamento de naturalidade abaixo.
+_CTX = threading.local()
+
+def marcar_inicio(t0=None):
+    _CTX.t0 = t0 or time.time()
+
+# "tempo de digitação" simulado antes do 1º envio. O objetivo NUNCA foi somar espera: é evitar
+# que a resposta chegue instantânea demais (cara de robô). 25/07: virou ORÇAMENTO em vez de
+# soma fixa -- o que importa é o tempo TOTAL desde a mensagem do cliente. Se o modelo já levou
+# 3s pensando, o cliente já esperou o suficiente e o delay é ZERO. Só o fastpath (responde em
+# ~10ms) precisa de uma pausa, e curta.
+DELAY_MIN_S = float(os.environ.get("FS_DELAY_MIN_S", "0.6"))
+DELAY_MAX_S = float(os.environ.get("FS_DELAY_MAX_S", "1.2"))
+# tempo total (chegada do cliente -> resposta) que soa natural. Acima disso, não espera mais nada.
+NATURAL_ALVO_S = float(os.environ.get("FS_NATURAL_ALVO_S", "2.0"))
+# log forense byte a byte: ligado só quando FS_FORENSE=1 (erros sempre são registrados)
+FORENSE_SEMPRE = os.environ.get("FS_FORENSE", "").strip() in ("1", "true", "sim")
 
 class FSResult(dict):
     pass
@@ -29,7 +43,14 @@ def _forense(url, body, resp=None, erro=None):
     """Assinatura técnica EXATA de cada envio (investigação dos botões de cópia do WhatsApp,
     24/07). Grava bytes/sha/codepoints/invisíveis do texto e o que a FlowSeller devolveu, para
     que qualquer diferença entre um envio que gera o botão e um que não gera fique PROVADA em
-    bytes -- nunca mais suposta. NÃO registra token, JWT, apiId nem cookie."""
+    bytes -- nunca mais suposta. NÃO registra token, JWT, apiId nem cookie.
+
+    25/07: a investigação fechou (causa era o aparelho do dono, não o envio), mas a ferramenta
+    fica. Só que ela varre a mensagem CARACTERE A CARACTERE (unicodedata.category) + sha256 +
+    INSERT, em TODO envio -- caro pra deixar ligado à toa. Agora roda quando: houve ERRO, ou
+    FS_FORENSE=1 no .env. Ou seja: diagnóstico continua disponível, sem custo no dia a dia."""
+    if not (erro or FORENSE_SEMPRE):
+        return
     try:
         import hashlib, unicodedata
         t = body.get("body") if isinstance(body.get("body"), str) else ""
@@ -112,7 +133,19 @@ def _enviar(body, usar="resposta", delay=True):
         return FSResult(enviado=False, modo=C.BOT_MODE, erro="credenciais FlowSeller ausentes", faria=plan)
     try:
         if delay:
-            time.sleep(random.uniform(DELAY_MIN_S, DELAY_MAX_S))
+            # desconta o que o processamento JÁ consumiu (t0 marcado quando a mensagem entrou):
+            # o cliente não deve esperar "pensar + digitar", só o total natural.
+            gasto = 0.0
+            try:
+                t0 = float(getattr(_CTX, "t0", 0) or 0)
+                if t0:
+                    gasto = max(0.0, time.time() - t0)
+            except Exception:
+                pass
+            espera = random.uniform(DELAY_MIN_S, DELAY_MAX_S)
+            espera = min(espera, max(0.0, NATURAL_ALVO_S - gasto))
+            if espera > 0.05:
+                time.sleep(espera)
         try:
             resp = _post(apiid, jwt, "", body)
         except urllib.error.HTTPError as e:
@@ -134,8 +167,11 @@ def _enviar(body, usar="resposta", delay=True):
             return FSResult(enviado=False, modo=C.BOT_MODE, erro="FlowSeller respondeu 200 mas nao criou a mensagem (corpo vazio/inesperado)", resposta=resp, faria=plan)
         return FSResult(enviado=True, modo=C.BOT_MODE, resposta=resp, body=body)
     except urllib.error.HTTPError as e:
-        return FSResult(enviado=False, modo=C.BOT_MODE, erro=f"HTTP {e.code}: {e.read().decode('utf-8')[:200]}", faria=plan)
+        _err = f"HTTP {e.code}: {e.read().decode('utf-8')[:200]}"
+        _forense(f"{C.FS_BASE}/v1/api/external/{apiid}", body, erro=_err)
+        return FSResult(enviado=False, modo=C.BOT_MODE, erro=_err, faria=plan)
     except Exception as e:
+        _forense(f"{C.FS_BASE}/v1/api/external/{apiid}", body, erro=str(e))
         return FSResult(enviado=False, modo=C.BOT_MODE, erro=str(e), faria=plan)
 
 # ---------- ações de alto nível (a decisão do brain vira uma destas) ----------

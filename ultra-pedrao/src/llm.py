@@ -7,6 +7,10 @@ import config as C
 class LLMError(Exception):
     pass
 
+# consumo da última chamada (tokens + acerto de cache). Lido pelo log de decisão e pelo /health
+# — é a única forma de saber se o cache do prompt está quente.
+ULTIMO_USO = {}
+
 _KEY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "anthropic_key.txt")
 
 # PERF (25/07): a chave era lida do DISCO a cada mensagem. Agora fica em cache e só é relida
@@ -53,13 +57,18 @@ def _anthropic(system, user, model=None):
     out = _post_json(
         "https://api.anthropic.com/v1/messages",
         {"x-api-key": key, "anthropic-version": "2023-06-01",
-         "content-type": "application/json"},
+         "content-type": "application/json",
+         # cache de 1h (o padrão é 5min): o Pedrão atua de madrugada, quando o intervalo entre
+         # conversas passa de 5min com facilidade -- o cache expirava, cada mensagem reprocessava
+         # ~13k tokens do zero E ainda pagava a escrita do cache sem nunca ler.
+         "anthropic-beta": "extended-cache-ttl-2025-04-11"},
         # max_tokens 1024 -> 2000: em 24/07 22:16 (ao vivo) a resposta do Sonnet bateu no teto,
         # o JSON veio truncado e o cliente levou balão de erro. Teto maior NÃO deixa mais lento
         # (a latência depende dos tokens realmente gerados), só evita o corte.
         # temperature baixa: o formato pedido é JSON — criatividade aqui só gera desvio de forma.
         {"model": model or C.LLM_MODEL, "max_tokens": 2000, "temperature": 0.4,
-         "system": [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+         "system": [{"type": "text", "text": system,
+                     "cache_control": {"type": "ephemeral", "ttl": "1h"}}],
          "messages": [{"role": "user", "content": user},
                       # prefill: já abre o JSON pelo modelo -> ele não escreve conversa antes
                       # ("Claro! Aqui está:"), economiza tokens e elimina a maior causa de
@@ -68,14 +77,23 @@ def _anthropic(system, user, model=None):
         C.LLM_TIMEOUT)
     txt = "".join(b.get("text", "") for b in out.get("content", []) if b.get("type") == "text")
     txt = "{" + txt if txt and not txt.lstrip().startswith("{") else txt
-    if out.get("stop_reason") == "max_tokens":
-        # não derruba a resposta (o parser tolerante do brain repara), mas deixa rastro
-        try:
+    # MEDIÇÃO: sem registrar o usage era impossível saber se o cache do prompt estava acertando
+    # (ele vale ~13k tokens por chamada). cache_read alto = quente; cache_creation alto toda hora
+    # = frio, e aí o dinheiro e o tempo estão indo embora.
+    try:
+        u = out.get("usage") or {}
+        ULTIMO_USO.update({
+            "cache_read": u.get("cache_read_input_tokens", 0),
+            "cache_write": u.get("cache_creation_input_tokens", 0),
+            "entrada": u.get("input_tokens", 0), "saida": u.get("output_tokens", 0),
+            "modelo": model or C.LLM_MODEL, "truncado": out.get("stop_reason") == "max_tokens",
+        })
+        if ULTIMO_USO["truncado"]:
             import memory as _M
             _M.log_evento("sistema", "llm_truncado",
-                          {"modelo": model or C.LLM_MODEL, "chars": len(txt)})
-        except Exception:
-            pass
+                          {"modelo": ULTIMO_USO["modelo"], "chars": len(txt)})
+    except Exception:
+        pass
     return txt
 
 def _openai(system, user):

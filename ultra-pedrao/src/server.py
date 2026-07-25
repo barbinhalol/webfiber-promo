@@ -2,7 +2,7 @@
 """Servidor webhook do Ultra Pedrão (FastAPI).
 Fluxo: FlowSeller -> POST /webhook -> filtros -> dedup -> debounce -> brain -> flowseller(shadow/live).
 Modo sombra (BOT_MODE=shadow): decide e REGISTRA o que faria, sem enviar."""
-import time, hashlib, json, asyncio, re
+import time, hashlib, json, asyncio, re, threading
 from fastapi import FastAPI, Request, Header, HTTPException
 from fastapi.responses import JSONResponse
 
@@ -10,6 +10,7 @@ import config as C
 import memory as M
 import schedule as S
 import brain as B
+import llm as L
 import flowseller as FS
 import painel as PAINEL
 import sentimento as SENT
@@ -214,6 +215,7 @@ def _copiloto(ev):
     """Atende a fila do Financeiro em modo 'invisível': só fatura, e só até um humano digitar."""
     import mycore as MC
     import respostas as R
+    FS.marcar_inicio()   # mesmo orçamento de naturalidade do caminho normal
     contato, ext = ev["contato"], ev["external_key"]
     texto = str(ev["texto"])
     fatos = M.get_fatos(contato)
@@ -398,8 +400,39 @@ def _parse_evento(p: dict):
         "_raw": p,
     }
 
+_RESUMO_LOCK = threading.Lock()
+_RESUMO_EM_CURSO = set()
+
+def _resumir_worker(contato):
+    try:
+        hist = M.historico(contato, n=C.MEM_RESUMO_APOS + 4)
+        if len(hist) >= C.MEM_RESUMO_APOS:
+            M.set_resumo(contato, B.resumir(hist, M.get_resumo(contato)))
+    except Exception:
+        pass
+    finally:
+        with _RESUMO_LOCK:
+            _RESUMO_EM_CURSO.discard(contato)
+
+def _agendar_resumo(contato):
+    """Atualiza o resumo da conversa FORA do caminho crítico (o cliente já recebeu a resposta).
+    Um por contato de cada vez -- em rajada, não dispara N chamadas de LLM em paralelo."""
+    with _RESUMO_LOCK:
+        if contato in _RESUMO_EM_CURSO:
+            return
+        _RESUMO_EM_CURSO.add(contato)
+    t = threading.Thread(target=_resumir_worker, args=(contato,), daemon=True)
+    t.start()
+
+def _ms(t0):
+    return int((time.time() - float(t0 or 0)) * 1000) if t0 else None
+
 def _processar(contato, texto, ctx):
     """Chamado pelo debouncer após agrupar as mensagens do contato."""
+    _t_ini = time.time()
+    _t_cerebro = _t_envio = None
+    FS.marcar_inicio(_t_ini)   # orçamento de naturalidade: o "tempo de digitação" desconta o que
+                               # o raciocínio já consumiu, em vez de somar espera por cima
     ext = ctx.get("external_key")
     # SENTINELA — 2ª checagem (pós-debounce), fecha a CORRIDA DO 1º BALÃO: na 1ª mensagem de uma
     # conversa nova, o menu nativo e o Pedrão reagem À MESMA mensagem ao mesmo tempo; no instante
@@ -439,6 +472,7 @@ def _processar(contato, texto, ctx):
     hist_b = [] if _fresh else hist
     resumo_b = "" if _fresh else resumo
     fatos_b = {} if _fresh else fatos
+    _t_cerebro = time.time()
     d = B.fastpath(texto, sessao_nova, hist_b, fatos_b, sentimento=sent, contato=contato)
     if d is None:
         d = B.decidir(texto, historico=hist_b, memoria_cliente=fatos_b, sessao_nova=sessao_nova, resumo=resumo_b, sentimento=sent)
@@ -467,13 +501,16 @@ def _processar(contato, texto, ctx):
     M.add_mensagem(contato, ext, "cliente", texto)
     if d.get("dados_coletados"):
         M.merge_fatos(contato, d["dados_coletados"])
-    # memória nível 2: atualiza o resumo quando a conversa cresce
-    hist_full = M.historico(contato, n=C.MEM_RESUMO_APOS + 4)
-    if len(hist_full) >= C.MEM_RESUMO_APOS:
-        try: M.set_resumo(contato, B.resumir(hist_full, M.get_resumo(contato)))
-        except Exception: pass
 
+    # >>> A RESPOSTA VAI PRIMEIRO. <<<
+    _t_envio = time.time()
     resultado = FS.executar_decisao(ext, d, contato) if ext else {"erro": "sem external_key"}
+
+    # memória nível 2 (resumo da conversa): é uma 2ª chamada de LLM, ~2s. Até 25/07 ela rodava
+    # ANTES do envio -- ou seja, TODO cliente em conversa longa esperava o bot "tomar nota" antes
+    # de receber a resposta. Agora sai depois e em thread: o resumo continua sendo atualizado
+    # (serve pra próxima mensagem), sem custar 1 segundo de espera pro cliente.
+    _agendar_resumo(contato)
     # registra o que NÓS enviamos (o detector de "humano digitou" usa isso pra não nos confundir)
     _registra_txt(contato, d.get("texto"))
     for _e in (d.get("_envios") or []):
@@ -487,6 +524,10 @@ def _processar(contato, texto, ctx):
         "humor": sent.get("humor"), "cor": sent.get("cor"),
         "viab": d.get("_viabilidade_sistema", {}).get("status"),
         "alertas": d.get("_alertas"), "render": d.get("_render"), "envio": resultado,
+        # CRONÔMETRO (25/07): quanto o cliente esperou, em partes. Sem isso, "está mais rápido"
+        # é opinião. ms_cerebro = decidir (inclui LLM); ms_envio = FlowSeller; ms_total = tudo.
+        "ms_cerebro": _ms(_t_cerebro), "ms_envio": _ms(_t_envio), "ms_total": _ms(_t_ini),
+        "uso_llm": dict(L.ULTIMO_USO) if not d.get("_fastpath") else None,
     })
 
 _DEB = Debouncer(on_flush=_processar)
@@ -612,7 +653,12 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     if ev["tipo"] in ("audio", "ptt", "voice") and not texto:
         if ev.get("media_url"):
             import transcricao as TR
-            t, erro = TR.transcrever(ev["media_url"], jwt=C.FS_JWT_RESPOSTA or None)
+            # PERF (25/07): rodava DIRETO no handler async -- baixar o áudio + transcrever é I/O
+            # de rede de vários segundos e travava o event loop INTEIRO: enquanto um áudio era
+            # processado, todos os outros clientes ficavam na fila sem resposta. Agora vai pra
+            # thread e o servidor continua atendendo o resto.
+            t, erro = await asyncio.to_thread(
+                TR.transcrever, ev["media_url"], C.FS_JWT_RESPOSTA or None)
             if t:
                 texto = t
                 M.log_evento(ev["contato"], "audio_transcrito", {"mask": _mask(ev["contato"]), "chars": len(t)})

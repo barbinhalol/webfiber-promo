@@ -2,7 +2,7 @@
 """Cérebro do Ultra Pedrão: monta contexto -> LLM -> parseia JSON -> aplica GUARDS de código.
 Os guards NÃO confiam no modelo (bloqueiam preço digitado, placeholder, fastReply/fila inválidos,
 e viabilidade afirmada sem o veredito do sistema)."""
-import json, os, re
+import json, os, re, time
 import config as C
 import viability as V
 import llm as L
@@ -152,6 +152,68 @@ _SUP_NAO_RESOLVIDO = re.compile(
 # "não mudou nada" (sem citar cor nenhuma) e o roteiro fechou dizendo "a luz continuou vermelha" —
 # dado inventado, foi pro cliente E pra nota interna que a equipe técnica usa pra agir.
 _SUP_LUZ_VERMELHA = re.compile(r"\b(vermelh\w*|loss|piscando|apagad\w*|sem\s+luz)\b", re.I)
+# 25/07 (auditoria): a regex acima AINDA deixava o bot inventar diagnóstico -- ela casa
+# "piscando", "apagado", "sem luz" e até "a luz NÃO está vermelha", e o roteiro fechava
+# afirmando "luz vermelha" pro cliente E pra nota da equipe técnica. Só fecha com o roteiro
+# da fibra quem DISSE vermelha/LOSS, sem negação.
+_LUZ_VERMELHA_POS = re.compile(r"\b(vermelh[ao]s?|loss)\b", re.I)
+_LUZ_NEGADA = re.compile(r"\b(n[ãa]o|nenhum[ao]?|sem)\b[^.!?]{0,25}\b(vermelh|loss)", re.I)
+_LUZ_OUTRA = re.compile(r"\b(piscando|apagad\w*|sem\s+luz|verde|azul|laranja|amarel\w*|branca)\b", re.I)
+
+def _luz_vermelha_confirmada(msg):
+    return bool(_LUZ_VERMELHA_POS.search(msg)) and not _LUZ_NEGADA.search(msg)
+
+# "voltou MAS ainda tá ruim" NÃO é resolvido -- e queda que volta e cai de novo é justamente a
+# INTERMITENTE, que a regra 5 manda tratar como prioridade (o bot encerrava com "Que ótimo!").
+_SUP_RESSALVA = re.compile(
+    r"\b(mas|por[ée]m|s[óo]\s+que|ainda\s+(assim|t[áa]|est[áa]|sem)|de\s+novo|dnv|novamente|toda\s+hora|"
+    r"cai(u|ndo)|volta\s+e\s+cai|lent[ao]|frac[ao]|oscil\w*|ruim|inst[áa]ve|travand|"
+    r"(uns?|alguns)\s*\d+\s*(min|minutos?|segundos?)|parou)\b", re.I)
+
+# cliente JÁ reiniciou por conta própria -> regra 5 proíbe pedir de novo ("já reiniciei mil vezes")
+_JA_REINICIOU = re.compile(
+    r"\b(j[áa]\s+(reinici\w*|resetei|reset\w*|desliguei|liguei\s+e\s+desliguei|tirei\s+da\s+tomada|"
+    r"tirei\s+e\s+(coloquei|botei)|fiz\s+isso)|"
+    r"(reinici\w*|desliguei|tirei\s+da\s+tomada)\s+(v[áa]rias|muitas|mil|umas?\s*)?\d*\s*(vezes|x)\b|"
+    r"reiniciei)\b", re.I)
+
+# cliente não consegue olhar o aparelho agora -> parar de insistir na cor da luz
+_NAO_SABE = re.compile(
+    r"\b(n[ãa]o\s+(sei|consigo|d[áa]\s+pra?|posso)\s*(ver|olhar|checar)?|n[ãa]o\s+(t[ôo]|estou)\s+em\s+casa|"
+    r"t[ôo]\s+(fora|na\s+rua|no\s+trabalho)|longe\s+de\s+casa|s[óo]\s+(mais\s+tarde|amanh[ãa]|quando\s+chegar)|"
+    r"n[ãa]o\s+tem\s+ningu[ée]m\s+em\s+casa)\b", re.I)
+
+# RECLAMAÇÃO financeira != pedido de 2ª via. Mandar boleto em aberto pra quem acabou de dizer
+# "já paguei e vocês cortaram" é receita de fúria e Procon (regra 6: registrar e encaminhar).
+_FIN_RECLAMACAO = re.compile(
+    r"\b(j[áa]\s+(paguei|foi\s+pago|t[áa]\s+pag\w*)|paguei\s+(e|mas|ontem|hoje|dia|no\s+dia)|comprovante|"
+    r"cobran[çc]a\s+(indevida|errada|duplicada|a\s+mais)|cobrando\s+(a\s+mais|errado|dobrado|duas\s+vezes)|"
+    r"n[ãa]o\s+reconhe[çc]o|valor\s+(errado|diferente|a\s+mais)|negativ\w*|serasa|spc|"
+    r"desconto|parcel\w*|acordo|mudar\s+(o\s+)?vencimento|adiar|prorrog\w*)\b", re.I)
+
+# JÁ É CLIENTE falando do PRÓPRIO plano (upgrade, velocidade entregue): NÃO é lead novo --
+# mandar tabela de planos e pedir endereço "pra ver viabilidade" pra quem é cliente há meses
+# é a resposta que faz a pessoa perder a paciência.
+_JA_CLIENTE = re.compile(
+    r"\b(meu|minha)\s+(plano|internet|velocidade|pacote|contrato|linha)\b|"
+    r"\b(contratei|assinei|pago|tenho|uso)\b[^.!?]{0,20}\b(plano|mega|giga|internet)\b|"
+    r"\b(aumentar|subir|melhorar|trocar|mudar|migrar|upgrade|downgrade|reduzir|baixar)\b[^.!?]{0,15}"
+    r"\b(plano|velocidade|internet|pacote)\b|"
+    r"\b(teste\s+de\s+velocidade|speedtest|s[óo]\s+(d[áa]|chega|vem|t[áa]\s+dando)\s*\d+)\b", re.I)
+
+# pediu HUMANO -> atender na hora, sem insistir (regra 15)
+_QUER_HUMANO = re.compile(
+    r"\b(atendente|humano|pessoa\s+de\s+verdade|falar\s+com\s+(algu[ée]m|uma\s+pessoa|gente)|"
+    r"n[ãa]o\s+quero\s+(falar\s+com\s+)?(rob[ôo]|bot|m[áa]quina)|quero\s+(um|uma)\s+(atendente|pessoa))\b", re.I)
+
+def _ja_disse(historico, padrao, de="cliente", n=10):
+    """Olha as últimas N mensagens do cliente atrás de um padrão. O atalho decidia lendo só a
+    mensagem da vez -- por isso pedia reinício de quem já tinha reiniciado 3 mensagens antes."""
+    alvo = ("cliente",) if de == "cliente" else ("pedrao", "bot", "atendente")
+    for h in (historico or [])[-n:]:
+        if h.get("de") in alvo and padrao.search(h.get("texto") or ""):
+            return True
+    return False
 
 # dicas rápidas de internet (só enviadas se o cliente ACEITAR) — texto do dono, curto
 _DICAS_TEXTO = (
@@ -267,7 +329,7 @@ def _fp(texto, acao="responder", intencao="saudacao", fila=0, fid=0, nota="", su
          "_fastpath": True, "_render": f"{icone} (atalho, sem LLM) “{texto[:80]}”"}
     return d
 
-def _suporte_passo(msg, sup, fatos):
+def _suporte_passo(msg, sup, fatos, historico=None):
     """Roteiro de suporte (padrão dos exemplos do dono):
     sup=1 -> cliente mandou nome+CPF: busca o cadastro REAL no MyCore (endereço certo, nunca inventado)
              e conduz o reset do roteador. sup=2 -> lê a cor da luz: resolveu (fecha) ou não resolveu
@@ -294,7 +356,14 @@ def _suporte_passo(msg, sup, fatos):
             if d:
                 nome_real = d.get("nome") or ""
                 end_real = d.get("endereco") or ""
-        dados = {"sup_nome": nome_real or msg.strip()[:60], "sup_end": end_real}
+        # NUNCA usar a mensagem crua como nome: sem cadastro achado, o texto do cliente virava
+        # "nome" e saía no fechamento e na nota do time ("Nome: já reiniciei tudo e não funciona").
+        dados = {"sup_end": end_real}
+        if nome_real:
+            dados["sup_nome"] = nome_real
+        # regra 5: quem JÁ reiniciou por conta própria não pode ouvir "reinicia de novo"
+        if _JA_REINICIOU.search(msg) or fatos.get("sup_ja_reset") or _ja_disse(historico, _JA_REINICIOU):
+            return None
         prim = nome_real.split(" ")[0].title() if nome_real else ""
         texto = (f"Obrigado{', ' + prim if prim else ''}! Vamos tentar restabelecer a conexão 🙌\n\n"
                  "Por favor: retire o *roteador* da tomada, aguarde *1 minuto completo*, reconecte e espere as luzes "
@@ -307,26 +376,37 @@ def _suporte_passo(msg, sup, fatos):
     nome = (fatos.get("sup_nome") or "").strip()
     prim = nome.split(" ")[0].title() if nome else ""
     if _SUP_RESOLVIDO.search(msg) and not _SUP_NAO_RESOLVIDO.search(msg):
-        texto = (f"Que ótimo que voltou{', ' + prim if prim else ''}! 😊 Fico à disposição — qualquer coisa é só me "
+        if _SUP_RESSALVA.search(msg):
+            return None   # "voltou MAS tá lenta" / "voltou e caiu de novo" -> não é resolvido:
+                          # conversa de verdade (LLM). Queda intermitente é prioridade (regra 5).
+        texto = (f"Que ótimo que voltou{', ' + prim if prim else ''}! 😊 Qualquer coisa é só me "
                  "chamar. Posso te ajudar em mais alguma coisa?")
         return _fp(texto, intencao="suporte", sup="fim")
-    if _SUP_LUZ_VERMELHA.search(msg):   # cliente CITOU a luz/o sinal de verdade -> fecha com o roteiro
+    if _NAO_SABE.search(msg):
+        return None       # "não tô em casa" / "não consigo ver" -> parar de pedir a cor da luz
+    if _LUZ_OUTRA.search(msg) and not _luz_vermelha_confirmada(msg):
+        return None       # relatou OUTRO sinal (piscando/verde/apagada) -> o LLM registra com as
+                          # palavras dele, sem cravar diagnóstico de fibra que ele não descreveu
+    if _luz_vermelha_confirmada(msg):   # cliente DISSE vermelha/LOSS, sem negação -> roteiro da fibra
         end = (fatos.get("sup_end") or "").strip()
         dados_linha = (nome if nome else "(nome a confirmar)") + (f", {end}" if end else " — endereço a confirmar")
-        texto = (f"Obrigado por realizar os testes{', ' + prim if prim else ''}. 🙏\n\n"
-                 "Essa luz vermelha normalmente é um ajuste no sinal da *fibra óptica* — é comum e *tem solução*. "
-                 "Quem resolve isso é a nossa *equipe técnica* em campo.\n\n"
-                 "Já deixei seu caso *registrado e priorizado* aqui — não se perde. Nossa equipe atende *a partir das "
-                 "9h*; assim que o expediente começar, eles te chamam por aqui mesmo com o próximo passo. Você *não* "
-                 "precisa fazer mais nada 😊\n\n"
-                 "Resumo do seu atendimento:\n"
-                 f"✔️ *Dados:* {dados_linha}\n"
-                 "✔️ *Problema:* sem sinal de internet (luz vermelha no aparelho)\n"
-                 "✔️ *Testes:* reiniciou o roteador e a luz continuou vermelha\n\n"
-                 "Pode ficar tranquilo(a) que vamos cuidar do seu caso até o fim. Pode contar com a *WebFiber Provedor* 💙")
-        nota = (f"[PEDRÃO fora do horário] SUPORTE PRIORITÁRIO | {dados_linha} | Problema: sem sinal / LOSS "
-                "(luz vermelha, possível falha na fibra) | Testes: reiniciou o roteador, luz continuou vermelha | "
-                "Encaminhar equipe técnica pra agendar o reparo.")
+        quando = S.proximo_atendimento(setor="suporte")
+        queixa = (fatos.get("sup_queixa") or "").strip()
+        texto = (f"Obrigado por testar aí{', ' + prim if prim else ''} 🙏\n\n"
+                 "Luz vermelha normalmente é um ajuste no sinal da *fibra* — é comum e tem solução, "
+                 "mas quem resolve é a nossa *equipe técnica* em campo.\n\n"
+                 f"Já deixei seu caso *registrado e priorizado* e a equipe fala com você {quando}, "
+                 "por aqui mesmo. Você não precisa fazer mais nada.\n\n"
+                 "Só confere se anotei certo:\n"
+                 f"• Você: {dados_linha}\n"
+                 + (f"• O que está acontecendo: {queixa}\n" if queixa else "")
+                 + "• O aparelho está com a luz vermelha\n\n"
+                 "Se tiver algo errado aí, me corrige que eu ajusto o registro 👍")
+        nota = (f"[PEDRÃO fora do horário] SUPORTE PRIORITÁRIO | {dados_linha} | "
+                + (f"Relato do cliente: \"{queixa}\" | " if queixa else "")
+                + "Luz vermelha confirmada PELO CLIENTE (possível falha na fibra / LOSS) | "
+                  "Testes: reiniciou o roteador e não resolveu | "
+                  "Encaminhar equipe técnica pra agendar o reparo.")
         return _fp(texto, acao="transferir", intencao="suporte", fila=24, nota=nota, sup="fim",
                    dados={"nota_ok": 1}, icone="⚡➡️")  # já tem nota rica na transferência -> não repetir no vigia
     if _SUP_NAO_RESOLVIDO.search(msg):
@@ -353,14 +433,29 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     msg = (mensagem or "").strip()
     if not msg:
         return None
-    # cliente IRRITADO nunca cai no atalho automático -> vai pro LLM tratar com cuidado e acolhimento
-    if sentimento and sentimento.get("humor") == "irritado":
+    # cliente IRRITADO (ou querendo cancelar) nunca cai no atalho -> LLM trata com cuidado
+    if sentimento and sentimento.get("humor") in ("irritado", "churn"):
         return None
     sup = "" if sessao_nova else str(fatos.get("sup") or "")
 
+    # PEDIU HUMANO -> atende na hora, sem insistir nem repetir menu (regra 15)
+    if _QUER_HUMANO.search(msg):
+        return None
+
+    # AVISO OPERACIONAL ATIVO (rompimento/queda em massa): o atalho não conhece o aviso do painel
+    # -- sem isso, numa queda em massa dezenas de clientes recebem "tira da tomada 1 minuto"
+    # enquanto o dono já sabe que é rompimento. Assunto técnico vai pro LLM, que recebe o aviso.
+    try:
+        _p = PAINEL.ler() if PAINEL else {}
+        if _p.get("aviso_ativo") and (_p.get("aviso") or "").strip() \
+                and (_SUP_INTENCAO.search(msg) or sup in ("1", "2")):
+            return None
+    except Exception:
+        pass
+
     # 0) roteiro de suporte JÁ em andamento tem prioridade
     if sup in ("1", "2"):
-        return _suporte_passo(msg, sup, fatos)
+        return _suporte_passo(msg, sup, fatos, historico)
 
     # 1) saudação pura -> abertura fixa "Olá!", sem anunciar conversa anterior (mesmo se reaberta)
     if _SAUDACAO_PURA.match(msg) and not _SINAIS_COMPLEXOS.search(msg):
@@ -370,8 +465,11 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
 
     # 2) pedido de planos/internet -> FLUXO PRINCIPAL: já conhece os planos? + qual o local (viabilidade)
     #    (empresa/PJ sai pro LLM: planos e ficha empresariais são diferentes)
+    # _JA_CLIENTE: quem fala do PRÓPRIO plano (upgrade, velocidade entregue) NÃO é lead novo --
+    # mandar tabela de planos + pedir endereço pra "viabilidade" pra cliente de meses é ofensivo.
     if (_PLANOS_INTENCAO.search(msg) and not _SINAIS_COMPLEXOS.search(msg)
-            and not _EMPRESA.search(msg) and len(msg.split()) <= 18):
+            and not _EMPRESA.search(msg) and not _JA_CLIENTE.search(msg)
+            and len(msg.split()) <= 18):
         if sessao_nova:
             texto = (f"{_abertura()} Você já conhece nossos planos? E me diz uma coisa: "
                      "qual é o endereço aí (rua, número e bairro) pra eu já verificar a viabilidade pra você?")
@@ -399,7 +497,11 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     # entra no fluxo se pediu financeiro AGORA, se está aguardando o CPF E a msg tem dígitos,
     # OU se já foi identificado pelo CPF seco (cpf_ok) e confirmou que quer a fatura.
     _tem_digitos = len(re.sub(r"\D", "", msg)) >= 8
-    if (_FINANCEIRO_KW.search(msg) or (fin_state == "aguarda_cpf" and _tem_digitos)
+    # _FIN_RECLAMACAO: "já paguei e cortaram", cobrança indevida, negativação, pedido de desconto
+    # ou acordo NÃO é pedido de 2ª via -- entregar boleto em aberto nesses casos gera fúria e
+    # Procon. Regra 6: registrar e encaminhar ao Financeiro humano (o LLM conduz).
+    if ((_FINANCEIRO_KW.search(msg) and not _FIN_RECLAMACAO.search(msg))
+            or (fin_state == "aguarda_cpf" and _tem_digitos)
             or (fin_state == "cpf_ok" and _SIM.search(msg) and not _NAO.search(msg))
             or (fin_state == "escolhe" and re.fullmatch(r"\s*\d{1,2}\s*", msg or ""))):
         import mycore as MC
@@ -562,6 +664,27 @@ def _parse_json(txt):
         d["fastReplyId"] = int(m.group(1))
     return d
 
+def _gerar_resiliente(system, user, model=None):
+    """Uma falha de rede/instabilidade da API NÃO pode virar transferência automática na cara do
+    cliente (era o que acontecia: qualquer exceção -> _fallback -> ticket transferido). Tenta de
+    novo UMA vez, rápido; se o modelo 'esperto' falhar, a 2ª tentativa cai no rápido (Haiku),
+    que responde melhor do que não responder. Erros de credencial/limite não são retentados."""
+    try:
+        return L.gerar(system, user, model) if model else L.gerar(system, user)
+    except L.LLMError as e:
+        msg = str(e)
+        if any(s in msg for s in ("401", "403", "invalid_api_key", "ANTHROPIC_API_KEY ausente",
+                                  "credit", "billing")):
+            raise                       # problema de conta: retentar não resolve
+        try:
+            import memory as _M
+            _M.log_evento("sistema", "llm_retry", {"erro": msg[:180], "modelo": model or C.LLM_MODEL})
+        except Exception:
+            pass
+        time.sleep(0.4)
+        return L.gerar(system, user)    # 2ª tentativa sempre no modelo rápido
+
+
 def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, resumo="", sentimento=None):
     """historico: [{'de':'cliente'|'pedrao','texto':...}]; memoria_cliente: dict de fatos por contato.
     resumo: resumo textual da conversa (memória nível 2) — injetado no contexto pra o bot lembrar do
@@ -622,7 +745,7 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     _model = getattr(C, "LLM_MODEL_SMART", None) if _complexo else None
 
     try:
-        raw = L.gerar(system, user, _model) if _model else L.gerar(system, user)
+        raw = _gerar_resiliente(system, user, _model)
     except L.LLMError as e:
         return _fallback(f"LLM indisponível: {e}", viab)
 
