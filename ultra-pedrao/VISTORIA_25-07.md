@@ -1,6 +1,6 @@
 # Vistoria completa — Ultra Pedrão (madrugada 24→25/07)
 
-**Tudo já está NO AR.** Deploy feito por mim via terminal, container saudável, bateria **220/220**.
+**Tudo já está NO AR.** Deploy feito por mim via terminal, container saudável, bateria **237/237**.
 Você não precisa colar nada. Este documento é só pra você conferir o que mudou.
 
 ---
@@ -167,6 +167,35 @@ O resto responde em ~2 a 3 segundos. Antes, o caminho típico levava 10 a 13 seg
 
 ---
 
+### Teste das regras novas — e 4 erros que ele revelou
+
+Rodei cada regra nova contra o bot no ar. Quatro passaram de primeira; **três falharam**, e um
+deles era grave. Os quatro achados:
+
+| # | Erro encontrado | Correção |
+|---|---|---|
+| 1 | **O bot não sabia que horas eram** — escrevia "Boa tarde!" à meia-noite | Agora recebe data, hora e o prazo já calculado por setor |
+| 2 | 🔴 **"Vou me mudar, dá pra levar a internet?"** → *"**Dá sim! A gente leva junto**"* — promessa de cobertura **sem saber o endereço** | Virou resposta fixa: "quem confirma é a nossa equipe" |
+| 3 | **"2ª via do contrato"** → *"pra puxar a sua **fatura**, me manda o CPF"* | Contrato/IR/titularidade separados de boleto |
+| 4 | **"Quero aumentar meu plano"** → pedia rua e bairro "pra ver viabilidade" de um cliente de anos | Virou resposta fixa: registra e pede só o CPF |
+
+**Detalhe importante:** nos casos 2 e 4 eu **reescrevi a regra e não adiantou** — o modelo continuou
+respondendo errado, porque o prompt principal puxa forte para o fluxo de venda. Só resolveu quando
+tirei do texto e transformei em **código**. Ficou mais confiável **e** instantâneo (0ms, sem custo).
+
+**Resultado final, medido depois das correções:**
+
+| Cliente | Pedrão |
+|---|---|
+| "vou me mudar, dá pra levar a internet?" | *"Posso registrar sim! Quem confirma se a gente já atende o endereço novo é a nossa equipe."* **(0ms)** |
+| "quero aumentar meu plano pra 1 giga" | *"Vou registrar seu pedido e o Comercial te passa a condição certinha. Me confirma o CPF?"* **(0ms)** |
+| "que horas o técnico chega?" | *"Não tenho acesso à agenda… a equipe entra em contato **amanhã (sábado) a partir das 9h**"* |
+| "falo pelo meu pai, ele é o titular" | *"Por segurança, dados da conta só vão pro titular… a equipe fala com ele **a partir de segunda**"* |
+
+Repare que os prazos saem **diferentes e corretos**: suporte trabalha sábado, financeiro não.
+
+---
+
 ## 📏 7. COMO VOCÊ ACOMPANHA SOZINHO
 
 Abra: `https://pedrao.webfiberprovedorcliente.cloud/health`
@@ -195,9 +224,9 @@ Deixei um monitor rodando: assim que houver movimento suficiente, eu te trago os
 
 ---
 
-## ✅ Bateria de testes: 220/220
+## ✅ Bateria de testes: 237/237
 
-De 145 para **220 verificações**. As novas cobrem **cada frase real** que produzia resposta errada —
+De 145 para **237 verificações**. As novas cobrem **cada frase real** que produzia resposta errada —
 então esses erros não voltam sem o teste apitar.
 
 ---
