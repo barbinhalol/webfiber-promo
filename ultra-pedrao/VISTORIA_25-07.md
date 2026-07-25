@@ -253,6 +253,35 @@ velocidade que existe aqui.
 
 ---
 
+## 🔙 Se algo der errado (reverter em 1 comando)
+
+Tudo entrou em commits pequenos e separados. Para voltar ao estado de **antes da madrugada**:
+
+```bash
+cd ~/up/ultra-pedrao && git reset --hard 6605d41 && docker compose up -d --build
+```
+
+Para voltar só um passo (desfazer o último commit e manter o resto):
+
+```bash
+cd ~/up/ultra-pedrao && git reset --hard HEAD~1 && docker compose up -d --build
+```
+
+E se quiser **desligar tudo na hora**, sem terminal: o botão no painel
+(`pedrao.webfiberprovedorcliente.cloud/painel`, senha `01webfiber01`) continua funcionando igual.
+
+### Ajustes finos que você pode mudar sem mexer em código (no `.env` da VPS)
+
+| Variável | Hoje | O que faz |
+|---|---|---|
+| `FS_DELAY_MIN_S` / `FS_DELAY_MAX_S` | 0,6 / 1,2 | Pausa antes de responder (para não parecer robô). **Quer mais rápido ainda? Baixe para 0.3/0.6** — o atalho hoje leva 1,2s e ~1,1s disso é essa pausa. |
+| `FS_NATURAL_ALVO_S` | 2,0 | Tempo total que soa natural. Acima disso, não espera mais nada. |
+| `DEBOUNCE_CURTA_S` | 0,8 | Espera de quem já terminou a frase. |
+| `DEBOUNCE_SECONDS` | 2 | Espera de quem está digitando em pedaços. |
+| `FS_FORENSE` | (desligado) | `1` liga o log byte a byte de cada envio (só para diagnóstico). |
+
+---
+
 ## 📌 O que eu deixaria para uma próxima
 
 1. **Comprovante de pagamento** (o que você perguntou antes de dormir): o webhook já recebe a foto,
