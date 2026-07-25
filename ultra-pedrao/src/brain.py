@@ -185,6 +185,14 @@ _NAO_SABE = re.compile(
 
 # RECLAMAÇÃO financeira != pedido de 2ª via. Mandar boleto em aberto pra quem acabou de dizer
 # "já paguei e vocês cortaram" é receita de fúria e Procon (regra 6: registrar e encaminhar).
+# "2ª via" NÃO é sempre fatura: contrato, comprovante de quitação e declaração de IR usam a mesma
+# palavra e o bot respondia "pra puxar a sua FATURA, me manda o CPF" (visto no teste) -- ignorando
+# o que a pessoa pediu. Isso o Pedrão não emite (regra 21): registra e encaminha.
+_DOC_NAO_FATURA = re.compile(
+    r"\b(contrato|comprovante\s+de\s+(quita|pagamento)|declara[çc][ãa]o|imposto\s+de\s+renda|\birpf\b|"
+    r"nota\s+fiscal|\bnf-?e\b|titularidade|transferir\s+(a\s+)?(conta|titular)|"
+    r"mudar\s+(o\s+)?(nome|titular)|hist[óo]rico\s+de\s+pagamento)\b", re.I)
+
 _FIN_RECLAMACAO = re.compile(
     r"\b(j[áa]\s+(paguei|foi\s+pago|t[áa]\s+pag\w*)|paguei\s+(e|mas|ontem|hoje|dia|no\s+dia)|comprovante|"
     r"cobran[çc]a\s+(indevida|errada|duplicada|a\s+mais)|cobrando\s+(a\s+mais|errado|dobrado|duas\s+vezes)|"
@@ -500,7 +508,8 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     # _FIN_RECLAMACAO: "já paguei e cortaram", cobrança indevida, negativação, pedido de desconto
     # ou acordo NÃO é pedido de 2ª via -- entregar boleto em aberto nesses casos gera fúria e
     # Procon. Regra 6: registrar e encaminhar ao Financeiro humano (o LLM conduz).
-    if ((_FINANCEIRO_KW.search(msg) and not _FIN_RECLAMACAO.search(msg))
+    if ((_FINANCEIRO_KW.search(msg) and not _FIN_RECLAMACAO.search(msg)
+            and not _DOC_NAO_FATURA.search(msg))
             or (fin_state == "aguarda_cpf" and _tem_digitos)
             or (fin_state == "cpf_ok" and _SIM.search(msg) and not _NAO.search(msg))
             or (fin_state == "escolhe" and re.fullmatch(r"\s*\d{1,2}\s*", msg or ""))):
@@ -717,6 +726,19 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     if memoria_cliente:
         ctx.append("MEMÓRIA DO CLIENTE (fatos já sabidos — não pergunte de novo): " + json.dumps(memoria_cliente, ensure_ascii=False))
     ctx.append("CONVERSA ATÉ AGORA:\n" + "\n".join(linhas))
+    # QUE HORAS SÃO. O modelo não tem relógio: ele escrevia "Boa tarde!" à meia-noite e
+    # "Bom dia!" às 22h (visto no teste). Também é o que permite ele falar o dia certo em que a
+    # equipe volta sem depender de conta de cabeça.
+    try:
+        _ag = S._agora()
+        _per = S.periodo_do_dia(_ag) or "madrugada"
+        ctx.append(f"[AGORA: {S._DIAS[_ag.weekday()]}, {_ag.strftime('%d/%m/%Y %H:%M')} — "
+                   f"cumprimente com \"{_per}\" (e nunca outro). "
+                   f"A equipe de SUPORTE volta {S.proximo_atendimento(_ag, 'suporte')}; "
+                   f"COMERCIAL e FINANCEIRO voltam {S.proximo_atendimento(_ag, 'comercial')}. "
+                   "Use exatamente esses prazos — não invente outro nem diga só 'próximo dia útil'.]")
+    except Exception:
+        pass
     ctx.append(V.hint_para_prompt(viab))
     # REINCIDÊNCIA: o cliente que já trouxe o mesmo problema semana passada não pode ser tratado
     # como chamado novo -- é a coisa mais humana que existe ("vi que você já falou disso") e a
