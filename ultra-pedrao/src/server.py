@@ -418,11 +418,23 @@ def _parse_evento(p: dict):
 _RESUMO_LOCK = threading.Lock()
 _RESUMO_EM_CURSO = set()
 
+_RESUMO_PASSO = 6   # depois do 1º resumo, só refaz a cada N mensagens novas
+
 def _resumir_worker(contato):
     try:
         hist = M.historico(contato, n=C.MEM_RESUMO_APOS + 4)
-        if len(hist) >= C.MEM_RESUMO_APOS:
-            M.set_resumo(contato, B.resumir(hist, M.get_resumo(contato)))
+        if len(hist) < C.MEM_RESUMO_APOS:
+            return
+        # Antes refazia o resumo a CADA mensagem depois da 16ª -- uma chamada de IA por mensagem,
+        # pra sempre, numa conversa longa (e essa é a única que não usa cache: paga preço cheio).
+        # O resumo não muda a cada frase; refazer a cada 6 mensagens novas dá o mesmo resultado
+        # prático por ~1/6 do custo.
+        f = M.get_fatos(contato)
+        n_ant = int(f.get("resumo_n") or 0)
+        if n_ant and len(hist) - n_ant < _RESUMO_PASSO:
+            return
+        M.set_resumo(contato, B.resumir(hist, M.get_resumo(contato)))
+        M.merge_fatos(contato, {"resumo_n": len(hist)})
     except Exception:
         pass
     finally:
