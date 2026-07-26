@@ -667,9 +667,10 @@ def _processar(contato, texto, ctx):
         # levava a MESMA pergunta de volta, 3x seguidas. O cooldown só pode falar quando o cliente
         # ainda NÃO escolheu; se ele já escolheu (ou perguntou outra coisa), quem responde é o
         # cérebro. Frase fixa repetida é o jeito mais rápido de perder um lead quente.
+        # "850MG", "700 mb", "1 giga", "o segundo", "esse" — o jeito real como o cliente escolhe
         _JA_ESCOLHEU = re.compile(
-            r"\b(\d{3,4}\s*(mega|mb|m)\b|\bgiga\b|\b1\s*g\b|o\s+(primeiro|segundo|terceiro|"
-            r"[úu]ltimo)\b|esse|este|quero\s+o\b|fico\s+com\b|vou\s+(querer|de)\b)", re.I)
+            r"(\d{3,4}\s*(mega|megas|mb|mg|m)\b|\bgigas?\b|\b1\s*g\b|o\s+(primeiro|segundo|"
+            r"terceiro|[úu]ltimo)\b|\besse\b|\beste\b|quero\s+o\b|fico\s+com\b|vou\s+(querer|de)\b)", re.I)
         if _JA_ESCOLHEU.search(texto or "") or "?" in (texto or ""):
             pass          # deixa a decisão do cérebro passar — ele responde de verdade
         else:
