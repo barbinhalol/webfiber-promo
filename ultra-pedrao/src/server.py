@@ -662,13 +662,39 @@ def _processar(contato, texto, ctx):
     _eh_planos = d.get("acao") == "fastreply" and d.get("fastReplyId") in (1296, 1437, 1438)
     _ult_planos = fatos_b.get("planos_ts")   # fresco na sessão nova (não arrasta do fechado)
     if _eh_planos and _ult_planos and (time.time() - float(_ult_planos)) < 180:
-        d = {"acao": "responder", "fastReplyId": 0, "fila": 0, "intencao": "planos",
-             "texto": "Os planos são esses que te mandei aqui em cima 👆 Qual deles fez mais sentido pra você?",
-             "viabilidade": "naoaplicavel", "motivo": "", "nota_interna": "", "dados_coletados": {},
-             "_alertas": ["cooldown planos (nao repetiu imagens)"], "_fastpath": True,
-             "_viabilidade_sistema": d.get("_viabilidade_sistema", {}), "_render": "💬 (cooldown) planos ja enviados"}
+        # ⛔ 25/07 (4 conversas reais): esta frase de cooldown virou LOOP. O cliente respondia
+        # "850 mega", "o segundo", "quero o de 1 giga" — que é EXATAMENTE a resposta pedida — e
+        # levava a MESMA pergunta de volta, 3x seguidas. O cooldown só pode falar quando o cliente
+        # ainda NÃO escolheu; se ele já escolheu (ou perguntou outra coisa), quem responde é o
+        # cérebro. Frase fixa repetida é o jeito mais rápido de perder um lead quente.
+        _JA_ESCOLHEU = re.compile(
+            r"\b(\d{3,4}\s*(mega|mb|m)\b|\bgiga\b|\b1\s*g\b|o\s+(primeiro|segundo|terceiro|"
+            r"[úu]ltimo)\b|esse|este|quero\s+o\b|fico\s+com\b|vou\s+(querer|de)\b)", re.I)
+        if _JA_ESCOLHEU.search(texto or "") or "?" in (texto or ""):
+            pass          # deixa a decisão do cérebro passar — ele responde de verdade
+        else:
+            d = {"acao": "responder", "fastReplyId": 0, "fila": 0, "intencao": "planos",
+                 "texto": "Os planos são esses que te mandei aqui em cima 👆 Qual deles fez mais sentido pra você?",
+                 "viabilidade": "naoaplicavel", "motivo": "", "nota_interna": "", "dados_coletados": {},
+                 "_alertas": ["cooldown planos (nao repetiu imagens)"], "_fastpath": True,
+                 "_viabilidade_sistema": d.get("_viabilidade_sistema", {}), "_render": "💬 (cooldown) planos ja enviados"}
     elif _eh_planos:
         d.setdefault("dados_coletados", {})["planos_ts"] = time.time()
+
+    # ⛔ ANTI-REPETIÇÃO GERAL (25/07): "pra empresa a gente tem soluções próprias" saiu 3x
+    # seguidas pro mesmo cliente que já tinha respondido "Reside" e "É para residência". Se a
+    # resposta é igual à anterior E o cliente escreveu algo no meio, ela NÃO pode sair de novo.
+    _ant = (fatos_b.get("ult_resposta") or "").strip()
+    _novo_txt = (d.get("texto") or "").strip()
+    if _ant and _novo_txt and _novo_txt[:80] == _ant[:80]:
+        M.log_evento(contato, "resposta_repetida_bloqueada", {"mask": _mask(contato), "texto": _novo_txt[:70]})
+        d = dict(d, acao="transferir", fila=C.FILAS.get("atendimento", 112), fastReplyId=0,
+                 texto="Deixa eu te passar pra uma pessoa do time pra resolver isso com você agora.",
+                 nota_interna="[Pedrão] REPETIÇÃO — eu ia mandar a mesma frase de novo e o cliente "
+                              "já tinha respondido. Assumam a conversa. Última fala do cliente: "
+                              + str(texto or "")[:120])
+    if _novo_txt:
+        d.setdefault("dados_coletados", {})["ult_resposta"] = _novo_txt[:120]
 
     # ORDEM DO DONO: nada de nota interna na hora — a nota do lead sai no vigia dos 20 min.
     # EXCEÇÃO: na TRANSFERÊNCIA a nota vai junto (o humano precisa do contexto ao pegar o ticket).
@@ -1161,6 +1187,59 @@ async def admin_teste_botoes(request: Request, x_admin_token: str = Header(defau
             "observar_no_celular": "qual variante mostrou o botao de copiar",
             "nota": "preview_url/context/template nao existem na API externa da FlowSeller — "
                     "campos ausentes registrados como None no log forense"}
+
+@app.post("/admin/followup-lead")
+async def admin_followup_lead(request: Request, x_admin_token: str = Header(default="")):
+    """2ª TENTATIVA do lead (ordem do dono 25/07): perguntei o endereço pra ver viabilidade, o
+    cliente NÃO respondeu -> depois de ~10-15 min mando UMA pergunta simples pra não deixar o
+    lead morrer. Só entra quem: (a) a última fala da conversa foi MINHA e foi pedido de endereço;
+    (b) o cliente não escreveu nada depois; (c) ninguém mais falou com ele; (d) 1x só por conversa.
+    Body: {"min_min": 10, "max_min": 180, "confirmar": false}"""
+    _auth_painel(x_admin_token)
+    body = await request.json() if await request.body() else {}
+    min_s = float(body.get("min_min", 10)) * 60
+    max_s = float(body.get("max_min", 180)) * 60
+    confirmar = bool(body.get("confirmar"))
+    agora = time.time()
+    _PEDI_END = re.compile(r"(rua,?\s*n[úu]mero\s*e\s*bairro|qual\s+[ée]\s+o\s+endere[çc]o|"
+                           r"me\s+passa\s+o\s+endere[çc]o|confirmar?\s+a\s+viabilidade)", re.I)
+    import sqlite3
+    con = sqlite3.connect(C.SQLITE_PATH)
+    con.row_factory = sqlite3.Row
+    contatos = [r["contato"] for r in con.execute(
+        "SELECT DISTINCT contato FROM mensagens WHERE ts>?", (agora - max_s,)).fetchall()]
+    alvos = []
+    for c in contatos:
+        msgs = con.execute("SELECT de,texto,ts FROM mensagens WHERE contato=? ORDER BY ts DESC LIMIT 6",
+                           (c,)).fetchall()
+        if not msgs or msgs[0]["de"] != "pedrao":
+            continue                                   # cliente falou por último -> não é abandono
+        idade = agora - float(msgs[0]["ts"])
+        if not (min_s <= idade <= max_s):
+            continue
+        if not _PEDI_END.search(msgs[0]["texto"] or ""):
+            continue                                   # a última fala minha não pedia endereço
+        f = M.get_fatos(c)
+        if f.get("followup_ts") or f.get("cop_mute_ticket"):
+            continue                                   # já insisti, ou humano assumiu
+        alvos.append({"contato": c, "mask": _mask(c), "min": int(idade // 60)})
+    con.close()
+    if not confirmar:
+        return {"dry_run": True, "quantos": len(alvos), "alvos": alvos}
+    TXT = ("Oi! Passando aqui rapidinho 😊 Vi que você perguntou sobre os nossos planos.\n\n"
+           "Qual é o endereço (rua, número e bairro)? É só pra eu verificar a viabilidade "
+           "e te passar a informação certa.")
+    ok = []
+    for a in alvos:
+        try:
+            await asyncio.to_thread(FS.responder_texto, a["contato"], TXT,
+                                    number=a["contato"], assinar=False, delay=False)
+            M.merge_fatos(a["contato"], {"followup_ts": time.time()})
+            M.log_evento(a["contato"], "followup_lead", {"mask": a["mask"], "min": a["min"]})
+            ok.append(a["mask"])
+        except Exception as ex:
+            M.log_evento(a["contato"], "followup_falhou", {"erro": str(ex)[:80]})
+    return {"dry_run": False, "enviados": len(ok), "detalhe": ok}
 
 def _eventos_desde(desde: float):
     """Eventos (ts, contato, tipo, payload) a partir de um epoch — usado pelo resgate."""

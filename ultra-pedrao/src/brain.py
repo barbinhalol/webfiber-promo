@@ -69,6 +69,38 @@ _DESCONTRAI = re.compile(
     r"\b(relaxa(\s+que)?|relaxe|fica\s+(tranquil[oa]|frio|de\s+boa|suave)|"
     r"n[ãa]o\s+esquenta|t[áa]\s+suave|tranquil[ãa]o|de\s+boa|calma\s+a[íi]|sem\s+estresse)\b[,!.]?\s*",
     re.I)
+# 3) "GALERA" e RISADA (ordem do dono 25/07 tarde, viu ao vivo): aqui NÃO existe "galera" —
+#    existe um TIME PROFISSIONAL de suporte. E nada de risadinha ("rá", "kkk", "rs") com quem
+#    está sem internet, muito menos com quem acabou de dizer que é difícil falar com robô.
+_GALERA = re.compile(r"\b(a\s+|nossa\s+|pra\s+|com\s+a\s+)?galera\b(\s+de\s+verdade)?", re.I)
+_RISADA = re.compile(r"(?<![a-zà-ú])(k{2,}|r+s+r*s*|haha+h?|hehe+|rá+|ha!|\bkk\b)(?![a-zà-ú])", re.I)
+# 4) GÍRIA/INTERJEIÇÃO em suporte: "que chato", "show", "opa" com quem está com problema.
+_GIRIA_SUP = re.compile(
+    r"\b(que\s+chato(\s+mesmo)?|poxa\s+vida|eita|caramba|nossa\s+senhora|"
+    r"show(\s+de\s+bola)?|massa|top|beleza\s+ent[ãa]o)\b[,!.]?\s*", re.I)
+
+# OFERTA DE VENDA — o que NÃO pode sair pra quem está em atendimento de problema.
+_OFERTA_VENDA = re.compile(
+    r"(quer\s+(que\s+eu\s+)?(te\s+)?(mostr|ver|conhec|ve[jr])\w*[^.!?]{0,25}(plano|op[çc][õo]es)|"
+    r"(temos|tem|a\s+gente\s+tem)\s+(cobertura|disponibilidade|viabilidade)|"
+    r"(melhorar|aumentar|fazer\s+upgrade|subir)\s+(o\s+|seu\s+|teu\s+)?plano|"
+    r"(olha\s+s[óo]|aqui\s+est[ãa]o|vou\s+te\s+mostrar)[^.!?]{0,20}plano|"
+    r"vizinhos?\s+j[áa]\s+s[ãa]o\s+(nossos\s+)?clientes|"
+    r"pr[ée][- ]cadastro|qual\s+plano\s+(mais\s+)?(te\s+)?interess)", re.I)
+
+# O cliente está em SUPORTE? (mensagem atual OU roteiro de suporte já aberto na ficha)
+_SUP_CTX = re.compile(
+    r"\b(sem\s+internet|sem\s+sinal|sem\s+conex|caiu|caindo|lenta|lentid[ãa]o|oscil|"
+    r"n[ãa]o\s+(funciona|conecta|pega|navega|est[áa]\s+funcionando)|"
+    r"luz\s+(vermelha|los)|roteador|modem|t[ée]cnico|reparo|problema\s+na\s+internet|"
+    r"travando|instabilidade)\b", re.I)
+
+def _e_suporte(msg, memoria):
+    """True se a conversa é de SUPORTE — pela mensagem atual ou pelo roteiro já em andamento."""
+    m = memoria or {}
+    if str(m.get("sup") or "") in ("1", "2", "fim") or m.get("problema_atual"):
+        return True
+    return bool(_SUP_CTX.search(msg or ""))
 
 def _tom_suporte(texto, sentimento=None):
     """Tira 'o básico' e as expressões de descontração das respostas de suporte."""
@@ -84,6 +116,16 @@ def _tom_suporte(texto, sentimento=None):
     if (sentimento or {}).get("humor") != "animado" and _DESCONTRAI.search(t):
         alertas.append("GUARD: expressão de descontração removida (suporte)")
         t = _DESCONTRAI.sub("", t)
+    # "galera" NUNCA — nem com cliente animado. Aqui é time/equipe.
+    if _GALERA.search(t):
+        alertas.append("GUARD: 'galera' -> equipe (aqui é time profissional)")
+        t = _GALERA.sub("nossa equipe", t)
+    if _RISADA.search(t):
+        alertas.append("GUARD: risada removida")
+        t = _RISADA.sub("", t)
+    if (sentimento or {}).get("humor") != "animado" and _GIRIA_SUP.search(t):
+        alertas.append("GUARD: gíria/interjeição removida (suporte)")
+        t = _GIRIA_SUP.sub("", t)
         t = re.sub(r"^\s*[,;]\s*", "", t)
     t = re.sub(r"\s{2,}", " ", t).strip()
     if alertas and t:                       # frase não pode começar em minúscula depois do corte
@@ -1070,6 +1112,19 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     # cobrança em aberto" SEM consulta nenhuma ao MyCore (e errado: havia 1 fatura). Quem afirma
     # se tem ou não tem fatura é só o fluxo de fatura real (fastpath/copiloto, que consulta).
     # O LLM no máximo se oferece pra verificar.
+    # ⛔ NUNCA VENDER PRA QUEM ESTÁ COM PROBLEMA (ordem do dono 25/07, 3 casos reais no mesmo dia):
+    #   • "Internet caindo e lenta" -> pediu endereço (roteiro de suporte) -> quando o cliente
+    #     mandou o endereço, respondeu "nesse endereço temos disponibilidade, quer ver os planos?"
+    #   • Tayana, SEM internet, disse "duas luzes verdes" -> "você já é cliente, dá pra MELHORAR
+    #     SEU PLANO, quer que eu veja opções?"
+    #   • "Código pix" -> "aqui estão nossos planos, me passa a rua..."
+    # O endereço no contexto de SUPORTE é pra localizar o cliente, NÃO é viabilidade comercial.
+    if texto and _e_suporte(texto_todo, memoria_cliente) and _OFERTA_VENDA.search(texto):
+        alertas.append("GUARD: oferta de venda removida (cliente em SUPORTE)")
+        novo = _remove_sentencas(texto, _OFERTA_VENDA)
+        texto = novo if len(novo) >= 25 else (
+            "Já anotei tudo aqui. Vou registrar seu atendimento pra nossa equipe técnica "
+            "e eles te dão retorno por aqui mesmo.")
     if texto and _STATUS_COBRANCA.search(texto):
         alertas.append("GUARD: status de cobranca inventado removido")
         texto = ("Deixa eu conferir isso certinho no sistema pra você 😊 "
