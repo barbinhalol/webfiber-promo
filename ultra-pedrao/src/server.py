@@ -113,6 +113,17 @@ async def _vigia_followup():
                                         number=a["contato"], assinar=False, delay=False)
                 M.log_evento(a["contato"], "followup_lead",
                              {"mask": _mask(a["contato"]), "min": a["min"], "auto": True})
+            # 3 min sem responder "quer ver os planos?" -> manda os planos assim mesmo
+            for a in await asyncio.to_thread(_planos_pendentes):
+                ext = M.ultimo_external_key(a["contato"]) or a["contato"]
+                M.merge_fatos(a["contato"], {"planos_ts": time.time()})   # ANTES: 1x só
+                await asyncio.to_thread(
+                    FS.executar_decisao, ext,
+                    {"acao": "fastreply", "fastReplyId": 1296, "fila": 0,
+                     "texto": "Separei os planos pra você dar uma olhada 👇",
+                     "nota_interna": ""}, a["contato"])
+                M.log_evento(a["contato"], "planos_followup",
+                             {"mask": _mask(a["contato"]), "min": a["min"]})
         except Exception as e:
             print("[vigia_followup] erro:", e, flush=True)
         await asyncio.sleep(120)
@@ -705,6 +716,20 @@ def _processar(contato, texto, ctx):
     elif _eh_planos:
         d.setdefault("dados_coletados", {})["planos_ts"] = time.time()
 
+    # ⛔ PROMETEU OS PLANOS -> MANDA OS PLANOS (caso Marcia, 25/07 15:23): o bot escreveu "deixa
+    # eu já te mostrar os nossos planos" e NÃO mandou nada. Se o texto promete mostrar/enviar
+    # plano e a ação não é o pacote de planos, a promessa vira envio de verdade.
+    _PROMETEU_PLANOS = re.compile(
+        r"(vou\s+(te\s+)?(mostrar|mandar|enviar|passar)|deixa\s+eu\s+(j[áa]\s+)?te\s+mostrar|"
+        r"j[áa]\s+(te\s+)?(mostro|mando|envio)|olha\s+s[óo]\s+(os\s+)?planos|"
+        r"aqui\s+(est[ãa]o|v[ãa]o)\s+(os\s+)?(nossos\s+)?planos)[^.!?\n]{0,30}\bplano", re.I)
+    if (d.get("acao") in ("responder", "transferir") and d.get("fastReplyId", 0) == 0
+            and _PROMETEU_PLANOS.search(d.get("texto") or "")
+            and not (fatos_b.get("planos_ts") and (time.time() - float(fatos_b["planos_ts"])) < 180)):
+        M.log_evento(contato, "promessa_planos_cumprida", {"mask": _mask(contato)})
+        d = dict(d, acao="fastreply", fastReplyId=1296, fila=0)
+        d.setdefault("dados_coletados", {})["planos_ts"] = time.time()
+
     # ⛔ ANTI-REPETIÇÃO GERAL (25/07): "pra empresa a gente tem soluções próprias" saiu 3x
     # seguidas pro mesmo cliente que já tinha respondido "Reside" e "É para residência". Se a
     # resposta é igual à anterior E o cliente escreveu algo no meio, ela NÃO pode sair de novo.
@@ -712,8 +737,14 @@ def _processar(contato, texto, ctx):
     _novo_txt = (d.get("texto") or "").strip()
     if _ant and _novo_txt and _novo_txt[:80] == _ant[:80]:
         M.log_evento(contato, "resposta_repetida_bloqueada", {"mask": _mask(contato), "texto": _novo_txt[:70]})
-        d = dict(d, acao="transferir", fila=C.FILAS.get("atendimento", 112), fastReplyId=0,
-                 texto="Deixa eu te passar pra uma pessoa do time pra resolver isso com você agora.",
+        # 25/07: esta frase dizia "...resolver isso com você AGORA" e saiu 4x num sábado à tarde,
+        # quando não há ninguém. "Agora" não existe (ordem do dono) — o certo é o prazo real.
+        _setor_rep = "suporte" if B._e_suporte(str(texto or ""), fatos_b) else "comercial"
+        d = dict(d, acao="transferir",
+                 fila=B._recategorizar(0, d.get("intencao", ""), d.get("motivo", ""), str(texto or "")),
+                 fastReplyId=0,
+                 texto=("Vou passar sua conversa pro time responsável, com prioridade. "
+                        "Eles falam com você " + S.proximo_atendimento(setor=_setor_rep) + ", por aqui mesmo."),
                  nota_interna="[Pedrão] REPETIÇÃO — eu ia mandar a mesma frase de novo e o cliente "
                               "já tinha respondido. Assumam a conversa. Última fala do cliente: "
                               + str(texto or "")[:120])
@@ -1228,6 +1259,42 @@ FOLLOWUP_TXT = ("Oi! Passando aqui rapidinho 😊 Vi que você perguntou sobre o
 _PEDI_ENDERECO = re.compile(r"(rua,?\s*n[úu]mero\s*e\s*bairro|qual\s+[ée]\s+o\s+endere[çc]o|"
                             r"me\s+passa\s+o\s+endere[çc]o|confirmar?\s+a\s+viabilidade|"
                             r"verificar\s+a\s+viabilidade)", re.I)
+# ⛔ ORDEM DO DONO (25/07): "não precisa esperar o SIM quando pergunta se quer que mostre os
+# planos — espera 3 minutos e envia do mesmo jeito, como follow-up". Perguntar e ficar esperando
+# mata o lead; o material é o que faz ele responder.
+_OFERECI_PLANOS = re.compile(
+    r"(quer\s+(que\s+eu\s+)?(te\s+)?(mostr|mand|envi|ver)\w*[^.!?\n]{0,25}plano|"
+    r"posso\s+(te\s+)?(mostrar|mandar|enviar)[^.!?\n]{0,20}plano|"
+    r"j[áa]\s+conhece\s+(os\s+)?(nossos\s+)?planos)", re.I)
+PLANOS_ESPERA_S = int(os.environ.get("PLANOS_ESPERA_S", "180"))   # 3 min
+
+def _planos_pendentes():
+    """Perguntei 'quer ver os planos?' e o cliente não respondeu em 3 min -> mando assim mesmo."""
+    agora = time.time()
+    import sqlite3
+    con = sqlite3.connect(C.SQLITE_PATH)
+    con.row_factory = sqlite3.Row
+    alvos = []
+    try:
+        contatos = [r["contato"] for r in con.execute(
+            "SELECT DISTINCT contato FROM mensagens WHERE ts>?", (agora - 7200,)).fetchall()]
+        for c in contatos:
+            ult = con.execute("SELECT de,texto,ts FROM mensagens WHERE contato=? ORDER BY ts DESC LIMIT 1",
+                              (c,)).fetchone()
+            if not ult or ult["de"] != "pedrao":
+                continue
+            idade = agora - float(ult["ts"])
+            if not (PLANOS_ESPERA_S <= idade <= 7200) or not _OFERECI_PLANOS.search(ult["texto"] or ""):
+                continue
+            f = M.get_fatos(c)
+            if f.get("cop_mute_ticket") or f.get("cop_mute_ts"):
+                continue
+            if f.get("planos_ts") and (agora - float(f["planos_ts"])) < 1800:
+                continue                      # já mandou o pacote há pouco
+            alvos.append({"contato": c, "mask": _mask(c), "min": int(idade // 60)})
+    finally:
+        con.close()
+    return alvos
 
 def _followup_alvos(min_s: float, max_s: float):
     """Leads que ficaram parados depois de eu pedir o endereço. Critérios (todos obrigatórios):

@@ -95,6 +95,19 @@ _SUP_CTX = re.compile(
     r"luz\s+(vermelha|los)|roteador|modem|t[ée]cnico|reparo|problema\s+na\s+internet|"
     r"travando|instabilidade)\b", re.I)
 
+_CITA_COMERCIAL = re.compile(r"\b(o\s+|nosso\s+|time\s+|setor\s+|equipe\s+)?comercial\b", re.I)
+
+# ⛔ ONDE A GENTE NÃO ATENDE (ordem do dono 25/07: "Barra e Recreio você sabe que não atendemos").
+# A base de endereços só tem RUAS — bairro nenhum. Então o bot pedia endereço, o cliente mandava,
+# e ele seguia como se fosse atender. Estes bairros/cidades estão fora da área: dizer na hora,
+# com honestidade, em vez de coletar dados e prometer o que não existe.
+_FORA_DA_AREA = re.compile(
+    r"\b(barra\s+da\s+tijuca|barra\b|recreio|jacarepagu[áa]|vargem\s+(grande|pequena)|"
+    r"campo\s+grande|santa\s+cruz|bangu|realengo|guaratiba|s[ãa]o\s+gon[çc]alo|niter[óo]i|"
+    r"duque\s+de\s+caxias|nova\s+igua[çc]u|belford\s+roxo|nil[óo]polis|mesquita|"
+    r"s[ãa]o\s+jo[ãa]o\s+de\s+meriti|itabora[íi]|mag[ée]|petr[óo]polis|"
+    r"s[ãa]o\s+paulo|\bsp\b|minas|belo\s+horizonte)\b", re.I)
+
 def _e_suporte(msg, memoria):
     """True se a conversa é de SUPORTE — pela mensagem atual ou pelo roteiro já em andamento."""
     m = memoria or {}
@@ -141,6 +154,19 @@ _AGENDA = re.compile(
     r"dia\s+\d{1,2}(/\d{1,2})?|em\s+\d+\s*(min|minutos?|horas?|h|dias?)|"
     r"[àa]s?\s*\d{1,2}\s*(h\b|hs\b|horas?|:\d{2})|per[íi]odo da (manh[ãa]|tarde|noite))\b", re.I)
 # frases PROATIVAS de contato que NÃO são agendamento de visita -> blindadas do guard de data
+# ⛔ "AGORA" NÃO EXISTE (ordem do dono 25/07, vista 4x ao vivo): o bot prometia "vou te passar
+# pra uma pessoa do time pra resolver isso com você AGORA" às 14h, 16h e 17h de sábado — não há
+# ninguém agora, o atendimento humano tem horário. Nunca prometer pessoa/solução IMEDIATA; o
+# certo é o prazo REAL, calculado por schedule.proximo_atendimento(). Guard cirúrgico: pega o
+# imediatismo ligado a atendimento/resolução/transferência, não o "agora me diz seu CPF".
+_PROMESSA_AGORA = re.compile(
+    r"((resolver?|resolve|tratar|ver|olhar|atender|falar|passar|transferir|encaminhar|"
+    r"chamar|acionar)[^.!?\n]{0,40}\b(agora|j[áa]|neste\s+momento|nesse\s+momento|"
+    r"imediatamente|em\s+instantes|already)\b|"
+    r"\b(agora|j[áa])\s+(mesmo\s+)?(vou|te\s+passo|passo|transfiro|chamo|aciono)\b|"
+    r"\bum\s+(momento|instante|minutinho)\s+que\s+(j[áa]|algu[ée]m)\b|"
+    r"(pessoa|algu[ée]m|atendente|t[ée]cnico)\s+do\s+time[^.!?\n]{0,30}\bagora\b)", re.I)
+
 _AGENDA_OK = re.compile(
     r"(pr[óo]ximo dia [úu]til|entra(m|r)?\s+em contato|entra\s+em\s+contato|"
     r"(nosso|o)\s+(time|setor|pessoal|comercial|suporte|financeiro)\s+(vai|entra|te)|"
@@ -211,10 +237,16 @@ def _fila_por_intencao(intencao, motivo):
 _FILA_ATENDIMENTO_GENERICA = 112
 def _recategorizar(fila, intencao, motivo, texto_cliente=""):
     """Tira o palpite genérico (112/Atendimento) da mesa: relê o que o cliente disse e escolhe
-    o SETOR de verdade. Cancelamento (26) e as três filas reais passam intactos."""
+    o SETOR de verdade. Cancelamento (26) passa intacto.
+    ⛔ 25/07 (caso Nanci): SUPORTE VENCE. A cliente estava com a internet caindo e velocidade
+    abaixo do contratado, e o bot disse "vou passar pro COMERCIAL sua insatisfação" — Comercial
+    é quem VENDE. Quem tem problema técnico vai pro Suporte, mesmo insatisfeito, mesmo falando
+    em cancelar. Por isso o teste de suporte roda ANTES de tudo e sobrepõe até a fila que veio."""
+    tudo = " ".join([str(intencao or ""), str(motivo or ""), str(texto_cliente or "")])
+    if _e_suporte(tudo, {}) or _SUP_CTX.search(tudo):
+        return 24
     if fila in (23, 24, 25, 26):
         return fila
-    tudo = " ".join([str(intencao or ""), str(motivo or ""), str(texto_cliente or "")])
     nova = _fila_por_intencao(intencao, tudo)
     return nova if nova != _FILA_ATENDIMENTO_GENERICA else 23   # na dúvida, Comercial atende
 
@@ -669,6 +701,19 @@ def fastpath(mensagem, sessao_nova, historico, fatos=None, sentimento=None, cont
     # cliente IRRITADO (ou querendo cancelar) nunca cai no atalho -> LLM trata com cuidado
     if sentimento and sentimento.get("humor") in ("irritado", "churn"):
         return None
+    # ⛔ FORA DA ÁREA (ordem do dono 25/07, caso Marcia/Barra-Recreio): não coletar endereço nem
+    # prometer plano pra quem está onde a gente não atende. Dizer na hora, com honestidade.
+    # Só quando NÃO é cliente em suporte (cliente nosso pode citar bairro vizinho por outro motivo).
+    if _FORA_DA_AREA.search(msg) and not _e_suporte(msg, fatos) and not str(fatos.get("cpf") or ""):
+        _reg = _FORA_DA_AREA.search(msg).group(0).strip().title()
+        return _fp("Obrigado por procurar a WebFiber! 😊\n\n"
+                   f"Infelizmente ainda não atendemos em {_reg} — nossa fibra cobre o Centro do "
+                   "Rio e bairros próximos.\n\n"
+                   "Se você tiver outro endereço aqui na nossa região, é só me mandar que eu "
+                   "verifico na hora.",
+                   intencao="planos", icone="📍",
+                   nota=f"[Pedrão] FORA DA ÁREA — cliente perguntou por {_reg}. Informado que não "
+                        "atendemos ali. Não coletei endereço nem enviei planos.")
     sup = "" if sessao_nova else str(fatos.get("sup") or "")
 
     # PEDIU HUMANO -> atende na hora, sem insistir nem repetir menu (regra 15)
@@ -1135,6 +1180,20 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     #     SEU PLANO, quer que eu veja opções?"
     #   • "Código pix" -> "aqui estão nossos planos, me passa a rua..."
     # O endereço no contexto de SUPORTE é pra localizar o cliente, NÃO é viabilidade comercial.
+    # ⛔ "AGORA" nunca existe: troca a promessa de imediatismo pelo prazo REAL do setor.
+    if texto and _PROMESSA_AGORA.search(texto):
+        alertas.append("GUARD: promessa de 'agora' trocada pelo prazo real")
+        _setor = "suporte" if _e_suporte(texto_todo, memoria_cliente) else "comercial"
+        _quando = S.proximo_atendimento(setor=_setor) if S else "no próximo dia útil, a partir das 9h"
+        novo = _remove_sentencas(texto, _PROMESSA_AGORA)
+        _fecho = (f"Já deixei tudo registrado com prioridade. Nossa equipe fala com você "
+                  f"{_quando}, por aqui mesmo.")
+        texto = (novo + "\n\n" + _fecho) if len(novo) >= 25 else _fecho
+    # SETOR COERENTE (caso Nanci, 25/07 16:19): cliente com internet caindo ouviu "vou passar pro
+    # COMERCIAL sua insatisfação". Comercial é quem VENDE. Em suporte, a palavra é equipe técnica.
+    if texto and _e_suporte(texto_todo, memoria_cliente) and _CITA_COMERCIAL.search(texto):
+        alertas.append("GUARD: 'Comercial' trocado por equipe técnica (assunto é SUPORTE)")
+        texto = _CITA_COMERCIAL.sub("nossa equipe técnica", texto)
     if texto and _e_suporte(texto_todo, memoria_cliente) and _OFERTA_VENDA.search(texto):
         alertas.append("GUARD: oferta de venda removida (cliente em SUPORTE)")
         novo = _remove_sentencas(texto, _OFERTA_VENDA)
