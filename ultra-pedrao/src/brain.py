@@ -195,12 +195,28 @@ def _fila_por_intencao(intencao, motivo):
     suporte -> Suporte(24) | planos/comercial -> Comercial(23) | financeiro -> Financeiro(25)
     | CANCELAMENTO -> Outros assuntos(26) — cancelamento NÃO vai pro Financeiro."""
     s = (str(intencao) + " " + str(motivo)).lower()
-    if re.search(r"suporte|t[eé]cnic|sem (internet|sinal|conex)|caiu|lent|oscil|reparo", s): return 24
+    if re.search(r"suporte|t[eé]cnic|sem (internet|sinal|conex)|caiu|lent|oscil|reparo|"
+                 r"luz\s+(vermelha|los)|roteador|instala[çc][ãa]o|visita|wi-?fi|senha", s): return 24
     # cancelamento ANTES do financeiro (senão "cancelar boleto" cairia no Financeiro)
     if re.search(r"cancel|rescis|desist|encerrar\s+(o\s+)?(contrato|plano|servi[çc]o)", s): return 26
-    if re.search(r"financ|boleto|cobran|fatura|pagamento|2[ªa]?\s*via|jur[ií]dic|procon", s): return 25
-    if re.search(r"pre[çc]o|plano|viab|cobertura|contrat|comercial|empresa|cnpj", s): return 23
+    if re.search(r"financ|boleto|cobran|fatura|pagamento|pix|2[ªa]?\s*via|jur[ií]dic|procon|"
+                 r"desbloqu|negativ|vencimento|desconto|renegoci", s): return 25
+    if re.search(r"pre[çc]o|plano|viab|cobertura|contrat|comercial|empresa|cnpj|"
+                 r"promo|upgrade|mudan[çc]a\s+de\s+endere[çc]o|velocidade", s): return 23
     return 112
+
+# ⛔ ORDEM DO DONO (25/07): ao categorizar (a nota amarela / transferência), o assunto TEM que
+# cair em PLANOS, SUPORTE ou FINANCEIRO — "Outros assuntos" não é categoria de triagem. A única
+# exceção é o CANCELAMENTO, que o próprio dono mandou pra fila 26 em 14/07 e continua valendo.
+_FILA_ATENDIMENTO_GENERICA = 112
+def _recategorizar(fila, intencao, motivo, texto_cliente=""):
+    """Tira o palpite genérico (112/Atendimento) da mesa: relê o que o cliente disse e escolhe
+    o SETOR de verdade. Cancelamento (26) e as três filas reais passam intactos."""
+    if fila in (23, 24, 25, 26):
+        return fila
+    tudo = " ".join([str(intencao or ""), str(motivo or ""), str(texto_cliente or "")])
+    nova = _fila_por_intencao(intencao, tudo)
+    return nova if nova != _FILA_ATENDIMENTO_GENERICA else 23   # na dúvida, Comercial atende
 
 # ---------------- ATALHOS SEM LLM (fastpath) ----------------
 # Medido ao vivo: o CLI grátis leva ~4,5s só pra abrir processo/rede (chão inevitável) + ~4,5s
@@ -1176,6 +1192,13 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
                  "contato com você no próximo dia útil, pela manhã. Pode ser por aqui mesmo, neste número?")
     if acao == "transferir" and fila not in FILAS:
         fila = _fila_por_intencao(d.get("intencao", ""), d.get("motivo", ""))
+    # RECATEGORIZAÇÃO (ordem do dono 25/07): a nota amarela nunca sai como "Outros assuntos" —
+    # relê o contexto e manda pro setor de verdade (Planos, Suporte ou Financeiro).
+    if acao == "transferir":
+        _f0 = fila
+        fila = _recategorizar(fila, d.get("intencao", ""), d.get("motivo", ""), mensagem)
+        if fila != _f0:
+            alertas.append(f"GUARD: recategorizado {_f0} -> {fila} (nada de 'Outros')")
 
     d.update({"acao": acao, "texto": texto, "fastReplyId": fid, "fila": fila,
               "_alertas": alertas, "_viabilidade_sistema": viab})

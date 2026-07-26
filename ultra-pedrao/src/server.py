@@ -95,9 +95,32 @@ async def _vigia_notas():
             print("[vigia_notas] erro:", e, flush=True)
         await asyncio.sleep(_VIGIA_INTERVALO_S)
 
+FOLLOWUP_MIN_S = int(os.environ.get("FOLLOWUP_MIN_S", "600"))    # 10 min (ordem do dono 25/07)
+FOLLOWUP_MAX_S = int(os.environ.get("FOLLOWUP_MAX_S", "14400"))  # até 4h depois; passou disso, esquece
+
+async def _vigia_followup():
+    """REGRA DO DONO (25/07): perguntei o endereço pra ver viabilidade e o cliente não respondeu?
+    Depois de 10 min mando UMA pergunta simples pra não deixar o lead morrer. Roda sozinho —
+    não depende de mensagem nova chegar (o lead calado é justamente quem não manda mais nada)."""
+    await asyncio.sleep(60)
+    while True:
+        try:
+            alvos = await asyncio.to_thread(_followup_alvos, FOLLOWUP_MIN_S, FOLLOWUP_MAX_S)
+            for a in alvos:
+                ext = M.ultimo_external_key(a["contato"]) or a["contato"]
+                M.merge_fatos(a["contato"], {"followup_ts": time.time()})   # ANTES: 1x só
+                await asyncio.to_thread(FS.responder_texto, ext, FOLLOWUP_TXT,
+                                        number=a["contato"], assinar=False, delay=False)
+                M.log_evento(a["contato"], "followup_lead",
+                             {"mask": _mask(a["contato"]), "min": a["min"], "auto": True})
+        except Exception as e:
+            print("[vigia_followup] erro:", e, flush=True)
+        await asyncio.sleep(120)
+
 @app.on_event("startup")
 async def _ligar_vigia():
     asyncio.create_task(_vigia_notas())
+    asyncio.create_task(_vigia_followup())
 
 # SENTINELA ANTI-DUPLO-BOT (incidente 15-16/07/2026: canal trocado pro chatbot NATIVO da
 # FlowSeller e o Pedrao continuou respondendo -> DOIS bots na mesma conversa). Os menus do
@@ -893,10 +916,20 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
                 and PAINEL.ativo() and PAINEL.copiloto_ativo() and ev["texto"]
                 and not _cop_mudo(ev)):
             return await asyncio.to_thread(_copiloto, ev)
-        M.log_evento(ev["contato"], "ignorado_humano_assumiu",
-                     {"mask": _mask(ev["contato"]), "status": ev.get("status"),
-                      "user": bool(ev.get("user_id")), "queue": ev.get("queue_id")})
-        return {"status": "ignorado_humano_assumiu"}
+        # ⛔ ORDEM DO DONO (25/07): "mesmo se ele falar depois da nota amarela, você CONTINUA a
+        # conversa, mesmo tendo recategorizado". Ou seja: a FILA sozinha não cala o Pedrão — ela
+        # é só o setor que vai assumir. Quem cala é PESSOA: atendente que pegou o ticket
+        # (`user_id`) ou que DIGITOU (`cop_mute`). No canal Pedrão puro (só_copiloto desligado),
+        # o cliente que responde depois da transferência continua sendo atendido, não some.
+        if (ev.get("queue_id") and not ev.get("user_id") and not _cop_mudo(ev)
+                and ev["texto"] and PAINEL.ativo() and not PAINEL.so_copiloto()):
+            M.log_evento(ev["contato"], "continua_apos_categoria",
+                         {"mask": _mask(ev["contato"]), "queue": ev.get("queue_id")})
+        else:
+            M.log_evento(ev["contato"], "ignorado_humano_assumiu",
+                         {"mask": _mask(ev["contato"]), "status": ev.get("status"),
+                          "user": bool(ev.get("user_id")), "queue": ev.get("queue_id")})
+            return {"status": "ignorado_humano_assumiu"}
     # liga/desliga pelo painel (o "botão" do dono, sem terminal)
     if not PAINEL.ativo():
         return {"status": "desligado_no_painel"}
@@ -1189,6 +1222,41 @@ async def admin_teste_botoes(request: Request, x_admin_token: str = Header(defau
             "nota": "preview_url/context/template nao existem na API externa da FlowSeller — "
                     "campos ausentes registrados como None no log forense"}
 
+FOLLOWUP_TXT = ("Oi! Passando aqui rapidinho 😊 Vi que você perguntou sobre os nossos planos.\n\n"
+                "Qual é o endereço (rua, número e bairro)? É só pra eu verificar a viabilidade "
+                "e te passar a informação certa.")
+_PEDI_ENDERECO = re.compile(r"(rua,?\s*n[úu]mero\s*e\s*bairro|qual\s+[ée]\s+o\s+endere[çc]o|"
+                            r"me\s+passa\s+o\s+endere[çc]o|confirmar?\s+a\s+viabilidade|"
+                            r"verificar\s+a\s+viabilidade)", re.I)
+
+def _followup_alvos(min_s: float, max_s: float):
+    """Leads que ficaram parados depois de eu pedir o endereço. Critérios (todos obrigatórios):
+    última fala da conversa é MINHA e pedia endereço · o cliente não escreveu depois ·
+    ninguém mais assumiu · ainda não insisti nessa conversa."""
+    agora = time.time()
+    import sqlite3
+    con = sqlite3.connect(C.SQLITE_PATH)
+    con.row_factory = sqlite3.Row
+    alvos = []
+    try:
+        contatos = [r["contato"] for r in con.execute(
+            "SELECT DISTINCT contato FROM mensagens WHERE ts>?", (agora - max_s,)).fetchall()]
+        for c in contatos:
+            ult = con.execute("SELECT de,texto,ts FROM mensagens WHERE contato=? ORDER BY ts DESC LIMIT 1",
+                              (c,)).fetchone()
+            if not ult or ult["de"] != "pedrao":
+                continue
+            idade = agora - float(ult["ts"])
+            if not (min_s <= idade <= max_s) or not _PEDI_ENDERECO.search(ult["texto"] or ""):
+                continue
+            f = M.get_fatos(c)
+            if f.get("followup_ts") or f.get("cop_mute_ticket") or f.get("cop_mute_ts"):
+                continue
+            alvos.append({"contato": c, "mask": _mask(c), "min": int(idade // 60)})
+    finally:
+        con.close()
+    return alvos
+
 @app.post("/admin/followup-lead")
 async def admin_followup_lead(request: Request, x_admin_token: str = Header(default="")):
     """2ª TENTATIVA do lead (ordem do dono 25/07): perguntei o endereço pra ver viabilidade, o
@@ -1201,41 +1269,17 @@ async def admin_followup_lead(request: Request, x_admin_token: str = Header(defa
     min_s = float(body.get("min_min", 10)) * 60
     max_s = float(body.get("max_min", 180)) * 60
     confirmar = bool(body.get("confirmar"))
-    agora = time.time()
-    _PEDI_END = re.compile(r"(rua,?\s*n[úu]mero\s*e\s*bairro|qual\s+[ée]\s+o\s+endere[çc]o|"
-                           r"me\s+passa\s+o\s+endere[çc]o|confirmar?\s+a\s+viabilidade)", re.I)
-    import sqlite3
-    con = sqlite3.connect(C.SQLITE_PATH)
-    con.row_factory = sqlite3.Row
-    contatos = [r["contato"] for r in con.execute(
-        "SELECT DISTINCT contato FROM mensagens WHERE ts>?", (agora - max_s,)).fetchall()]
-    alvos = []
-    for c in contatos:
-        msgs = con.execute("SELECT de,texto,ts FROM mensagens WHERE contato=? ORDER BY ts DESC LIMIT 6",
-                           (c,)).fetchall()
-        if not msgs or msgs[0]["de"] != "pedrao":
-            continue                                   # cliente falou por último -> não é abandono
-        idade = agora - float(msgs[0]["ts"])
-        if not (min_s <= idade <= max_s):
-            continue
-        if not _PEDI_END.search(msgs[0]["texto"] or ""):
-            continue                                   # a última fala minha não pedia endereço
-        f = M.get_fatos(c)
-        if f.get("followup_ts") or f.get("cop_mute_ticket"):
-            continue                                   # já insisti, ou humano assumiu
-        alvos.append({"contato": c, "mask": _mask(c), "min": int(idade // 60)})
-    con.close()
+    alvos = await asyncio.to_thread(_followup_alvos, min_s, max_s)
     if not confirmar:
         return {"dry_run": True, "quantos": len(alvos), "alvos": alvos}
-    TXT = ("Oi! Passando aqui rapidinho 😊 Vi que você perguntou sobre os nossos planos.\n\n"
-           "Qual é o endereço (rua, número e bairro)? É só pra eu verificar a viabilidade "
-           "e te passar a informação certa.")
+    TXT = FOLLOWUP_TXT
     ok = []
     for a in alvos:
         try:
-            await asyncio.to_thread(FS.responder_texto, a["contato"], TXT,
-                                    number=a["contato"], assinar=False, delay=False)
             M.merge_fatos(a["contato"], {"followup_ts": time.time()})
+            _ext = M.ultimo_external_key(a["contato"]) or a["contato"]
+            await asyncio.to_thread(FS.responder_texto, _ext, TXT,
+                                    number=a["contato"], assinar=False, delay=False)
             M.log_evento(a["contato"], "followup_lead", {"mask": a["mask"], "min": a["min"]})
             ok.append(a["mask"])
         except Exception as ex:
