@@ -24,6 +24,8 @@ PADRAO = {
                               # em 25/07 depois do dono ver o Pedrao se APRESENTAR ("Eu sou o Pedrao...")
                               # e oferecer PLANOS logo apos o cliente clicar FINANCEIRO. Desligar so
                               # quando o canal voltar pro fluxo vazio "Ultra Pedrao".
+    "canal_menu_ts": 0.0,     # quando o MENU NATIVO passou pela ultima vez = canal com chatbot
+                              # (usado pelo so_copiloto:"auto" pra saber em qual canal estamos)
     "nativo_ts": 0.0,         # sentinela anti-duplo-bot: quando o menu NATIVO da FlowSeller foi visto
     "sentinela_nativo": False, # DESLIGADA (23/07: dono CANCELOU o Pedrao nativo da FlowSeller ->
                                # nao ha mais outro bot; a espera de 10-30min virou so atraso inutil).
@@ -107,10 +109,39 @@ def bot_nativo_ativo(janela_s: int = None) -> bool:
     except Exception:
         return False
 
+CANAL_MENU_JANELA_S = int(os.environ.get("CANAL_MENU_JANELA_S", "5400"))   # 90 min
+
+def marcar_menu_canal():
+    """Registra que o MENU NATIVO da FlowSeller acabou de passar — é a impressão digital do canal
+    'ATENDIMENTO + ULTRA PEDRÃO'. Grava no máximo 1x/min (o menu passa dezenas de vezes por hora)."""
+    p = ler()
+    agora = time.time()
+    if agora - float(p.get("canal_menu_ts") or 0) < 60:
+        return
+    salvar({"canal_menu_ts": agora})
+
 def so_copiloto() -> bool:
-    """True = SÓ o Copiloto do Financeiro fala; o Pedrão nunca se apresenta nem responde sozinho.
-    É o modo do canal "ATENDIMENTO + ULTRA PEDRÃO", onde o chatbot normal já atende o cliente."""
-    return bool(ler().get("so_copiloto", False))
+    """True = SÓ o Copiloto do Financeiro fala; o Pedrão fica mudo.
+
+    25/07-26/07: essa chave era MANUAL e virou a maior fonte de erro do sistema — em 26/07 09:17
+    o dono trocou pro canal ATENDIMENTO+ULTRA PEDRÃO e a chave ficou desligada: o Pedrão
+    respondeu 17 vezes pra 8 clientes por cima do chatbot, até alguém perceber às 09:53.
+    Agora aceita "auto" (recomendado): o próprio MENU NATIVO denuncia o canal — ele passou no
+    webhook às 09:17:44, o segundo exato da troca. Menu recente = canal com chatbot = Pedrão
+    calado. Sem menu na janela = canal Ultra Pedrão puro = Pedrão atende. Sem depender de
+    ninguém lembrar de virar chave nenhuma.
+    Valores: True (sempre calado) | False (nunca) | "auto" (decide pelo menu)."""
+    v = ler().get("so_copiloto", False)
+    if isinstance(v, str) and v.strip().lower() == "auto":
+        return canal_tem_menu()
+    return bool(v)
+
+def canal_tem_menu() -> bool:
+    """O canal atual tem o chatbot nativo (menu) atendendo?"""
+    try:
+        return (time.time() - float(ler().get("canal_menu_ts") or 0)) < CANAL_MENU_JANELA_S
+    except Exception:
+        return False
 
 def copiloto_ativo() -> bool:
     """Copiloto Financeiro: entrega fatura na fila do Financeiro durante o horario humano."""

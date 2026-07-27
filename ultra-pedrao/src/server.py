@@ -807,6 +807,9 @@ _DEB = Debouncer(on_flush=_processar)
 @app.get("/health")
 def health():
     return {"ok": True, "uptime_s": int(time.time() - _START_TS), "config": C.resumo_seguro(),
+            "canal": ("ATENDIMENTO + ULTRA PEDRÃO (menu ativo — só o Copiloto Financeiro fala)"
+                      if PAINEL.canal_tem_menu() else "ULTRA PEDRÃO puro (o Pedrão atende tudo)"),
+            "pedrao_calado": PAINEL.so_copiloto(),
             "atuaria_agora": S.deve_atuar(), "modo_efetivo": PAINEL.modo_efetivo(C.BOT_MODE),
             "proximo_atendimento": S.proximo_atendimento(), "desempenho": _desempenho(),
             # "o Pedrão está esperando alguma coisa pra começar?" — resposta direta
@@ -905,6 +908,10 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     # (ANTES do dedup, pra renovar a janela a cada menu visto)
     if ev["from_me"] and ev["texto"] and _MENU_NATIVO.search(str(ev["texto"])):
         PAINEL.marcar_bot_nativo()
+        # o menu é a IMPRESSÃO DIGITAL do canal "ATENDIMENTO + ULTRA PEDRÃO" — com so_copiloto
+        # em "auto", é isto que faz o Pedrão se calar sozinho na troca de canal (26/07 09:17:44:
+        # o menu passou no segundo exato em que o dono trocou, e ninguém precisou virar chave).
+        PAINEL.marcar_menu_canal()
         M.log_evento(ev["contato"], "bot_nativo_detectado", {"mask": _mask(ev["contato"])})
         return {"status": "bot_nativo_detectado_pedrao_em_pausa"}
 
