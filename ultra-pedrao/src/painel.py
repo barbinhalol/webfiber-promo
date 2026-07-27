@@ -109,7 +109,13 @@ def bot_nativo_ativo(janela_s: int = None) -> bool:
     except Exception:
         return False
 
-CANAL_MENU_JANELA_S = int(os.environ.get("CANAL_MENU_JANELA_S", "5400"))   # 90 min
+# 26/07 20:36 — ERRO DE DESIGN MEU, corrigido: a janela era de 90 MIN e global. Trocar PARA o
+# canal com menu funcionava na hora, mas trocar DE VOLTA pro Ultra Pedrão puro deixava o bot
+# MUDO por até 90 minutos (cliente sem resposta — inadmissível). A janela global agora é curta
+# e serve só de rede de segurança; quem manda é o sinal POR CONVERSA (fatos["menu_ts"]), que
+# é imediato nos DOIS sentidos: veio menu nesta conversa = canal com chatbot; não veio = puro.
+CANAL_MENU_JANELA_S = int(os.environ.get("CANAL_MENU_JANELA_S", "300"))   # 5 min (rede)
+MENU_CONVERSA_S = int(os.environ.get("MENU_CONVERSA_S", "600"))          # menu nesta conversa
 
 def marcar_menu_canal():
     """Registra que o MENU NATIVO da FlowSeller acabou de passar — é a impressão digital do canal
@@ -120,7 +126,7 @@ def marcar_menu_canal():
         return
     salvar({"canal_menu_ts": agora})
 
-def so_copiloto() -> bool:
+def so_copiloto(menu_nesta_conversa: bool = False) -> bool:
     """True = SÓ o Copiloto do Financeiro fala; o Pedrão fica mudo.
 
     25/07-26/07: essa chave era MANUAL e virou a maior fonte de erro do sistema — em 26/07 09:17
@@ -130,10 +136,12 @@ def so_copiloto() -> bool:
     webhook às 09:17:44, o segundo exato da troca. Menu recente = canal com chatbot = Pedrão
     calado. Sem menu na janela = canal Ultra Pedrão puro = Pedrão atende. Sem depender de
     ninguém lembrar de virar chave nenhuma.
-    Valores: True (sempre calado) | False (nunca) | "auto" (decide pelo menu)."""
+    Valores: True (sempre calado) | False (nunca) | "auto" (decide pelo menu).
+    `menu_nesta_conversa`: passe True quando o menu nativo passou NESTA conversa — é o sinal
+    imediato e o que decide no "auto" (a janela global é só rede de segurança)."""
     v = ler().get("so_copiloto", False)
     if isinstance(v, str) and v.strip().lower() == "auto":
-        return canal_tem_menu()
+        return bool(menu_nesta_conversa) or canal_tem_menu()
     return bool(v)
 
 def canal_tem_menu() -> bool:

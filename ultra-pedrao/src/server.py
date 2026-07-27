@@ -912,6 +912,9 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
         # em "auto", é isto que faz o Pedrão se calar sozinho na troca de canal (26/07 09:17:44:
         # o menu passou no segundo exato em que o dono trocou, e ninguém precisou virar chave).
         PAINEL.marcar_menu_canal()
+        # marca TAMBÉM na conversa: é o sinal imediato dos dois lados (com menu = canal com
+        # chatbot; sem menu = canal puro, e o Pedrão volta a atender na hora, sem esperar janela)
+        M.merge_fatos(ev["contato"], {"menu_ts": time.time()})
         M.log_evento(ev["contato"], "bot_nativo_detectado", {"mask": _mask(ev["contato"])})
         return {"status": "bot_nativo_detectado_pedrao_em_pausa"}
 
@@ -960,7 +963,8 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
         # (`user_id`) ou que DIGITOU (`cop_mute`). No canal Pedrão puro (só_copiloto desligado),
         # o cliente que responde depois da transferência continua sendo atendido, não some.
         if (ev.get("queue_id") and not ev.get("user_id") and not _cop_mudo(ev)
-                and ev["texto"] and PAINEL.ativo() and not PAINEL.so_copiloto()):
+                and ev["texto"] and PAINEL.ativo()
+                and not PAINEL.so_copiloto(_menu_nesta_conversa(ev["contato"]))):
             M.log_evento(ev["contato"], "continua_apos_categoria",
                          {"mask": _mask(ev["contato"]), "queue": ev.get("queue_id")})
         else:
@@ -997,7 +1001,7 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     # caminhos do copiloto (fila do Financeiro e clique no botão), que continuam funcionando.
     # É trava de CÓDIGO, não regra de prompt: a lição de 25/07 é que regra escrita não segura o
     # modelo (ele já ignorou as regras 16 e 18 escritas).
-    if PAINEL.so_copiloto():
+    if PAINEL.so_copiloto(_menu_nesta_conversa(ev["contato"])):
         M.log_evento(ev["contato"], "so_copiloto_silenciou",
                      {"mask": _mask(ev["contato"]), "texto": (str(ev["texto"] or ""))[:60]})
         return {"status": "so_copiloto_pedrao_calado"}
@@ -1359,6 +1363,16 @@ async def admin_followup_lead(request: Request, x_admin_token: str = Header(defa
         except Exception as ex:
             M.log_evento(a["contato"], "followup_falhou", {"erro": str(ex)[:80]})
     return {"dry_run": False, "enviados": len(ok), "detalhe": ok}
+
+def _menu_nesta_conversa(contato) -> bool:
+    """O menu nativo passou NESTA conversa há pouco? É o sinal imediato do canal com chatbot.
+    26/07: a versão anterior olhava só a janela GLOBAL de 90 min — trocar de volta pro canal
+    Ultra Pedrão puro deixava o bot mudo até a janela vencer. Por conversa, a virada é na hora."""
+    try:
+        ts = float(M.get_fatos(contato).get("menu_ts") or 0)
+        return (time.time() - ts) < PAINEL.MENU_CONVERSA_S
+    except Exception:
+        return False
 
 def _eventos_desde(desde: float):
     """Eventos (ts, contato, tipo, payload) a partir de um epoch — usado pelo resgate."""
