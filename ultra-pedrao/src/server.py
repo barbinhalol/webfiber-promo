@@ -166,6 +166,9 @@ _BOT_TXT = {}  # contato -> [(ts, texto enviado por nós)] — p/ distinguir hum
 # estado de funil, não identidade — sobrevivendo, o bot abria conversa nova com "vi que você tem
 # interesse em planos — é para a Rua X?" (interesse VELHO, de outra conversa; regra 23: nunca
 # afirme o que o cliente não disse NESTA conversa).
+# conversa parada mais que isso = assunto novo (o resumo/roteiro de ontem não vale hoje)
+SESSAO_NOVA_GAP_S = int(os.environ.get("SESSAO_NOVA_GAP_S", "10800"))   # 3h
+
 _FICHA_KEYS = ("nome", "cpf", "cnpj", "fin_cpf", "endereco", "sup_end", "sup_nome", "bairro",
                "rua", "numero", "complemento", "cpf_fornecido", "plano", "hist_oc",
                "desbloqueio_mes")
@@ -643,6 +646,16 @@ def _processar(contato, texto, ctx):
     ticket_id_atual = ctx.get("ticket_id")
     ticket_id_anterior = M.get_ultimo_ticket(contato)
     sessao_nova = ticket_id_atual is not None and str(ticket_id_atual) != str(ticket_id_anterior)
+    # ⛔ 26/07 20:49 (quase custou uma venda): o ticket NUNCA foi fechado, então "mesmo ticket"
+    # arrastou o contexto de ONTEM pra conversa de hoje — o cliente disse só "quero instalar na
+    # Tadeu Kosciuko" e ouviu "registrei que você já foi cliente e achou a taxa alta" (assunto de
+    # ontem). Conversa também nasce nova pelo RELÓGIO: silêncio longo = assunto encerrado.
+    _gap = M.silencio_desde_ultima(contato)
+    if _gap is not None and _gap > SESSAO_NOVA_GAP_S:
+        if not sessao_nova:
+            M.log_evento(contato, "sessao_nova_por_tempo",
+                         {"mask": _mask(contato), "horas_parado": round(_gap / 3600, 1)})
+        sessao_nova = True
     if ticket_id_atual is not None:
         M.set_ultimo_ticket(contato, ticket_id_atual)
 

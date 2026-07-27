@@ -97,6 +97,35 @@ _SUP_CTX = re.compile(
 
 _CITA_COMERCIAL = re.compile(r"\b(o\s+|nosso\s+|time\s+|setor\s+|equipe\s+)?comercial\b", re.I)
 
+# ⛔ NUNCA ATRIBUIR AO CLIENTE O QUE ELE NÃO DISSE (26/07 20:49 — quase custou uma venda):
+# o cliente falou só "Ola", "queria instalar na Tadeu Kosciuko" e "67, no centro"; o bot
+# respondeu "já registrei tudo — endereço, e que você JÁ FOI CLIENTE E ACHOU A TAXA ALTA".
+# Nada disso foi dito: veio do RESUMO de uma conversa de ONTEM, que vazou porque o ticket
+# nunca foi fechado. A regra 23 já existia no prompt e não segurou — agora é código.
+_ATRIBUI_AO_CLIENTE = re.compile(
+    r"[,;—-]?\s*e?\s*que\s+(voc[êe]|o\s+senhor|a\s+senhora)\s+"
+    r"(j[áa]\s+)?(foi|era|[ée]|tem|teve|achou|acha|considera|disse|falou|comentou|mencionou|"
+    r"reclamou|n[ãa]o\s+gostou|queria|quer|pediu|pretende)\b[^.!?\n]*", re.I)
+_STOP_ATRIB = {"você", "voce", "senhor", "senhora", "que", "para", "pelo", "pela", "como",
+               "mais", "muito", "está", "esta", "isso", "aqui", "nosso", "nossa", "seu", "sua",
+               "com", "sem", "por", "uma", "num", "dos", "das", "tudo", "ainda", "então"}
+
+def _sem_acento(s):
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFD", str(s or ""))
+                   if unicodedata.category(c) != "Mn").lower()
+
+def _cliente_disse(afirmacao: str, dito_pelo_cliente: str) -> bool:
+    """A afirmação que o bot está atribuindo ao cliente tem lastro no que ELE escreveu?
+    Compara as palavras que carregam sentido; se quase nenhuma aparece, é invenção."""
+    base = _sem_acento(dito_pelo_cliente)
+    palavras = [p for p in re.findall(r"[a-zà-ú]{4,}", _sem_acento(afirmacao))
+                if p not in {_sem_acento(x) for x in _STOP_ATRIB}]
+    if not palavras:
+        return True                       # nada verificável -> não mexe
+    achou = sum(1 for p in palavras if p[:5] in base)
+    return achou >= max(1, len(palavras) // 2)
+
 # ⛔ ONDE A GENTE NÃO ATENDE (ordem do dono 25/07: "Barra e Recreio você sabe que não atendemos").
 # A base de endereços só tem RUAS — bairro nenhum. Então o bot pedia endereço, o cliente mandava,
 # e ele seguia como se fosse atender. Estes bairros/cidades estão fora da área: dizer na hora,
@@ -1180,6 +1209,20 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     #     SEU PLANO, quer que eu veja opções?"
     #   • "Código pix" -> "aqui estão nossos planos, me passa a rua..."
     # O endereço no contexto de SUPORTE é pra localizar o cliente, NÃO é viabilidade comercial.
+    # ⛔ Recapitulação inventada: só pode dizer "que você X" se o cliente disse X NESTA conversa.
+    if texto and _ATRIBUI_AO_CLIENTE.search(texto):
+        _dito = " ".join([str(mensagem or "")] +
+                         [str(h.get("texto", "")) for h in (historico or [])
+                          if str(h.get("de", "")) == "cliente"])
+        _limpo = texto
+        for m in _ATRIBUI_AO_CLIENTE.finditer(texto):
+            if not _cliente_disse(m.group(0), _dito):
+                _limpo = _limpo.replace(m.group(0), "")
+        if _limpo != texto:
+            alertas.append("GUARD: recapitulação inventada removida (cliente não disse isso)")
+            _limpo = re.sub(r"\s{2,}", " ", _limpo).replace(" ,", ",").replace(" .", ".").strip()
+            _limpo = re.sub(r"[,;]\s*([.!?])", r"\1", _limpo)
+            texto = _limpo if len(_limpo) >= 20 else texto
     # ⛔ "AGORA" nunca existe: troca a promessa de imediatismo pelo prazo REAL do setor.
     if texto and _PROMESSA_AGORA.search(texto):
         alertas.append("GUARD: promessa de 'agora' trocada pelo prazo real")

@@ -113,6 +113,16 @@ def merge_fatos(contato, novos: dict):
                   (contato, json.dumps(atual, ensure_ascii=False), time.time()))
     return atual
 
+def silencio_desde_ultima(contato):
+    """Há quantos segundos foi a última mensagem desta conversa? None se nunca falou.
+    Usado pra decidir que uma conversa parada há horas é assunto NOVO (26/07: contexto de
+    ontem vazou pra hoje porque o ticket nunca tinha sido fechado)."""
+    with _db() as c:
+        r = c.execute("SELECT MAX(ts) FROM mensagens WHERE contato=?", (contato,)).fetchone()
+    if not r or not r[0]:
+        return None
+    return max(0.0, time.time() - float(r[0]))
+
 def remover_fatos(contato, chaves):
     """Apaga chaves específicas da ficha (25/07: sessão nova limpa o roteiro velho NO BANCO —
     antes só filtrava na 1ª mensagem e o estado morto voltava da 2ª em diante)."""
