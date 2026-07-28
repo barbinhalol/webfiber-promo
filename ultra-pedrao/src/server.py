@@ -978,7 +978,14 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
         # COPILOTO FINANCEIRO: fila 25 + copiloto ligado + nenhum humano DIGITOU neste ticket
         # -> o bot entrega a fatura ali mesmo (mesmo com atendente tendo ACEITADO — eles aceitam
         # e demoram; quem manda parar é o humano DIGITAR, tratado no marcador cop_mute_ticket).
-        if (str(ev.get("queue_id") or "") == str(FILA_FINANCEIRO)
+        # ⛔ 28/07 10:43 (cliente Vivane, pediu fatura e não foi atendida): ela clicou primeiro
+        # "FALAR COM ATENDENTE" (ticket foi pra fila 112) e DEPOIS clicou "FINANCEIRO". O clique
+        # chegou com queue_id=112 e morreu neste portão, ANTES de alcançar o copiloto — que só
+        # olhava a fila 25. Quem clica FINANCEIRO está pedindo o Financeiro, esteja o ticket na
+        # fila que estiver; o que impede é PESSOA (atendente que pegou o ticket ou digitou).
+        _pediu_fin = ev["texto"] and _BTN_FIN.match(str(ev["texto"]))
+        if ((str(ev.get("queue_id") or "") == str(FILA_FINANCEIRO)
+             or (_pediu_fin and not ev.get("user_id")))
                 and PAINEL.ativo() and PAINEL.copiloto_ativo() and ev["texto"]
                 and not _cop_mudo(ev)):
             return await asyncio.to_thread(_copiloto, ev)
