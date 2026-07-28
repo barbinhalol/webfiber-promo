@@ -640,6 +640,15 @@ def _processar(contato, texto, ctx):
     if PAINEL.bot_nativo_ativo():
         M.log_evento(contato, "pausado_bot_nativo_pos_debounce", {"mask": _mask(contato)})
         return
+    # ⛔ SÓ COPILOTO — 2ª checagem (pós-debounce). MESMA corrida, provada ao vivo em 28/07 10:33:
+    #   10:33:55.77  menu nativo chega  -> marca o canal
+    #   10:33:59.89  Pedrão responde    -> 4s DEPOIS, porque a checagem só existia na ENTRADA
+    # A mensagem do cliente chegou ANTES do menu, passou pelo portão e ficou 2s no agrupamento;
+    # ao sair, ninguém reconferia. Agora reconfere aqui, quando o menu já se identificou.
+    if PAINEL.so_copiloto(_menu_nesta_conversa(contato)):
+        M.log_evento(contato, "so_copiloto_silenciou_pos_debounce",
+                     {"mask": _mask(contato), "texto": str(texto or "")[:60]})
+        return
     # sessão nova/reaberta: a FlowSeller cria um ticket_id novo quando o atendimento anterior
     # foi fechado. Comparamos com o último ticket_id visto pra esse contato -- se mudou (ou é o
     # primeiro contato), sinalizamos pro cérebro cumprimentar do jeito clássico.
