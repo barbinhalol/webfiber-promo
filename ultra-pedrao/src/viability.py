@@ -68,6 +68,42 @@ def extrair_ruas(texto: str):
             ruas.append(rua)
     return ruas
 
+# ⛔ ORDEM DO DONO (26/07): "independente dele falar o bairro, você já pode bater a rua. Se tem
+# na rua, atende. Banco de dados já pensado sempre."
+# O cliente escreve como gente: "queria instalar aqui na Tadeu Kosciuko" — SEM a palavra "Rua".
+# O extrator antigo exigia o prefixo (RUA/AV/...), então isso virava "sem endereço" e o bot ficava
+# pedindo bairro em vez de consultar a base que JÁ TINHA a resposta (2 clientes na rua).
+# Agora o nome do logradouro é procurado direto na base — o bairro nunca é necessário.
+_NOMES_BASE = None
+
+def _nomes_base():
+    """Nomes das ruas da base SEM o tipo (TADEU KOSCIUKO), do mais longo pro mais curto —
+    o mais longo casa primeiro e evita que 'RUA DO GOVERNO' vire 'GOVERNO'."""
+    global _NOMES_BASE
+    if _NOMES_BASE is None:
+        vistos = {}
+        for rua in _STREET:
+            nome = re.sub(r"^(RUA|AVENIDA|ESTRADA|TRAVESSA|PRACA|LADEIRA|ALAMEDA|LARGO|"
+                          r"RODOVIA|CAMINHO)\s+", "", rua).strip()
+            if len(nome) >= 8 and " " in nome:      # nome curto demais dá falso positivo
+                vistos.setdefault(nome, rua)
+        _NOMES_BASE = sorted(vistos.items(), key=lambda kv: -len(kv[0]))
+    return _NOMES_BASE
+
+def rua_da_base_no_texto(texto: str):
+    """Acha no texto o nome de uma rua que EXISTE na base, mesmo sem 'Rua/Av' e sem bairro.
+    Devolve (rua_normalizada_da_base, numero_ou_None)."""
+    up = unicodedata.normalize("NFKD", texto or "").encode("ascii", "ignore").decode().upper()
+    for nome, rua in _nomes_base():
+        pos = up.find(nome)
+        if pos < 0:
+            continue
+        # número logo depois do nome ("TADEU KOSCIUKO 67", "TADEU KOSCIUKO, 67, CENTRO")
+        depois = up[pos + len(nome):pos + len(nome) + 24]
+        m = re.search(r"^[\s,.:-]*(?:N[ºO]?\.?\s*)?(\d{1,6}[A-Z]?)", depois)
+        return rua, (norm_num(m.group(1)) if m else None)
+    return None, None
+
 def extrair_enderecos(texto: str):
     """Devolve lista de (rua_norm, numero) achados no texto livre."""
     achados = []
@@ -90,6 +126,16 @@ def checar(texto_cliente: str) -> dict:
     Escolhe o MELHOR endereço citado (prioriza CONFIRMADA_PREDIO > PROVAVEL > FORA_BASE).
     """
     achados = extrair_enderecos(texto_cliente)
+    if not achados:
+        # o cliente falou o nome da rua sem "Rua/Av" e/ou junto do bairro? A base decide.
+        _rua_b, _num_b = rua_da_base_no_texto(texto_cliente)
+        if _rua_b:
+            achados = [(_rua_b, _num_b)] if _num_b else []
+            if not achados:
+                na_rua = _STREET.get(_rua_b, 0)
+                return {"status": PROVAVEL, "rua": _rua_b, "numero": None,
+                        "clientes_no_numero": 0, "clientes_na_rua": na_rua,
+                        "evidencia": f"{_rua_b} — rua atendida (nome reconhecido na base, sem nº)"}
     if not achados:
         # rua SEM número (ex.: "rua teodoro da silva"): se a RUA consta na base, já é PROVAVEL
         # (região atendida), só falta o número — assim o Pedrão já diz que TEM viabilidade.
