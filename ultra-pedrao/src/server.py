@@ -645,7 +645,7 @@ def _processar(contato, texto, ctx):
     #   10:33:59.89  Pedrão responde    -> 4s DEPOIS, porque a checagem só existia na ENTRADA
     # A mensagem do cliente chegou ANTES do menu, passou pelo portão e ficou 2s no agrupamento;
     # ao sair, ninguém reconferia. Agora reconfere aqui, quando o menu já se identificou.
-    if PAINEL.so_copiloto(_menu_nesta_conversa(contato)):
+    if PAINEL.so_copiloto(_menu_nesta_conversa(contato, ctx.get("ticket_id"))):
         M.log_evento(contato, "so_copiloto_silenciou_pos_debounce",
                      {"mask": _mask(contato), "texto": str(texto or "")[:60]})
         return
@@ -936,7 +936,10 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
         PAINEL.marcar_menu_canal()
         # marca TAMBÉM na conversa: é o sinal imediato dos dois lados (com menu = canal com
         # chatbot; sem menu = canal puro, e o Pedrão volta a atender na hora, sem esperar janela)
-        M.merge_fatos(ev["contato"], {"menu_ts": time.time()})
+        _mk = {"menu_ts": time.time()}
+        if ev.get("ticket_id") is not None:
+            _mk["menu_ticket"] = str(ev["ticket_id"])   # a conversa fica marcada até ela acabar
+        M.merge_fatos(ev["contato"], _mk)
         M.log_evento(ev["contato"], "bot_nativo_detectado", {"mask": _mask(ev["contato"])})
         return {"status": "bot_nativo_detectado_pedrao_em_pausa"}
 
@@ -986,7 +989,7 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
         # o cliente que responde depois da transferência continua sendo atendido, não some.
         if (ev.get("queue_id") and not ev.get("user_id") and not _cop_mudo(ev)
                 and ev["texto"] and PAINEL.ativo()
-                and not PAINEL.so_copiloto(_menu_nesta_conversa(ev["contato"]))):
+                and not PAINEL.so_copiloto(_menu_nesta_conversa(ev["contato"], ev.get("ticket_id")))):
             M.log_evento(ev["contato"], "continua_apos_categoria",
                          {"mask": _mask(ev["contato"]), "queue": ev.get("queue_id")})
         else:
@@ -1023,7 +1026,7 @@ async def webhook(request: Request, x_webhook_secret: str = Header(default=""),
     # caminhos do copiloto (fila do Financeiro e clique no botão), que continuam funcionando.
     # É trava de CÓDIGO, não regra de prompt: a lição de 25/07 é que regra escrita não segura o
     # modelo (ele já ignorou as regras 16 e 18 escritas).
-    if PAINEL.so_copiloto(_menu_nesta_conversa(ev["contato"])):
+    if PAINEL.so_copiloto(_menu_nesta_conversa(ev["contato"], ev.get("ticket_id"))):
         M.log_evento(ev["contato"], "so_copiloto_silenciou",
                      {"mask": _mask(ev["contato"]), "texto": (str(ev["texto"] or ""))[:60]})
         return {"status": "so_copiloto_pedrao_calado"}
@@ -1386,13 +1389,20 @@ async def admin_followup_lead(request: Request, x_admin_token: str = Header(defa
             M.log_evento(a["contato"], "followup_falhou", {"erro": str(ex)[:80]})
     return {"dry_run": False, "enviados": len(ok), "detalhe": ok}
 
-def _menu_nesta_conversa(contato) -> bool:
-    """O menu nativo passou NESTA conversa há pouco? É o sinal imediato do canal com chatbot.
-    26/07: a versão anterior olhava só a janela GLOBAL de 90 min — trocar de volta pro canal
-    Ultra Pedrão puro deixava o bot mudo até a janela vencer. Por conversa, a virada é na hora."""
+def _menu_nesta_conversa(contato, ticket_id=None) -> bool:
+    """Esta CONVERSA nasceu com o menu do chatbot? É o sinal do canal ATENDIMENTO+ULTRA PEDRÃO.
+
+    O dono precisa trocar de canal a qualquer hora, sem me chamar — um atendente vira pro Ultra
+    Pedrão perto das 20h e ali ele tem que responder tudo, na hora. Por isso o sinal é o TICKET:
+    - conversa que recebeu menu -> marcada pelo ticket; o Pedrão fica calado nela até o fim;
+    - conversa NOVA depois da troca -> não tem menu -> o Pedrão responde IMEDIATAMENTE.
+    Sem janela longa segurando o bot mudo e sem depender de ninguém virar chave.
+    O `menu_ts` recente (2 min) só cobre o instante em que a FlowSeller ainda não mandou o ticket."""
     try:
-        ts = float(M.get_fatos(contato).get("menu_ts") or 0)
-        return (time.time() - ts) < PAINEL.MENU_CONVERSA_S
+        f = M.get_fatos(contato)
+        if ticket_id is not None and str(f.get("menu_ticket") or "") == str(ticket_id):
+            return True
+        return (time.time() - float(f.get("menu_ts") or 0)) < 120
     except Exception:
         return False
 
