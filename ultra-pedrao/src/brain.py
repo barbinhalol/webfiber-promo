@@ -1331,10 +1331,10 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
     # sem causa determinística no pipeline). Roda POR ÚLTIMO, depois de qualquer outro guard/
     # remoção de trecho, e SOBRESCREVE acao/fila: se uma ofensa passou por tudo o resto, a
     # resposta inteira é trocada e o atendimento vai pra um humano — não se arrisca meia-frase.
-    # PARÁGRAFOS (ordem do dono 29/07: "a cada ponto que der pular uma linha, fazer parágrafos,
-    # pois escreve tudo junto e fica feio"). Regex puro, sem custo de LLM: quebra depois de . ! ?
-    # quando vem uma frase nova (maiúscula/emoji na sequência) — não mexe em abreviação (Sr.),
-    # decimal (99,90) nem reticências.
+    # PARÁGRAFOS (ordem do dono 29/07): escrever como se escreve hoje em dia — em e-mail,
+    # WhatsApp, qualquer lugar — ninguém manda tudo grudado num bloco só; cada ideia numa linha.
+    # Regex puro, sem custo de LLM: quebra a cada frase nova, sem mexer em abreviação (Sr.),
+    # decimal/CPF (99,90) nem reticências.
     if texto:
         # só quebra quando a PRÓXIMA frase começa com letra maiúscula (emoji colado no fim da
         # frase anterior — "Sem problema! 😊" — não pode virar linha órfã sozinha)
