@@ -144,6 +144,31 @@ def _e_suporte(msg, memoria):
         return True
     return bool(_SUP_CTX.search(msg or ""))
 
+# ⛔ PALAVRÃO/OFENSA NUNCA CHEGA AO CLIENTE (29/07, ao vivo — cliente REAL, com queda de
+# internet, chamado de "Otário!"). Investigação completa: não está no prompt (`pedrao_prompt.md`),
+# não está em regras.py/respostas.py, não veio dos ajustes do painel, não veio de memória de outra
+# conversa (contato era novo), não é corrupção de encoding (bytes UTF-8 limpos), não veio do
+# debounce (join simples). Foi o próprio modelo que gerou a palavra na resposta — sem causa
+# determinística no nosso pipeline. Regra de segurança daqui pra frente: NENHUM guard de prompt
+# resolve isso (o modelo pode gerar de novo, com qualquer palavra da lista); só código barra.
+# Se qualquer uma destas palavras aparecer na resposta, ela nunca sai — cai pro fallback humano.
+# só palavras que são SEMPRE ofensa dirigida à pessoa (evita falso positivo em uso comum:
+# "infeliz"/"droga"/"mané" têm uso corriqueiro não-ofensivo em PT-BR e ficaram de fora)
+_OFENSA = re.compile(
+    r"\b(otári[ao]|idiot[ao]|imbecil|est[úu]pid[ao]|burr[ao]|retardad[ao]|"
+    r"vagabund[ao]|desgra[çc]ad[ao]|maldit[ao]|"
+    r"cala\s+a\s+boca|v[áa]\s+se\s+(danar|ferrar)|"
+    r"babac[ao]|trouxa)\b", re.I)
+
+def _sem_ofensa(texto: str):
+    """Última linha de defesa: se QUALQUER palavra ofensiva aparecer, a resposta inteira é
+    trocada — não dá pra confiar em remover só a palavra (o resto da frase pode ter sido
+    construído em volta dela). Melhor um texto genérico e seguro do que arriscar meia-frase."""
+    if texto and _OFENSA.search(texto):
+        return ("Vou te passar pra uma pessoa da nossa equipe pra continuar seu atendimento "
+                "com atenção total, tá bem? Só um instante 🙏"), True
+    return texto, False
+
 def _tom_suporte(texto, sentimento=None):
     """Tira 'o básico' e as expressões de descontração das respostas de suporte."""
     t = texto or ""
@@ -1301,6 +1326,19 @@ def decidir(mensagem, historico=None, memoria_cliente=None, sessao_nova=False, r
         fila = _recategorizar(fila, d.get("intencao", ""), d.get("motivo", ""), mensagem)
         if fila != _f0:
             alertas.append(f"GUARD: recategorizado {_f0} -> {fila} (nada de 'Outros')")
+
+    # ⛔ ÚLTIMA LINHA DE DEFESA (29/07, ao vivo — cliente real chamado de "Otário!" pelo modelo,
+    # sem causa determinística no pipeline). Roda POR ÚLTIMO, depois de qualquer outro guard/
+    # remoção de trecho, e SOBRESCREVE acao/fila: se uma ofensa passou por tudo o resto, a
+    # resposta inteira é trocada e o atendimento vai pra um humano — não se arrisca meia-frase.
+    texto, _teve_ofensa = _sem_ofensa(texto)
+    if _teve_ofensa:
+        alertas.append("GUARD: ⚠️ OFENSA AO CLIENTE bloqueada — transferido pra humano")
+        acao, fila = "transferir", C.FILAS.get("atendimento", 112)
+        d["nota_interna"] = ("[Pedrão] ⚠️ ALERTA: o modelo gerou um termo ofensivo nesta resposta "
+                             "e ela foi BLOQUEADA antes de sair — só o texto de transferência foi "
+                             "enviado ao cliente. Verificar e, se possível, pedir desculpas pelo "
+                             "atraso na resposta.")
 
     d.update({"acao": acao, "texto": texto, "fastReplyId": fid, "fila": fila,
               "_alertas": alertas, "_viabilidade_sistema": viab})
