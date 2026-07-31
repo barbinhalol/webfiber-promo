@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest a capability or an improvement
+labels: ['enhancement', 'needs triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check [ROADMAP.md](../blob/main/ROADMAP.md) and the
+        [ADRs](../blob/main/docs/adr/) first — the idea may already be planned or
+        deliberately out of scope.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve
+      description: Who is affected, and what can they not do today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Project constraints
+      options:
+        - label: This does not add demographic fields to the profile
+          required: true
+        - label: This keeps candidate ranking explainable
+          required: true
