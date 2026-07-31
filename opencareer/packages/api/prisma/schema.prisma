@@ -1,0 +1,131 @@
+// Target persistence schema for the Postgres adapter (roadmap v0.2).
+// The API currently runs on the in-memory adapter; this file defines the storage
+// shape that adapter will implement behind the same ProfileRepository port.
+//
+// Storage normalizes the profile into relations; the API boundary keeps serving a
+// single portable OPP document. See docs/data-model.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id         String   @id @default(cuid())
+  handle     String   @unique
+  fullName   String
+  headline   String
+  bio        String?
+  location   String?
+  languages  String[]
+  openToWork Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  media       Media[]
+  skills      ProfileSkill[]
+  experiences Experience[]
+
+  @@index([openToWork, updatedAt])
+}
+
+enum MediaKind {
+  video
+  image
+  document
+  link
+}
+
+model Media {
+  id          String    @id @default(cuid())
+  profileId   String
+  kind        MediaKind
+  url         String
+  title       String
+  description String?
+  /// Exactly one media row per profile may be the video introduction.
+  isIntro     Boolean   @default(false)
+  position    Int       @default(0)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+enum Proficiency {
+  beginner
+  intermediate
+  advanced
+  expert
+}
+
+/// Shared taxonomy entry, e.g. `esco:1234` or `opencareer:typescript`.
+model Skill {
+  id   String @id
+  name String
+
+  profiles     ProfileSkill[]
+  experiences  ExperienceSkill[]
+}
+
+model ProfileSkill {
+  profileId         String
+  skillId           String
+  proficiency       Proficiency
+  yearsOfExperience Int?
+
+  profile       Profile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill         Skill          @relation(fields: [skillId], references: [id])
+  verifications Verification[]
+
+  @@id([profileId, skillId])
+  @@index([skillId, proficiency])
+}
+
+model Experience {
+  id           String    @id @default(cuid())
+  profileId    String
+  organization String
+  title        String
+  /// Month precision is intentional; see docs/data-model.md.
+  startDate    String
+  endDate      String?
+  summary      String?
+  verified     Boolean   @default(false)
+
+  profile Profile           @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skills  ExperienceSkill[]
+
+  @@index([profileId])
+}
+
+model ExperienceSkill {
+  experienceId String
+  skillId      String
+
+  experience Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  skill      Skill      @relation(fields: [skillId], references: [id])
+
+  @@id([experienceId, skillId])
+}
+
+/// Evidence behind a claim. Kept as records rather than a boolean so the source of
+/// trust survives export to another instance.
+model Verification {
+  id        String   @id @default(cuid())
+  profileId String
+  skillId   String
+  /// e.g. `assessment:go-2025`, `employer:acme`, `credential:university-x`
+  reference String
+  issuer    String
+  issuedAt  DateTime @default(now())
+  expiresAt DateTime?
+
+  profileSkill ProfileSkill @relation(fields: [profileId, skillId], references: [profileId, skillId], onDelete: Cascade)
+
+  @@index([profileId, skillId])
+}
