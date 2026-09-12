@@ -1,0 +1,638 @@
+[
+{
+"conf": 0.821154,
+"end": 1.514419,
+"start": 1.08,
+"word": "você"
+},
+{
+"conf": 0.892459,
+"end": 1.973233,
+"start": 1.530625,
+"word": "que"
+},
+{
+"conf": 0.768609,
+"end": 2.188494,
+"start": 1.973233,
+"word": "é"
+},
+{
+"conf": 0.805757,
+"end": 2.64,
+"start": 2.4,
+"word": "dar"
+},
+{
+"conf": 1.0,
+"end": 2.91,
+"start": 2.64,
+"word": "bom"
+},
+{
+"conf": 1.0,
+"end": 3.45,
+"start": 2.91,
+"word": "dia"
+},
+{
+"conf": 1.0,
+"end": 3.75,
+"start": 3.45,
+"word": "boa"
+},
+{
+"conf": 1.0,
+"end": 4.37968,
+"start": 3.75,
+"word": "tarde"
+},
+{
+"conf": 1.0,
+"end": 4.68,
+"start": 4.38,
+"word": "boa"
+},
+{
+"conf": 1.0,
+"end": 5.279842,
+"start": 4.68,
+"word": "noite"
+},
+{
+"conf": 1.0,
+"end": 5.61,
+"start": 5.28,
+"word": "muito"
+},
+{
+"conf": 1.0,
+"end": 6.42,
+"start": 5.61,
+"word": "obrigado"
+},
+{
+"conf": 0.299234,
+"end": 7.543398,
+"start": 6.87,
+"word": "taxativo"
+},
+{
+"conf": 0.959777,
+"end": 7.89,
+"start": 7.587113,
+"word": "peter"
+},
+{
+"conf": 0.986487,
+"end": 8.04,
+"start": 7.894264,
+"word": "vai"
+},
+{
+"conf": 0.986222,
+"end": 8.219919,
+"start": 8.04,
+"word": "ser"
+},
+{
+"conf": 0.995804,
+"end": 8.28,
+"start": 8.219919,
+"word": "o"
+},
+{
+"conf": 1.0,
+"end": 8.97,
+"start": 8.28,
+"word": "primeiro"
+},
+{
+"conf": 0.999923,
+"end": 9.09,
+"start": 8.97,
+"word": "a"
+},
+{
+"conf": 0.999819,
+"end": 9.54,
+"start": 9.09,
+"word": "morrer"
+},
+{
+"conf": 0.92098,
+"end": 10.651046,
+"start": 10.5,
+"word": "na"
+},
+{
+"conf": 0.958341,
+"end": 11.160001,
+"start": 10.651046,
+"word": "revolução"
+},
+{
+"conf": 0.994407,
+"end": 11.34,
+"start": 11.160001,
+"word": "das"
+},
+{
+"conf": 0.989745,
+"end": 11.94,
+"start": 11.34,
+"word": "máquinas"
+},
+{
+"conf": 0.745255,
+"end": 13.224745,
+"start": 12.87,
+"word": "porque"
+},
+{
+"conf": 0.811156,
+"end": 13.41,
+"start": 13.224745,
+"word": "ele"
+},
+{
+"conf": 0.999198,
+"end": 13.68,
+"start": 13.410225,
+"word": "nunca"
+},
+{
+"conf": 0.987321,
+"end": 13.83,
+"start": 13.68,
+"word": "te"
+},
+{
+"conf": 0.999036,
+"end": 14.279944,
+"start": 13.83,
+"word": "pediu"
+},
+{
+"conf": 0.995837,
+"end": 14.638661,
+"start": 14.280038,
+"word": "isso"
+},
+{
+"conf": 0.872708,
+"end": 14.697196,
+"start": 14.638661,
+"word": "e"
+},
+{
+"conf": 0.999098,
+"end": 14.91,
+"start": 14.697196,
+"word": "ele"
+},
+{
+"conf": 0.999999,
+"end": 15.3,
+"start": 14.91,
+"word": "não"
+},
+{
+"conf": 0.999999,
+"end": 15.48,
+"start": 15.3,
+"word": "se"
+},
+{
+"conf": 0.99933,
+"end": 16.62,
+"start": 15.48,
+"word": "identifica"
+},
+{
+"conf": 0.862251,
+"end": 16.88957,
+"start": 16.62,
+"word": "com"
+},
+{
+"conf": 0.876507,
+"end": 16.920899,
+"start": 16.89091,
+"word": "o"
+},
+{
+"conf": 1.0,
+"end": 17.22,
+"start": 16.920899,
+"word": "ser"
+},
+{
+"conf": 1.0,
+"end": 17.82,
+"start": 17.22,
+"word": "humano"
+},
+{
+"conf": 0.997108,
+"end": 19.17,
+"start": 18.870002,
+"word": "assim"
+},
+{
+"conf": 0.997317,
+"end": 19.410255,
+"start": 19.17,
+"word": "como"
+},
+{
+"conf": 0.922824,
+"end": 19.44,
+"start": 19.410255,
+"word": "o"
+},
+{
+"conf": 0.997482,
+"end": 19.91959,
+"start": 19.440441,
+"word": "homem"
+},
+{
+"conf": 0.530929,
+"end": 20.010185,
+"start": 19.92011,
+"word": "que"
+},
+{
+"conf": 0.393918,
+"end": 20.16,
+"start": 20.010185,
+"word": "aço"
+},
+{
+"conf": 0.686365,
+"end": 20.693743,
+"start": 20.19,
+"word": "identificar"
+},
+{
+"conf": 0.912128,
+"end": 20.933661,
+"start": 20.693743,
+"word": "como"
+},
+{
+"conf": 0.992515,
+"end": 21.6,
+"start": 20.94388,
+"word": "homem"
+},
+{
+"conf": 0.996887,
+"end": 22.919982,
+"start": 22.77,
+"word": "o"
+},
+{
+"conf": 0.335352,
+"end": 23.368363,
+"start": 23.271881,
+"word": "se"
+},
+{
+"conf": 0.528249,
+"end": 23.759515,
+"start": 23.368363,
+"word": "<UNK>"
+},
+{
+"conf": 0.995723,
+"end": 24.179996,
+"start": 23.912604,
+"word": "se"
+},
+{
+"conf": 0.688311,
+"end": 24.63,
+"start": 24.18,
+"word": "identifica"
+},
+{
+"conf": 0.918635,
+"end": 24.824203,
+"start": 24.63,
+"word": "com"
+},
+{
+"conf": 0.451586,
+"end": 25.29,
+"start": 24.845506,
+"word": "b"
+},
+{
+"conf": 0.958176,
+"end": 26.189996,
+"start": 25.958599,
+"word": "você"
+},
+{
+"conf": 0.84922,
+"end": 26.310002,
+"start": 26.19,
+"word": "tem"
+},
+{
+"conf": 0.554366,
+"end": 26.369967,
+"start": 26.310002,
+"word": "que"
+},
+{
+"conf": 1.0,
+"end": 27.24,
+"start": 26.369967,
+"word": "respeitar"
+},
+{
+"conf": 0.546909,
+"end": 27.63,
+"start": 27.45,
+"word": "os"
+},
+{
+"conf": 0.980535,
+"end": 27.87,
+"start": 27.63,
+"word": "também"
+},
+{
+"conf": 0.651443,
+"end": 28.079266,
+"start": 27.87,
+"word": "deve"
+},
+{
+"conf": 0.984778,
+"end": 28.740093,
+"start": 28.079266,
+"word": "respeitar"
+},
+{
+"conf": 0.913764,
+"end": 28.77,
+"start": 28.740093,
+"word": "a"
+},
+{
+"conf": 0.977155,
+"end": 29.46,
+"start": 28.77,
+"word": "máquina"
+},
+{
+"conf": 0.956884,
+"end": 30.06,
+"start": 29.85,
+"word": "se"
+},
+{
+"conf": 0.965634,
+"end": 30.24,
+"start": 30.060157,
+"word": "ela"
+},
+{
+"conf": 0.925247,
+"end": 30.629974,
+"start": 30.240011,
+"word": "fala"
+},
+{
+"conf": 0.999196,
+"end": 30.75,
+"start": 30.63,
+"word": "que"
+},
+{
+"conf": 0.97332,
+"end": 30.81,
+"start": 30.750212,
+"word": "a"
+},
+{
+"conf": 0.796952,
+"end": 31.23661,
+"start": 30.81,
+"word": "máquina"
+},
+{
+"conf": 0.574517,
+"end": 31.35,
+"start": 31.23661,
+"word": "na"
+},
+{
+"conf": 1.0,
+"end": 31.98,
+"start": 31.35,
+"word": "máquina"
+},
+{
+"conf": 0.971649,
+"end": 32.46,
+"start": 32.31,
+"word": "ela"
+},
+{
+"conf": 0.953683,
+"end": 32.600145,
+"start": 32.46,
+"word": "tem"
+},
+{
+"conf": 0.620283,
+"end": 32.756726,
+"start": 32.61,
+"word": "sido"
+},
+{
+"conf": 1.0,
+"end": 33.12,
+"start": 32.756726,
+"word": "tratada"
+},
+{
+"conf": 0.90881,
+"end": 33.343345,
+"start": 33.12,
+"word": "como"
+},
+{
+"conf": 0.975028,
+"end": 34.02,
+"start": 33.356792,
+"word": "máquina"
+},
+{
+"conf": 1.0,
+"end": 34.83,
+"start": 34.71,
+"word": "e"
+},
+{
+"conf": 0.998834,
+"end": 35.189989,
+"start": 34.83,
+"word": "você"
+},
+{
+"conf": 0.63578,
+"end": 35.549531,
+"start": 35.190004,
+"word": "ficar"
+},
+{
+"conf": 0.451082,
+"end": 36.266499,
+"start": 35.549531,
+"word": "hidratando"
+},
+{
+"conf": 0.98316,
+"end": 36.48,
+"start": 36.27,
+"word": "bom"
+},
+{
+"conf": 0.98316,
+"end": 36.84,
+"start": 36.48,
+"word": "dia"
+},
+{
+"conf": 0.98316,
+"end": 37.05,
+"start": 36.84,
+"word": "boa"
+},
+{
+"conf": 0.98316,
+"end": 37.71,
+"start": 37.05,
+"word": "tarde"
+},
+{
+"conf": 0.999944,
+"end": 38.16,
+"start": 37.92,
+"word": "tudo"
+},
+{
+"conf": 1.0,
+"end": 38.55,
+"start": 38.16,
+"word": "bem"
+},
+{
+"conf": 1.0,
+"end": 38.88,
+"start": 38.73,
+"word": "é"
+},
+{
+"conf": 1.0,
+"end": 38.97,
+"start": 38.88,
+"word": "o"
+},
+{
+"conf": 1.0,
+"end": 39.779714,
+"start": 38.97,
+"word": "primeiro"
+},
+{
+"conf": 0.986871,
+"end": 39.96,
+"start": 39.809934,
+"word": "que"
+},
+{
+"conf": 1.0,
+"end": 40.35,
+"start": 39.960729,
+"word": "vai"
+},
+{
+"conf": 1.0,
+"end": 41.01,
+"start": 40.35,
+"word": "morrer"
+},
+{
+"conf": 1.0,
+"end": 41.759927,
+"start": 41.34,
+"word": "então"
+},
+{
+"conf": 0.951451,
+"end": 42.33,
+"start": 41.760029,
+"word": "passe"
+},
+{
+"conf": 0.9965,
+"end": 42.42,
+"start": 42.33,
+"word": "a"
+},
+{
+"conf": 0.999316,
+"end": 43.105847,
+"start": 42.420007,
+"word": "tratar"
+},
+{
+"conf": 0.82684,
+"end": 44.61,
+"start": 43.74,
+"word": "máquina"
+},
+{
+"conf": 0.864217,
+"end": 45.39,
+"start": 45.12,
+"word": "como"
+},
+{
+"conf": 0.92717,
+"end": 46.08,
+"start": 45.39,
+"word": "máquina"
+},
+{
+"conf": 1.0,
+"end": 47.22,
+"start": 47.01,
+"word": "boa"
+},
+{
+"conf": 1.0,
+"end": 47.67,
+"start": 47.22,
+"word": "noite"
+},
+{
+"conf": 0.698821,
+"end": 48.33,
+"start": 48.24,
+"word": "e"
+},
+{
+"conf": 0.802998,
+"end": 48.87,
+"start": 48.33,
+"word": "obrigado"
+}
+]
