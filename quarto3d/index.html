@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Meu Quarto 3D</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css?v=8">
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="view" tabindex="0" aria-label="Vista 3D do quarto"></canvas>
+    <div id="prog"></div>
+    <div id="top">
+      <div class="brand">Meu Quarto 3D</div>
+      <div class="seg" id="modes" role="group" aria-label="Modo de navegação">
+        <button type="button" data-mode="walk" aria-pressed="true">Passeio</button>
+        <button type="button" data-mode="orbit" aria-pressed="false">Maquete</button>
+      </div>
+      <span class="sp"></span>
+      <div class="seg" id="scenes" role="group" aria-label="Cena de luz">
+        <button type="button" data-scene="acesa" aria-pressed="true">Luz acesa</button>
+        <button type="button" data-scene="neon" aria-pressed="false">Neon</button>
+        <button type="button" data-scene="dia" aria-pressed="false">Dia</button>
+      </div>
+      <button type="button" class="ico" id="undo" title="Desfazer" aria-label="Desfazer" disabled><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+      <button type="button" class="ico" id="photo" title="Esconder controles" aria-label="Esconder controles"><svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/></svg></button>
+    </div>
+    <div id="toast" role="status"></div>
+    <div id="tip" hidden></div>
+    <button type="button" class="act" id="back" hidden>Mostrar controles</button>
+    <input type="file" id="vidFile" accept="video/*" hidden aria-label="Escolher vídeo">
+    <div id="load"><div><h1>Meu Quarto 3D</h1><p id="loadMsg">Montando o quarto…</p><div class="bar"><i></i></div></div></div>
+  </div>
+  <div id="dock">
+    <div id="float">
+      <div id="joy" role="application" aria-label="Controle para andar pelo quarto"><i></i></div>
+      <div id="sel" class="empty">
+        <div class="row">
+          <div class="name" id="selName"></div>
+          <button type="button" class="act" id="quick" hidden>Virar para a cama</button>
+          <button type="button" class="act" id="quick2" hidden>Ver da cama</button>
+          <button type="button" class="act" id="optBtn" hidden>Opções</button>
+          <button type="button" class="act" id="rotL" title="Girar para a esquerda" aria-label="Girar para a esquerda"><svg viewBox="0 0 24 24"><path d="M4 5v5h5"/><path d="M4.6 10A8 8 0 1 1 6 17"/></svg></button>
+          <button type="button" class="act" id="rotR" title="Girar para a direita" aria-label="Girar para a direita"><svg viewBox="0 0 24 24"><path d="M20 5v5h-5"/><path d="M19.4 10A8 8 0 1 0 18 17"/></svg></button>
+          <button type="button" class="act" id="dup" title="Duplicar" aria-label="Duplicar"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></button>
+          <button type="button" class="act danger" id="del" title="Excluir" aria-label="Excluir"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
+          <button type="button" class="act" id="desel" title="Fechar" aria-label="Fechar seleção"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <section id="panel" aria-live="polite"></section>
+    <nav id="tabs" role="tablist" aria-label="Controles">
+      <button type="button" role="tab" data-tab="luzes" aria-selected="true">Luzes</button>
+      <button type="button" role="tab" data-tab="pintar" aria-selected="false">Estilo</button>
+      <button type="button" role="tab" data-tab="objetos" aria-selected="false">Objetos</button>
+      <button type="button" role="tab" data-tab="quarto" aria-selected="false">Quarto</button>
+    </nav>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/lights/RectAreaLightUniformsLib.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/Pass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="js/00-core.js?v=8"></script>
+<script src="js/10-room.js?v=8"></script>
+<script src="js/20-objects.js?v=8"></script>
+<script src="js/30-engine.js?v=8"></script>
+<script src="js/40-app.js?v=8"></script>
+</body>
+</html>
