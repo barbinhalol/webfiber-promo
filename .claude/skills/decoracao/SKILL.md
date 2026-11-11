@@ -31,6 +31,7 @@ O projeto de referência já existe na pasta `quarto3d/` deste repositório (lei
 - **Posição de móvel que o usuário marcou é lei.** Quando ele aponta na captura onde algo deve ficar ("colado na janela", "sobre os pés da cama"), mova exatamente para lá e confira na mesma vista.
 - **Mudou posição ou medida padrão?** O arranjo salvo no navegador do usuário não se atualiza sozinho. Troque a chave de armazenamento ou migre o estado (como `tvRev` em `40-app.js`).
 - **Conteúdo protegido:** não use trechos de filmes, logotipos nem personagens de terceiros, e não dá para embutir YouTube na página. Ofereça uma animação original e a opção de tocar um vídeo do próprio aparelho (ele não vai junto com o link).
+- **Falha de carregamento tem de aparecer na tela.** Uma página que fica "carregando" para sempre impede o diagnóstico à distância. Mantenha `js/guard.js` na página e, ao mexer no carregamento, teste simulando CDN bloqueada, erro de código, aparelho sem WebGL e demora.
 - **Não afirme desempenho em celular real** sem ter medido. O teste headless é sem placa de vídeo.
 
 ## Convenções técnicas (para não reaprender)

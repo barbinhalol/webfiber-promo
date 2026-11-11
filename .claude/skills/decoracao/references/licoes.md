@@ -14,6 +14,7 @@ Leia antes de mexer em algo parecido. Cada item vale uma conferência específic
 | **Toque rápido para girar a vista movia o objeto** | Teste de toque no celular emulado | Toque longo (240 ms) para pegar o objeto; decidir pelo relógio do evento, não do temporizador |
 | **Lâmpada de teto estourando o forro** | Captura com exposição estourada | Limitar a emissão da luminária para baixo e compensar a exposição dos emissivos |
 | **Cabo e peças da janela aparecendo atrás da parede na maquete** | Captura da vista geral | Malhas separadas por material para poder escondê-las quando a câmera está atrás da parede |
+| **Página parada em "Montando o quarto…" sem explicar nada** quando a CDN não baixa ou o aparelho não suporta o 3D; o usuário só disse "não abre" | Mensagem do usuário, sem como diagnosticar | `quarto3d/js/guard.js` mostra o motivo na tela (arquivo que não baixou, erro de código, sem WebGL, demora) e oferece "Tentar de novo". Teste simulando as falhas: rota abortada na CDN, sem WebGL, relógio acelerado |
 | **Haiku estimando lajota de 60 cm** | Medição com fork deu 80 cm, conforme o usuário disse | A informação do usuário (80 cm) é dado, não estimativa; dar a medida ao agente |
 
 ## Do que o usuário gostou (manter)

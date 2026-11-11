@@ -7,6 +7,7 @@ e TV em suporte articulado. É HTML + JavaScript puro (three.js via CDN), sem et
 |---|---|
 | `index.html` | A página |
 | `style.css` | Visual da interface |
+| `js/guard.js` | Mostra na tela o motivo quando o 3D não abre (internet, navegador) e oferece "Tentar de novo" |
 | `js/00-core.js` | Texturas, materiais e o filme que passa na TV |
 | `js/10-room.js` | O cômodo e a marcenaria — as medidas ficam no bloco `MEAS`, no topo |
 | `js/20-objects.js` | Catálogo de objetos (móveis, decoração, luzes, TV) |
